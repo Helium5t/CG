@@ -1,0 +1,165 @@
+// Each #kernel tells which function to compile; you can have many kernels
+// Old kernel before multi function implementation
+// #pragma kernel FunctionKernel
+
+// definition of all kernels for each function type, defines order for kernel id ToMultiWave
+#pragma kernel WaveKernel
+#pragma kernel MultiWaveKernel
+#pragma kernel RippleKernel
+#pragma kernel SphereKernel
+#pragma kernel TorusKernel
+
+// MorphingFunctions
+#pragma kernel WaveToMultiWaveKernel
+#pragma kernel RippleToMultiWaveKernel
+#pragma kernel SphereToMultiWaveKernel
+#pragma kernel TorusToMultiWaveKernel
+
+#pragma kernel MultiWaveToWaveKernel
+#pragma kernel RippleToWaveKernel
+#pragma kernel SphereToWaveKernel
+#pragma kernel TorusToWaveKernel
+
+#pragma kernel WaveToRippleKernel
+#pragma kernel MultiWaveToRippleKernel
+#pragma kernel SphereToRippleKernel
+#pragma kernel TorusToRippleKernel
+
+#pragma kernel WaveToSphereKernel
+#pragma kernel MultiWaveToSphereKernel
+#pragma kernel RippleToSphereKernel
+#pragma kernel TorusToSphereKernel
+
+#pragma kernel WaveToTorusKernel
+#pragma kernel MultiWaveToTorusKernel
+#pragma kernel RippleToTorusKernel
+#pragma kernel SphereToTorusKernel
+
+#define PI 3.14159265358979323846
+
+// Unity ComputeBuffer = RWStructuredBuffer in HLSL
+RWStructuredBuffer<float3> _Positions;
+
+uint _Resolution;
+
+float _Step, _Time, _TransitionTime;
+
+float2 GetUV(uint3 id){
+    return (id.xy + 0.5) * _Step - 1.0;
+}
+
+// Write the output position of the value to the buffer
+void SetPosition (uint3 id, float3 position) {
+    if (id.x >= _Resolution || id.y >= _Resolution){
+        return;
+    }
+	_Positions[id.x + id.y * _Resolution] = position;
+}
+
+float3 MultiWave(float2 coord, float t){
+    float3 p;
+    coord.x = coord.x/2.0;
+    coord.y = coord.y/2.0;
+    p.x = coord.x;
+    p.z = coord.y;
+    float final =   sin(PI*( coord.x+ t*0.5));
+    // Add double speed wave with half width
+    final += sin(PI*( coord.y + t)*2.0)* 0.5;
+    final += sin(PI * (coord.x + coord.y + 0.25*t));
+    p.y = final * 2.0/5.0;
+    return p;
+}
+
+float3 Wave(float2 coord, float t){
+    float3 p;
+    p.x = coord.x;
+    p.z = coord.y;
+    p.y = sin(PI * (coord.x + coord.y + t));
+    return p;
+}
+
+
+float3 Sphere(float2 c, float t){
+    float r =  cos( PI * c.y);
+    float3 p = float3(
+        r * sin(PI * (t+c.x)),
+        sin(PI * c.y),
+        r* cos(PI * (t+c.x))
+    );
+    return p;
+}
+
+
+float3 Torus(float2 c, float t){
+    // float r1 = 0.7f + 0.1f * sin(PI * (6f * c.x + 0.5f * t));
+    // float r2 = 0.15f + 0.05f * sin(PI * (8f * c.x + 4f * c.y + 2f * t));
+    float r1 = 1.0;
+    float r2 = 0.2;
+    float cartToRad =  PI;
+    float3 p = float3(
+        cos(cartToRad* c.x) * (r1 + (r2 * cos(cartToRad*c.y))),
+        r2 * sin(c.y * cartToRad),
+        sin(cartToRad *c.x) * (r1 + (r2 * cos(cartToRad*c.y)))
+    );
+    return p;
+}
+
+
+float3 Ripple(float2 c, float t){
+    c.x = c.x/2.0;
+    c.y = c.y/2.0;
+    float d = sqrt((c.x*c.x) + (c.y*c.y));
+    float y=  sin(PI* (4.0 * d-t));
+    return float3(c.x, y/ (1.0 + 10.0*d),c.y);
+}
+
+// Defines the size of the group as X*Y*Z, this is done mainly so that the indexing of the thread can match a 1D,2D or 3D structure. 
+// e.g: Accessing a nxn matrix => (n,n,1), accessing the vertices of a cube => (2,2,2)
+// \ used to include the entire function inside the #define
+#define KERNEL_MORPH_FUNCTION(funcNameA, funcNameB) \
+[numthreads(8, 8, 1)] \
+/*Here we use "funcName" and the double # to auto generate the function kernel name*/ \
+void funcNameA##To##funcNameB##Kernel(uint3 id: SV_DispatchThreadID){ /* The SV_DispatchThreadID semantic keyword indicates uint3 id is meant to be used as the thread id*/ \
+    float2 uv = GetUV(id); \
+    float3 resA = funcNameA(uv, _Time); \
+    float3 resB = funcNameB(uv, _Time); \
+    SetPosition(id, lerp(resA,resB, _TransitionTime) ); \
+}
+
+#define KERNEL_FUNCTION(funcName) \
+[numthreads(8, 8, 1)] \
+/*Here we use "funcName" and the double # to auto generate the function kernel name*/ \
+void funcName##Kernel(uint3 id: SV_DispatchThreadID){ /* The SV_DispatchThreadID semantic keyword indicates uint3 id is meant to be used as the thread id*/ \
+    float2 uv = GetUV(id); \
+    SetPosition(id, funcName(uv, _Time)); \
+}
+
+
+// Definition order in the shader is not defined by the KERNEL_FUNCTION() but by the #pragma directives 
+
+KERNEL_FUNCTION(Ripple)
+KERNEL_FUNCTION(MultiWave)
+KERNEL_FUNCTION(Sphere)
+KERNEL_FUNCTION(Torus)
+KERNEL_FUNCTION(Wave)
+
+KERNEL_MORPH_FUNCTION(Ripple, Wave) // will generate RippleKernel, TorusKernel, SphereKernel etc.....
+KERNEL_MORPH_FUNCTION(Ripple, MultiWave)
+KERNEL_MORPH_FUNCTION(Ripple, Sphere)
+KERNEL_MORPH_FUNCTION(Ripple, Torus)
+KERNEL_MORPH_FUNCTION(Wave, Ripple)
+KERNEL_MORPH_FUNCTION(Wave, MultiWave)
+KERNEL_MORPH_FUNCTION(Wave, Sphere)
+KERNEL_MORPH_FUNCTION(Wave, Torus)
+KERNEL_MORPH_FUNCTION(MultiWave, Ripple)
+KERNEL_MORPH_FUNCTION(MultiWave, Wave)
+KERNEL_MORPH_FUNCTION(MultiWave, Sphere)
+KERNEL_MORPH_FUNCTION(MultiWave, Torus)
+KERNEL_MORPH_FUNCTION(Sphere, Ripple)
+KERNEL_MORPH_FUNCTION(Sphere, Wave)
+KERNEL_MORPH_FUNCTION(Sphere, MultiWave)
+KERNEL_MORPH_FUNCTION(Sphere, Torus)
+KERNEL_MORPH_FUNCTION(Torus, Ripple)
+KERNEL_MORPH_FUNCTION(Torus, Wave)
+KERNEL_MORPH_FUNCTION(Torus, MultiWave)
+KERNEL_MORPH_FUNCTION(Torus, Sphere) 
