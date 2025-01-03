@@ -74,7 +74,7 @@ public class Fractal : MonoBehaviour {
                 }
                 fp.worldPos = parent.worldPos + mul(fp.worldRot,float3(0f,1.5f * size ,0f) );
                 sectionAtDepth[index] = fp;
-                transformMatrices[index] = TRS(
+                transformMatrices[index] = Util.TRS(
                     fp.worldPos,
                     fp.worldRot,
                     size
@@ -144,7 +144,7 @@ public class Fractal : MonoBehaviour {
             noiseOffsets[i] = new Vector4(Random.value,Random.value);
         }
         sections[0][0] = CreateSectionElement(0);
-        transformMatrices[0][0] = TRS(
+        transformMatrices[0][0] = Util.TRS(
             sections[0][0].worldPos,
             sections[0][0].worldRot,
             1
@@ -191,7 +191,7 @@ public class Fractal : MonoBehaviour {
         root.worldPos = transform.position;
         sections[0][0] = root;
         float size = transform.lossyScale.x;
-        transformMatrices[0][0] = TRS(
+        transformMatrices[0][0] = Util.TRS(
             root.worldPos,
             root.worldRot,
             size
@@ -255,11 +255,6 @@ public class Fractal : MonoBehaviour {
             rp.matProps = propertyBlock;
             Graphics.RenderMeshPrimitives(rp, usedMesh, 0, transformMatrices[i].Length);
         }
-    }
-
-    private static float3x4 TRS(float3 pos, quaternion rot, float scale){
-        float3x3 scaleRot = float3x3(rot) * scale;
-        return float3x4(scaleRot.c0, scaleRot.c1, scaleRot.c2, pos);
     }
 
 }
