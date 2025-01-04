@@ -248,10 +248,8 @@ MonoBehaviour:
   mat: {fileID: 2100000, guid: be0c508a3288546a7b521bf73fb2eb7c, type: 2}
   mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   resolution: 30
-  shape: 2
-  instanceScale: 2
-  displacement: 0.1
   seed: 0
+  displacement: 0.1
   domain:
     translation:
       x: 0

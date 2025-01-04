@@ -38,7 +38,7 @@ public abstract class Visualizer: MonoBehaviour
     normsID = Shader.PropertyToID("_Normals"),
     smoothID = Shader.PropertyToID("_Smoothness");
 	
-    public enum Shape { Plane, Sphere, OctaSphereGen, Torus }
+    public enum Shape { Plane, Sphere, OctaSphere, Torus }
 
 	protected static ShapeGen.ScheduleDelegate[] shapeJobs = {
 		ShapeGen.Job<ShapeGen.PlaneGen>.ScheduleParallel,
