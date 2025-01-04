@@ -16,43 +16,16 @@ using quaternion = Unity.Mathematics.quaternion;
 using Unity.Mathematics;
 using System;
 
-public class Hashing: MonoBehaviour
+public class Hashing: Visualizer
 {
-    [SerializeField]
-    Material mat;
-    [SerializeField]
-    Mesh mesh;
-    [SerializeField, Range(1,512)] 
-    int resolution;
-
-    ComputeBuffer gBufferHashes, gBufferCoords, gBufferNormals;
-
-    /// <summary>
-    /// coordinates and normals for the parametric shapes
-    /// </summary>
-    NativeArray<float3x4> coords, normals; 
+    ComputeBuffer gBufferHashes;
     NativeArray<uint4> hashes;
-    MaterialPropertyBlock mpb;
-
     JobHandle jobs;
 
-    static int hashesID = Shader.PropertyToID("_Hashes"),
-    resInfoID = Shader.PropertyToID("_ResolutionInfo"),
-    coordsID = Shader.PropertyToID("_Coords"),
-    normsID = Shader.PropertyToID("_Normals"),
-    smoothID = Shader.PropertyToID("_Smoothness");
+    static int hashesID = Shader.PropertyToID("_Hashes");
 
     [SerializeField]
-
     int seed =0;
-
-    // [SerializeField, Range(-2f, 10f)]
-	// float verticalRange = 1f;
-
-    [SerializeField, Range(-0.5f, 0.5f)]
-	float displacement = 0.1f;
-
-    bool isDirty;
     
 
     // transform that is applied to all the points in the same way, regardless of coordinates. 
@@ -61,21 +34,6 @@ public class Hashing: MonoBehaviour
 	SpaceTRS domain = new SpaceTRS {
 		scale = 8f
 	};
-	
-    public enum Shape { Plane, Sphere, OctaSphereGen, Torus }
-
-	static ShapeGen.ScheduleDelegate[] shapeJobs = {
-		ShapeGen.Job<ShapeGen.PlaneGen>.ScheduleParallel,
-		ShapeGen.Job<ShapeGen.SphereGen>.ScheduleParallel,
-		ShapeGen.Job<ShapeGen.OctaSphereGen>.ScheduleParallel,
-		ShapeGen.Job<ShapeGen.TorusGen>.ScheduleParallel
-	};
-	
-	[SerializeField]
-	Shape shape;
-
-    [SerializeField, Range(0.1f, 10f)]
-	float instanceScale = 2f;
 
     [BurstCompile(CompileSynchronously = true, FloatPrecision = FloatPrecision.Standard, FloatMode = FloatMode.Fast)]
     struct HashGen : IJobFor{
@@ -120,91 +78,36 @@ public class Hashing: MonoBehaviour
         }
     }
 
-    public void OnEnable(){
-        isDirty = true;
-        int length = (resolution * resolution/4) + (resolution & 1);
-        /*
-        We neeed compute buffers to also increase in size in steps of 4 because size between arrays needs to match. 
-        If we use base resolution as reference this is what happens:
-        sizeof(gbuffer) for resolution:3 = 3 * 3 * sizeof(uint32) = 3 * 3 * 4 = 36
-        sizeof(nativeArray) for resolution:3 = 3 * sizeof(uint4) = 3 * 4 * sizeof(uint) = 3 * 4 * 4 = 48
-        */
-        int computeBufferLength = length*4;
-
-        hashes = new NativeArray<uint4>(length,Allocator.Persistent);
-        coords = new NativeArray<float3x4>(length,Allocator.Persistent);
-        normals = new NativeArray<float3x4>(length, Allocator.Persistent);
+    protected override void EnableViz(int jobBufferLength){
+        hashes = new NativeArray<uint4>(jobBufferLength,Allocator.Persistent);
         // 4 = uint 32 bits / 8 (stride is in bytes)
-        gBufferHashes = new ComputeBuffer(computeBufferLength, 4);
-        // 3 (xyz) * 4 (float stride)
-        gBufferCoords = new ComputeBuffer(computeBufferLength, 3 * 4);
-        gBufferNormals = new ComputeBuffer(computeBufferLength, 3 * 4);
-
-        mpb = new MaterialPropertyBlock();
+        gBufferHashes = new ComputeBuffer(jobBufferLength * 4, 4);
         mpb.SetBuffer(hashesID, gBufferHashes);
-        mpb.SetBuffer(coordsID, gBufferCoords);
-        mpb.SetBuffer(normsID, gBufferNormals);
-        mpb.SetVector(resInfoID, new Vector4(resolution, instanceScale / resolution, displacement/ resolution, 0f));
-        mpb.SetFloat(smoothID, 1f);
     }
 
-    public void OnDisable(){
+    protected override void DisableViz(){
         gBufferHashes.Release();
-        gBufferCoords.Release();
-        gBufferNormals.Release();
         hashes.Dispose();
-        coords.Dispose();
-        normals.Dispose();
-        mpb = null;
         gBufferHashes = null;
-        gBufferCoords = null;
-        gBufferNormals = null;
     }
-
-    public void OnValidate(){
-        if (!enabled || gBufferHashes == null){
-            return;
-        }
-        OnDisable();
-        OnEnable();
-    }
-
-    Bounds bounds;
-
-    public void Update(){
-        if (isDirty || transform.hasChanged){
-            bounds = new Bounds(  
-				transform.position,
-				float3(2f * cmax(abs(transform.lossyScale)) + displacement)
-            );
-            isDirty = false;
-            transform.hasChanged = false;
-            shapeJobs[(int) shape](coords, normals, transform.localToWorldMatrix, resolution, default).Complete();
-
-            jobs = new HashGen(){
-                hashes = hashes,
-                // "pack" 4 coordinates into one matrix to make the hash computation parallel.s
-                coords = coords,
-                hash = SmallXXHashVectorized.Seed(seed),
-                domainTransform = domain.Matrix,
-            }.ScheduleParallel(hashes.Length,resolution, default); // each batch will do one row
-
-            jobs.Complete();
-            // uint32 = 4 bytes, uint4 = 4 * sizeof(uint32)
-            // passed size is CURRENT expected size of the data type, not the one we are converting to.
-            gBufferHashes.SetData(hashes.Reinterpret<uint>(4*4));
-            // float32 = 4 bytes, float3 = 3 * sizeof(uint32), float3x4 = 4 * sizeof(float3)
-            gBufferCoords.SetData(coords.Reinterpret<float3>(3 * 4 * 4));
-            gBufferNormals.SetData(normals.Reinterpret<float3>(3 * 4 * 4));
-        }
+    /* 
+    Not needed anymore as this is declared in ../Common/Visualizer.cs
+     public void OnValidate(){} 
+    */
 
 
-        RenderParams rp = new RenderParams(){
-            matProps = mpb,
-            material = mat,
-            worldBounds = bounds,
-        };
-        Graphics.RenderMeshPrimitives(rp, mesh, 0, resolution * resolution);
+    protected override void UpdateViz(JobHandle shapeGenJob){
+        jobs = new HashGen(){
+            hashes = hashes,
+            coords = coords,
+            hash = SmallXXHashVectorized.Seed(seed),
+            domainTransform = domain.Matrix,
+        }.ScheduleParallel(hashes.Length,resolution, shapeGenJob); // each batch will do one row
+
+        jobs.Complete();
+        // uint32 = 4 bytes, uint4 = 4 * sizeof(uint32)
+        // passed size is CURRENT expected size of the data type, not the one we are converting to.
+        gBufferHashes.SetData(hashes.Reinterpret<uint>(4*4));
     }
 }
 
