@@ -101,14 +101,14 @@ public static class ShapeGen {
             [invResolution * (i - resolution * y2 + 0.5f) - 0.5f][invResolution * ( floor(invResolution * i2 + 0.00001f) + 0.5f) - 0.5f]
             [invResolution * (i - resolution * y3 + 0.5f) - 0.5f][invResolution * ( floor(invResolution * i3 + 0.00001f) + 0.5f) - 0.5f]
             */
-			positions[i] = transpose(MathLib.TransformVectors(posTransform, float4x3(uv.c0, 0f, uv.c1)));
+			positions[i] = transpose(posTransform.TransformVectors(float4x3(uv.c0, 0f, uv.c1)));
             // Generates plane
             // Compute the local normal accounting for rotation of the game object transform
             normals[i] = NormalizeVectors(transpose(MathLib.TransformVectors(posTransform, float4x3(0f,1f,0f))));
             }else{
                 ShapeGen.PackedPointInfo ppi = default(S).GeneratePoints(i, resolution, invResolution);
-                positions[i] = transpose(MathLib.TransformVectors(posTransform, ppi.pos));
-                normals[i] = NormalizeVectors(transpose(MathLib.TransformVectors(normTransform, ppi.normals)));
+                positions[i] = transpose(posTransform.TransformVectors( ppi.pos));
+                normals[i] = NormalizeVectors(transpose(normTransform.TransformVectors( ppi.normals)));
             }
 		}
 
@@ -124,8 +124,8 @@ public static class ShapeGen {
 				resolution = resolution,
 				invResolution = 1f / resolution,
                 normals = normals,
-    			posTransform = float3x4(transform.c0.xyz, transform.c1.xyz, transform.c2.xyz, transform.c3.xyz),
-				normTransform = float3x4(tim.c0.xyz, tim.c1.xyz, tim.c2.xyz, tim.c3.xyz)
+    			posTransform = transform.TruncateTo3x4(),
+				normTransform = tim.TruncateTo3x4()
             }.ScheduleParallel(positions.Length, resolution, dependency);
 		}
 

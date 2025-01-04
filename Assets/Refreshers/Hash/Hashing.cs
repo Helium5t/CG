@@ -46,16 +46,6 @@ public class Hashing: Visualizer
         public SmallXXHashVectorized hash;
 
         public float3x4 domainTransform;
-        
-
-        private float4x3 TransformPositionVectorized(float3x4 transform, float4x3 positions) =>  float4x3(
-            // xx * x123 + xy * y123 + xz * z123 + xw (offset) 
-			transform.c0.x * positions.c0 + transform.c1.x * positions.c1 + transform.c2.x * positions.c2 + transform.c3.x,
-            // yx * x123 + yy * y123 + yz * z123 + yw (offset)
-			transform.c0.y * positions.c0 + transform.c1.y * positions.c1 + transform.c2.y * positions.c2 + transform.c3.y,
-            // zx * x123 + zy * y123 + zz * z123 + zw (offset)
-			transform.c0.z * positions.c0 + transform.c1.z * positions.c1 + transform.c2.z * positions.c2 + transform.c3.z
-		);
 
 		public void Execute(int i) {
             /* previous planar point generation , now positions are offered by the previous burst code
@@ -64,7 +54,8 @@ public class Hashing: Visualizer
 			float uf = invResolution * (i - resolution * vf + 0.5f) - 0.5f; // column = ((index % rowSize) + 0.5) / rowSize ) - 0.5 = -0.5,....., 0.5 => [-0.5,0.5]
 			vf = invResolution * (vf + 0.5f) - 0.5f; // [-0.5,-0.5]
             */
-            float4x3 p = TransformPositionVectorized(domainTransform,  transpose(coords[i]));
+            float4x3 p = domainTransform.TransformVectors(transpose(coords[i]));
+            // Previously TransformPositionVectorized(domainTransform,  transpose(coords[i]));
 
 			int4 u = (int4)floor(p.c0);
 			int4 v = (int4)floor(p.c1);
