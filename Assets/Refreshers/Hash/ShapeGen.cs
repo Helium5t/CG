@@ -59,12 +59,6 @@ public static class ShapeGen {
 			transform.c0.z * positions.c0 + transform.c1.z * positions.c1 + transform.c2.z * positions.c2 + transform.c3.z
 		);
 
-        // From the tutorial for both UV and normals (w is always 1)
-        public static float4x3 TransformVectors (float3x4 trs, float4x3 p, float w = 1f) => float4x3(
-			trs.c0.x * p.c0 + trs.c1.x * p.c1 + trs.c2.x * p.c2 + trs.c3.x * w,
-			trs.c0.y * p.c0 + trs.c1.y * p.c1 + trs.c2.y * p.c2 + trs.c3.y * w,
-			trs.c0.z * p.c0 + trs.c1.z * p.c1 + trs.c2.z * p.c2 + trs.c3.z * w
-		);
 
         // Contains a set of 4 points and 4 normals. (for vectorization purposes)
         public struct PackedPointInfo {
@@ -107,14 +101,14 @@ public static class ShapeGen {
             [invResolution * (i - resolution * y2 + 0.5f) - 0.5f][invResolution * ( floor(invResolution * i2 + 0.00001f) + 0.5f) - 0.5f]
             [invResolution * (i - resolution * y3 + 0.5f) - 0.5f][invResolution * ( floor(invResolution * i3 + 0.00001f) + 0.5f) - 0.5f]
             */
-			positions[i] = transpose(TransformVectors(posTransform, float4x3(uv.c0, 0f, uv.c1)));
+			positions[i] = transpose(MathLib.TransformVectors(posTransform, float4x3(uv.c0, 0f, uv.c1)));
             // Generates plane
             // Compute the local normal accounting for rotation of the game object transform
-            normals[i] = NormalizeVectors(transpose(TransformVectors(posTransform, float4x3(0f,1f,0f))));
+            normals[i] = NormalizeVectors(transpose(MathLib.TransformVectors(posTransform, float4x3(0f,1f,0f))));
             }else{
                 ShapeGen.PackedPointInfo ppi = default(S).GeneratePoints(i, resolution, invResolution);
-                positions[i] = transpose(TransformVectors(posTransform, ppi.pos));
-                normals[i] = NormalizeVectors(transpose(TransformVectors(normTransform, ppi.normals)));
+                positions[i] = transpose(MathLib.TransformVectors(posTransform, ppi.pos));
+                normals[i] = NormalizeVectors(transpose(MathLib.TransformVectors(normTransform, ppi.normals)));
             }
 		}
 
