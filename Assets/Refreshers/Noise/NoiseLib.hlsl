@@ -27,7 +27,7 @@ void ConfigureProcedural(){
 		unity_ObjectToWorld = 0.0;
         unity_ObjectToWorld._m03_m13_m23_m33 = float4(coord, 1.0);
 
-        unity_ObjectToWorld._m03_m13_m23 +=  (_ResolutionInfo.z * _Noise[unity_InstanceID]) * _Normals[unity_InstanceID];
+        unity_ObjectToWorld._m03_m13_m23 +=  (_ResolutionInfo.z * _Noises[unity_InstanceID]) * _Normals[unity_InstanceID];
         // scale by 1/resolution = square size
 		unity_ObjectToWorld._m00_m11_m22 = _ResolutionInfo.y;
     #endif 

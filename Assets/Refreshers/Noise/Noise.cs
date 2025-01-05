@@ -5,6 +5,8 @@ using Unity.Mathematics;
 using UnityEngine;
 using Unity.Jobs;
 
+using static NoiseGen;
+
 class Noise : Visualizer
 {
 
@@ -38,7 +40,8 @@ class Noise : Visualizer
 
     protected override void UpdateViz(JobHandle shapeGenJob)
     {
-        shapeGenJob.Complete();
+        NoiseGenJob<LatticeNoise1D>.ScheduleParallel(coords, noises, seed, resolution,domain, shapeGenJob ).Complete();
+        
         gBufferNoise.SetData(noises.Reinterpret<float>(4 * 4));
     }
 }
