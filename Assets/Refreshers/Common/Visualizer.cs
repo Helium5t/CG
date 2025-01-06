@@ -13,7 +13,6 @@ using Unity.Mathematics;
 using float4x4 = Unity.Mathematics.float4x4;
 using quaternion = Unity.Mathematics.quaternion;
 
-using Unity.Mathematics;
 using System;
 
 public abstract class Visualizer: MonoBehaviour
@@ -34,9 +33,10 @@ public abstract class Visualizer: MonoBehaviour
     protected MaterialPropertyBlock mpb;
 
     protected static int resInfoID = Shader.PropertyToID("_ResolutionInfo"),
-    coordsID = Shader.PropertyToID("_Coords"),
-    normsID = Shader.PropertyToID("_Normals"),
-    smoothID = Shader.PropertyToID("_Smoothness");
+                         coordsID = Shader.PropertyToID("_Coords"),
+                         normsID = Shader.PropertyToID("_Normals"),
+                         smoothID = Shader.PropertyToID("_Smoothness");
+
 	
     public enum Shape { Plane, Sphere, OctaSphere, Torus }
 
@@ -69,7 +69,6 @@ public abstract class Visualizer: MonoBehaviour
     protected abstract void UpdateViz(JobHandle shapeGenJob);
 
     public void OnEnable(){
-        isDirty = true;
         int length = (resolution * resolution/4) + (resolution & 1);
         /*
         We neeed compute buffers to also increase in size in steps of 4 because size between arrays needs to match. 
@@ -105,30 +104,42 @@ public abstract class Visualizer: MonoBehaviour
     }
 
     public void OnValidate(){
-        if (!enabled && gBufferCoords != null){
+        Debug.Log("OnValidate");
+        if (!enabled || gBufferCoords == null){
+            Debug.Log("Skipping either disabled or coords are null");
             return;
         }
         OnDisable();
         OnEnable();
+        isDirty = true;
     }
 
     protected Bounds bounds;
 
     public void Update(){
+        if (isDirty){
+            Debug.Log("isDirty");
+        }
+        if (transform.hasChanged){
+            Debug.Log("transformChanged");
+        }
         if (isDirty || transform.hasChanged){
+            Debug.Log("UpdateViz");
             bounds = new Bounds(  
 				transform.position,
 				float3(2f * cmax(abs(transform.lossyScale)) + displacement)
             );
-            isDirty = false;
-            transform.hasChanged = false;
             UpdateViz(shapeJobs[(int) shape](coords, normals, transform.localToWorldMatrix, resolution, default));
             // float32 = 4 bytes, float3 = 3 * sizeof(uint32), float3x4 = 4 * sizeof(float3)
             gBufferCoords.SetData(coords.Reinterpret<float3>(3 * 4 * 4));
             gBufferNormals.SetData(normals.Reinterpret<float3>(3 * 4 * 4));
+            if (isDirty){
+                isDirty = false;
+                // WaitForSeconds wfs = new WaitForSeconds(0.3f);
+                // while(wfs.)
+            }
+            transform.hasChanged = false;
         }
-
-
         RenderParams rp = new RenderParams(){
             matProps = mpb,
             material = mat,

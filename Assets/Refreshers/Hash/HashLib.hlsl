@@ -16,6 +16,7 @@
 
 // x = size of one side of the square = resolution
 // y = size of one square (one side) = 1/resolution
+// z = displacement/ resolution
 float4 _ResolutionInfo;
 
 

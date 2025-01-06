@@ -3,14 +3,13 @@ using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
-using Unity.Jobs;
 
 using static NoiseGen;
 
 class Noise : Visualizer
 {
 
-    static int noiseId = Shader.PropertyToID("_Noise");
+    static int noiseId = Shader.PropertyToID("_Noises");
 
     [SerializeField]
     int seed;
@@ -32,16 +31,38 @@ class Noise : Visualizer
     }
     protected override void DisableViz()
     {
-        noises.Dispose();
         gBufferNoise.Release();
+        noises.Dispose();
         gBufferNoise = null;
     }
 
 
     protected override void UpdateViz(JobHandle shapeGenJob)
     {
-        NoiseGenJob<LatticeNoise1D>.ScheduleParallel(coords, noises, seed, resolution,domain, shapeGenJob ).Complete();
-        
+        shapeGenJob.Complete();
+
+        // string log = "10 coords:";
+        // for (int i=0 ; i < 10 && i < coords.Length; i++){
+        //      log += "-" + coords[i].c0.ToString();
+        // }
+        // Debug.Log(log);
+
+        // string log = "domain:";
+        // log += domain.Matrix.ToString();
+        // Debug.Log(log);
+
+        NoiseGenJob<LatticeNoise1D>.ScheduleParallel(
+            coords,
+            noises,
+            seed,
+            resolution,
+            domain, 
+            shapeGenJob 
+        ).Complete();
+       
+        // Debug.Log("Setting noise!");
+        // log = "10 noises:";
+        // for (int i=0 ; i < 10 && i < noises.Length; i++){
         gBufferNoise.SetData(noises.Reinterpret<float>(4 * 4));
     }
 }

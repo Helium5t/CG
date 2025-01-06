@@ -13,7 +13,6 @@ using Unity.Mathematics;
 using float4x4 = Unity.Mathematics.float4x4;
 using quaternion = Unity.Mathematics.quaternion;
 
-using Unity.Mathematics;
 using System;
 
 public class Hashing: Visualizer

@@ -29,7 +29,7 @@ public static partial class NoiseGen {
 
 		public void Execute (int i) {
 			noise[i] = default(N).GenerateVectorizedNoise(
-				transform.TransformVectors(transpose(coords[i])), hashes);
+			transform.TransformVectors(transpose(coords[i])), hashes);
 		}
 
         public static JobHandle ScheduleParallel(NativeArray<float3x4> coords, NativeArray<float4> noise,int seed, int resolution,SpaceTRS transform, JobHandle dependency ) => 

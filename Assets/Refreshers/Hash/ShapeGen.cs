@@ -105,10 +105,11 @@ public static class ShapeGen {
             // Generates plane
             // Compute the local normal accounting for rotation of the game object transform
             normals[i] = NormalizeVectors(transpose(MathLib.TransformVectors(posTransform, float4x3(0f,1f,0f))));
-            }else{
+            }
+            else {
                 ShapeGen.PackedPointInfo ppi = default(S).GeneratePoints(i, resolution, invResolution);
                 positions[i] = transpose(posTransform.TransformVectors( ppi.pos));
-                normals[i] = NormalizeVectors(transpose(normTransform.TransformVectors( ppi.normals)));
+                normals[i] = NormalizeVectors(transpose(normTransform.TransformVectors( ppi.normals, 0f)));
             }
 		}
 
