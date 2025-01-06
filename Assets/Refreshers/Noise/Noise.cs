@@ -51,7 +51,7 @@ class Noise : Visualizer
         // log += domain.Matrix.ToString();
         // Debug.Log(log);
 
-        NoiseGenJob<LatticeNoise1D>.ScheduleParallel(
+        NoiseGenJob<LatticeNoise2D>.ScheduleParallel(
             coords,
             noises,
             seed,

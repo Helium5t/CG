@@ -104,9 +104,7 @@ public abstract class Visualizer: MonoBehaviour
     }
 
     public void OnValidate(){
-        Debug.Log("OnValidate");
         if (!enabled || gBufferCoords == null){
-            Debug.Log("Skipping either disabled or coords are null");
             return;
         }
         OnDisable();
@@ -117,14 +115,7 @@ public abstract class Visualizer: MonoBehaviour
     protected Bounds bounds;
 
     public void Update(){
-        if (isDirty){
-            Debug.Log("isDirty");
-        }
-        if (transform.hasChanged){
-            Debug.Log("transformChanged");
-        }
         if (isDirty || transform.hasChanged){
-            Debug.Log("UpdateViz");
             bounds = new Bounds(  
 				transform.position,
 				float3(2f * cmax(abs(transform.lossyScale)) + displacement)

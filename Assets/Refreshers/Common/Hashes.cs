@@ -49,6 +49,30 @@ public readonly struct SmallXXHashVectorized {
     (data << steps) | (data >> 32 - steps);
 
     public static SmallXXHashVectorized Seed (int4 seed) => (uint4)seed + primeE;
+
+
+    // mask the first byte[0 ,255]
+    public uint4 FirstByte => (uint4)this & 255;
+
+    // Return the first byte mapped to [0.0,1.0] range
+    public float4 MapATo01 => (float4) FirstByte*(1f/255f);
+
+    // mask the second byte[0 ,255]
+    public uint4 SecondByte => (uint4)this & 255;
+
+    // Return the second byte mapped to [0.0,1.0] range
+    public float4 MapBTo01 => (float4) SecondByte*(1f/255f);
+    // mask the third byte[0 ,255]
+    public uint4 ThirdByte => (uint4)this & 255;
+
+    // Return the third byte mapped to [0.0,1.0] range
+    public float4 MapCTo01 => (float4) ThirdByte*(1f/255f);
+
+    // mask the fourth byte[0 ,255]
+    public uint4 FourthByte => (uint4)this & 255;
+
+    // Return the fourth byte mapped to [0.0,1.0] range
+    public float4 MapDTo01 => (float4) FourthByte*(1f/255f);
 }
 
 
