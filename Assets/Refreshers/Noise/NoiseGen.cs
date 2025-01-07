@@ -17,6 +17,8 @@ public static partial class NoiseGen {
 	[BurstCompile(FloatPrecision.Standard, FloatMode.Fast, CompileSynchronously = true)]
 	public struct NoiseGenJob<N> : IJobFor where N : struct, INoiseGenerator {
 
+
+
 		[ReadOnly]
 		public NativeArray<float3x4> coords;
 
@@ -40,11 +42,5 @@ public static partial class NoiseGen {
                 transform = transform.Matrix
             }.ScheduleParallel(coords.Length,resolution, dependency);
         
-
-        // This delegate allows us to call a different schedule based on different noise generation we want. 
-        // For each noise type, we will have a ScheduleDelegate(...) => ScheduleParallel<NoiseType>(...)
-        public delegate JobHandle ScheduleDelegate(
-            NativeArray<float3x4> coords, NativeArray<float4> noise,int seed, int resolution, SmallXXHashVectorized hashes,SpaceTRS transform, JobHandle dependency 
-        );
     }
 }

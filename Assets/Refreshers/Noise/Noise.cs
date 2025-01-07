@@ -9,6 +9,12 @@ using static NoiseGen;
 class Noise : Visualizer
 {
 
+    public static ScheduleDelegate[] noiseGenerators = {
+        NoiseGenJob<LatticeNoise1D>.ScheduleParallel,
+        NoiseGenJob<LatticeNoise2D>.ScheduleParallel,
+        NoiseGenJob<LatticeNoise3D>.ScheduleParallel,
+    };
+
     static int noiseId = Shader.PropertyToID("_Noises");
 
     [SerializeField]
@@ -18,6 +24,16 @@ class Noise : Visualizer
     SpaceTRS domain = new SpaceTRS{
         scale = 8f
     };
+
+
+    enum NoiseType{
+        Lattice1D,
+        Lattice2D,
+        Lattice3D,
+    }
+
+    [SerializeField]
+    NoiseType noiseType  = NoiseType.Lattice1D;
 
     NativeArray<float4> noises;
 
@@ -51,7 +67,7 @@ class Noise : Visualizer
         // log += domain.Matrix.ToString();
         // Debug.Log(log);
 
-        NoiseGenJob<LatticeNoise2D>.ScheduleParallel(
+        noiseGenerators[(int)noiseType](
             coords,
             noises,
             seed,
@@ -65,4 +81,9 @@ class Noise : Visualizer
         // for (int i=0 ; i < 10 && i < noises.Length; i++){
         gBufferNoise.SetData(noises.Reinterpret<float>(4 * 4));
     }
+    // This delegate allows us to call a different schedule based on different noise generation we want. 
+    // For each noise type, we will have a ScheduleDelegate(...) => ScheduleParallel<NoiseType>(...)
+    public delegate JobHandle ScheduleDelegate(
+       NativeArray<float3x4> coords, NativeArray<float4> noise,int seed, int resolution,SpaceTRS transform, JobHandle dependency
+    );
 }
