@@ -1,2 +1,2 @@
-*.unity -diff
-*.mat -diff
+*.unity linguist-generated
+*.mat linguist-generated
