@@ -37,22 +37,21 @@ public static partial class NoiseGen {
 		};
 	}
 
-	public struct LatticeNoise1D<G> : INoiseGenerator where G: struct, IGradientEval {
+	public struct LatticeNoise1D : INoiseGenerator{
 
 		public float4 GenerateVectorizedNoise(float4x3 coords, SmallXXHashVectorized hash) {
-			LatticeValuesVectorized x = GenerateLatticeValues(coords.c0);// get all x (lattice is 1D)
+			LatticeValuesVectorized x = GenerateLatticeValues(coords.c0);// get all x coordinates
+								
 
-			var g = default(G); // Allow for different gradients
 			// Map coordinates to [-1,1] space
 			// hash the values, mask the first byte and then convert to float. [0.0,255.0]
 			// divide by value range [0.0, 255.0] => [0,0,1.0]
 			// interpolate between actual point and next value based on the fractional part of the x coordinate.
-			float4 finalPoint = lerp(
-				g.Evaluate(hash.Eat(x.p0),x.g0),
-				g.Evaluate(hash.Eat(x.p1), x.g1),
-				coords.c0 - x.t);
+			SmallXXHashVectorized hashX0 = hash.Eat(x.p0), hashX1 = hash.Eat(x.p1);  // Start off with hashing the X Space
+			float4 finalPoint = lerp(hashX0.MapATo01,hashX1.MapATo01,x.t);
 
-			return finalPoint;
+			// Ultimately double the value and reduce by 1 => [-1.0,1.0]
+			return finalPoint *2f - 1f;
 		}
 	}
 
