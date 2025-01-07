@@ -46,6 +46,8 @@ public static partial class NoiseGen {
             so we divide by that to normalize */
 			return (gx * x + gy * y) * (2f / 0.53528f); // generates points along a rotated square of side 1 and vertices in 0.5 from the hash, then uses x and y to scale the point along it.
         }
+        
+
 		public float4 Evaluate (SmallXXHashVectorized hash, float4 x, float4 y, float4 z) {
             // 3D version of 2D square generation, equivalent to octahedron sphere generation in ShapeGen.cs
             float4  gx = hash.MapATo01 * 2f - 1f, 
