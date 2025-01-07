@@ -265,7 +265,7 @@ MonoBehaviour:
   resolution: 50
   shape: 2
   instanceScale: 1
-  displacement: 29
+  displacement: 191
   seed: 0
   domain:
     translation:

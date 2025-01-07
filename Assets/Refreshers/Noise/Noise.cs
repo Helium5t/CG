@@ -13,6 +13,12 @@ class Noise : Visualizer
         NoiseGenJob<LatticeNoise1D>.ScheduleParallel,
         NoiseGenJob<LatticeNoise2D>.ScheduleParallel,
         NoiseGenJob<LatticeNoise3D>.ScheduleParallel,
+        NoiseGenJob<GradientNoise1D<FractionalGradient>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise2D<FractionalGradient>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise3D<FractionalGradient>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise1D<PerlinGradient>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise2D<PerlinGradient>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise3D<PerlinGradient>>.ScheduleParallel,
     };
 
     static int noiseId = Shader.PropertyToID("_Noises");
@@ -30,6 +36,12 @@ class Noise : Visualizer
         Lattice1D,
         Lattice2D,
         Lattice3D,
+        Gradient1D,
+        Gradient2D,
+        Gradient3D,
+        Perlin1D,
+        Perlin2D,
+        Perlin3D,
     }
 
     [SerializeField]
