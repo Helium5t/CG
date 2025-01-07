@@ -41,9 +41,21 @@ public static partial class NoiseGen {
             float4 gx = hash.MapATo01 * 2f - 1f;
 			float4 gy = 0.5f - abs(gx); // Extract y coordinate from single-dimension hash
 			gx -= floor(gx + 0.5f); // Extract x cooridnate from single dimension hash
-			return (gx * x + gy * y) * 2f; // generates points along a rotated square of side 1 and vertices in 0.5 from the hash, then uses x and y to scale the point along it.
+            /* Given a quirk of the custom smoothing,
+            with some gradient configuration we can reach a max value of 0.53528..,
+            so we divide by that to normalize */
+			return (gx * x + gy * y) * (2f / 0.53528f); // generates points along a rotated square of side 1 and vertices in 0.5 from the hash, then uses x and y to scale the point along it.
         }
-		public float4 Evaluate (SmallXXHashVectorized hash, float4 x, float4 y, float4 z)  => 0f;
+		public float4 Evaluate (SmallXXHashVectorized hash, float4 x, float4 y, float4 z) {
+            // 3D version of 2D square generation, equivalent to octahedron sphere generation in ShapeGen.cs
+            float4  gx = hash.MapATo01 * 2f - 1f, 
+                    gy = hash.MapDTo01 * 2f - 1f; // Use byte 0 and 3 of the hash as inputs
+			float4 gz = 1f - abs(gx) - abs(gy); 
+			float4 offset = max(-gz, 0f);
+			gx += select(-offset, offset, gx < 0f);
+			gy += select(-offset, offset, gy < 0f);
+			return (gx * x + gy * y + gz * z) * (1f / 0.56290f)/*Normalization based on max values of function*/;
+        }
     }
 
     
