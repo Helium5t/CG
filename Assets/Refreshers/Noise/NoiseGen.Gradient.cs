@@ -27,22 +27,26 @@ public static partial class NoiseGen {
     /// Evaluates gradient as simply the fractional part of the hash mapped to [-1,1]
     /// </summary>
     public struct FractionalGradient: IGradientEval{
-
-        /// <summary>
-        /// Map fractal part of hash: [0.0001,0.9999] to [-1,1]
-        /// </summary>
         public float4 Evaluate(SmallXXHashVectorized hash, float4 x )  => hash.MapATo01 * 2f -1f;
-
-        /// <summary>
-        /// Map fractal part of hash: [0.0001,0.9999] to [-1,1]
-        /// </summary>
 		public float4 Evaluate (SmallXXHashVectorized hash, float4 x, float4 y)  => hash.MapATo01 * 2f -1f;
-
-        /// <summary>
-        /// Map fractal part of hash: [0.0001,0.9999] to [-1,1]
-        /// </summary>
 		public float4 Evaluate (SmallXXHashVectorized hash, float4 x, float4 y, float4 z)  => hash.MapATo01 * 2f -1f;
     }
+
+    /// <summary>
+    /// Generated a value follwing Perlin noise from Hash and point gradient.
+    /// </summary>
+    public struct PerlinGradient: IGradientEval{
+        public float4 Evaluate(SmallXXHashVectorized hash, float4 x )  =>	(1f + hash.MapATo01) * select(-x, x, ((uint4)hash & 1 << 8/*avoids dependency on same byte */) == 0); // [0,2]
+		public float4 Evaluate (SmallXXHashVectorized hash, float4 x, float4 y) {
+            float4 gx = hash.MapATo01 * 2f - 1f;
+			float4 gy = 0.5f - abs(gx); // Extract y coordinate from single-dimension hash
+			gx -= floor(gx + 0.5f); // Extract x cooridnate from single dimension hash
+			return (gx * x + gy * y) * 2f; // generates points along a rotated square of side 1 and vertices in 0.5 from the hash, then uses x and y to scale the point along it.
+        }
+		public float4 Evaluate (SmallXXHashVectorized hash, float4 x, float4 y, float4 z)  => 0f;
+    }
+
+    
 
 	public struct GradientNoise1D<G> : INoiseGenerator where G: struct, IGradientEval {
 
