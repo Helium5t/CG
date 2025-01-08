@@ -24,7 +24,7 @@ class Noise : Visualizer
     static int noiseId = Shader.PropertyToID("_Noises");
 
     [SerializeField]
-    int seed;
+    GenSettings genSettings;
 
     [SerializeField]
     SpaceTRS domain = new SpaceTRS{
@@ -82,7 +82,7 @@ class Noise : Visualizer
         noiseGenerators[(int)noiseType](
             coords,
             noises,
-            seed,
+            genSettings, 
             resolution,
             domain, 
             shapeGenJob 
@@ -96,6 +96,6 @@ class Noise : Visualizer
     // This delegate allows us to call a different schedule based on different noise generation we want. 
     // For each noise type, we will have a ScheduleDelegate(...) => ScheduleParallel<NoiseType>(...)
     public delegate JobHandle ScheduleDelegate(
-       NativeArray<float3x4> coords, NativeArray<float4> noise,int seed, int resolution,SpaceTRS transform, JobHandle dependency
+       NativeArray<float3x4> coords, NativeArray<float4> noise,GenSettings settings, int resolution,SpaceTRS transform, JobHandle dependency
     );
 }
