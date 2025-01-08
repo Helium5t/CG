@@ -45,9 +45,9 @@ public static partial class NoiseGen {
                 );
                 maxAmplitude += amplitude;
                 // Increase frequency
-                f *= 2;
+                f *= genSettings.lacunarity;
                 // decrease amplitude
-                amplitude *= 0.5f;
+                amplitude *= genSettings.persistence;
             }
             // Divide by max amplitude to normalize the noise in [-1,1]
 			noise[i] = finalNoise/maxAmplitude;
