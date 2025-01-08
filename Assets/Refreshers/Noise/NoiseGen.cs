@@ -12,7 +12,7 @@ using static Unity.Mathematics.math;
 public static partial class NoiseGen {
 
 	public interface INoiseGenerator {
-		float4 GenerateVectorizedNoise (float4x3 positions, SmallXXHashVectorized hash);
+		float4 GenerateVectorizedNoise (float4x3 positions, SmallXXHashVectorized hash, int frequency);
 	}
 
 	[BurstCompile(FloatPrecision.Standard, FloatMode.Fast, CompileSynchronously = true)]
@@ -39,9 +39,9 @@ public static partial class NoiseGen {
             float amplitude = 1f, maxAmplitude = 0f;
             for (int o =0; o < genSettings.octaves; o++){
                 finalNoise += amplitude * default(N).GenerateVectorizedNoise(
-                    // Scale the coordinate up by the frequency to increase rate of change across same value space
-                    f* transformedCoords, 
-                    hashes + o // Modify hash with octave to have different seed.
+                    transformedCoords, 
+                    hashes + o, // Modify hash with octave to have different seed.
+                    f
                 );
                 maxAmplitude += amplitude;
                 // Increase frequency

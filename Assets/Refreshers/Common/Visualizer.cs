@@ -21,7 +21,7 @@ public abstract class Visualizer: MonoBehaviour
     protected Material mat;
     [SerializeField]
     protected Mesh mesh;
-    [SerializeField, Range(1,512)] 
+    [SerializeField, Range(1,700)] 
     protected int resolution;
 
     protected ComputeBuffer  gBufferCoords, gBufferNormals;
@@ -53,7 +53,7 @@ public abstract class Visualizer: MonoBehaviour
     [SerializeField, Range(0.1f, 10f)]
 	protected float instanceScale = 2f;
 
-    [SerializeField, Range(0.1f, 1000f)]
+    [SerializeField, Range(-1000f, 1000f)]
 	protected float displacement = 2f;
 
     // This shouldn't get modifed by implementations
@@ -118,7 +118,7 @@ public abstract class Visualizer: MonoBehaviour
         if (isDirty || transform.hasChanged){
             bounds = new Bounds(  
 				transform.position,
-				float3(2f * cmax(abs(transform.lossyScale)) + displacement)
+				float3(2f * cmax(abs(transform.lossyScale)) + abs(displacement))
             );
             UpdateViz(shapeJobs[(int) shape](coords, normals, transform.localToWorldMatrix, resolution, default));
             // float32 = 4 bytes, float3 = 3 * sizeof(uint32), float3x4 = 4 * sizeof(float3)
