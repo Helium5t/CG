@@ -9,22 +9,47 @@ using static NoiseGen;
 class Noise : Visualizer
 {
 
+    public bool tiling = false;
+
     public static ScheduleDelegate[] noiseGenerators = {
-        NoiseGenJob<LatticeNoise1D>.ScheduleParallel,
-        NoiseGenJob<LatticeNoise2D>.ScheduleParallel,
-        NoiseGenJob<LatticeNoise3D>.ScheduleParallel,
-        NoiseGenJob<GradientNoise1D<FractionalGradient>>.ScheduleParallel,
-        NoiseGenJob<GradientNoise2D<FractionalGradient>>.ScheduleParallel,
-        NoiseGenJob<GradientNoise3D<FractionalGradient>>.ScheduleParallel,
-        NoiseGenJob<GradientNoise1D<PerlinGradient>>.ScheduleParallel,
-        NoiseGenJob<GradientNoise2D<PerlinGradient>>.ScheduleParallel,
-        NoiseGenJob<GradientNoise3D<PerlinGradient>>.ScheduleParallel,
+        NoiseGenJob<LatticeNoise1D<OpenLattice>>.ScheduleParallel,
+        NoiseGenJob<LatticeNoise2D<OpenLattice>>.ScheduleParallel,
+        NoiseGenJob<LatticeNoise3D<OpenLattice>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise1D<OpenLattice,FractionalGradient>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise2D<OpenLattice,FractionalGradient>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise3D<OpenLattice,FractionalGradient>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise1D<OpenLattice,AbsoluteTurbulent<FractionalGradient>>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise2D<OpenLattice,AbsoluteTurbulent<FractionalGradient>>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise3D<OpenLattice,AbsoluteTurbulent<FractionalGradient>>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise1D<OpenLattice,PerlinGradient>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise2D<OpenLattice,PerlinGradient>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise3D<OpenLattice,PerlinGradient>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise1D<OpenLattice,AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise2D<OpenLattice,AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise3D<OpenLattice,AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
+    };
+    public static ScheduleDelegate[] tilingNoiseGenerators = {
+        NoiseGenJob<LatticeNoise1D<TilingLattice>>.ScheduleParallel,
+        NoiseGenJob<LatticeNoise2D<TilingLattice>>.ScheduleParallel,
+        NoiseGenJob<LatticeNoise3D<TilingLattice>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise1D<TilingLattice,FractionalGradient>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise2D<TilingLattice,FractionalGradient>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise3D<TilingLattice,FractionalGradient>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise1D<TilingLattice,AbsoluteTurbulent<FractionalGradient>>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise2D<TilingLattice,AbsoluteTurbulent<FractionalGradient>>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise3D<TilingLattice,AbsoluteTurbulent<FractionalGradient>>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise1D<TilingLattice,PerlinGradient>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise2D<TilingLattice,PerlinGradient>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise3D<TilingLattice,PerlinGradient>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise1D<TilingLattice,AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise2D<TilingLattice,AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
+        NoiseGenJob<GradientNoise3D<TilingLattice,AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
     };
 
     static int noiseId = Shader.PropertyToID("_Noises");
 
     [SerializeField]
-    int seed;
+    GenSettings genSettings;
 
     [SerializeField]
     SpaceTRS domain = new SpaceTRS{
@@ -39,9 +64,15 @@ class Noise : Visualizer
         Gradient1D,
         Gradient2D,
         Gradient3D,
+        TurbulentGradient1D,
+        TurbulentGradient2D,
+        TurbulentGradient3D,
         Perlin1D,
         Perlin2D,
         Perlin3D,
+        TurbulentPerlin1D,
+        TurbulentPerlin2D,
+        TurbulentPerlin3D,
     }
 
     [SerializeField]
@@ -78,15 +109,25 @@ class Noise : Visualizer
         // string log = "domain:";
         // log += domain.Matrix.ToString();
         // Debug.Log(log);
-
-        noiseGenerators[(int)noiseType](
-            coords,
-            noises,
-            seed,
-            resolution,
-            domain, 
-            shapeGenJob 
-        ).Complete();
+        if (tiling){
+            tilingNoiseGenerators[(int)noiseType](
+                coords,
+                noises,
+                genSettings, 
+                resolution,
+                domain, 
+                shapeGenJob 
+            ).Complete();
+        }else{
+            noiseGenerators[(int)noiseType](
+                coords,
+                noises,
+                genSettings, 
+                resolution,
+                domain, 
+                shapeGenJob 
+            ).Complete();
+        }
        
         // Debug.Log("Setting noise!");
         // log = "10 noises:";
@@ -96,6 +137,6 @@ class Noise : Visualizer
     // This delegate allows us to call a different schedule based on different noise generation we want. 
     // For each noise type, we will have a ScheduleDelegate(...) => ScheduleParallel<NoiseType>(...)
     public delegate JobHandle ScheduleDelegate(
-       NativeArray<float3x4> coords, NativeArray<float4> noise,int seed, int resolution,SpaceTRS transform, JobHandle dependency
+       NativeArray<float3x4> coords, NativeArray<float4> noise,GenSettings settings, int resolution,SpaceTRS transform, JobHandle dependency
     );
 }
