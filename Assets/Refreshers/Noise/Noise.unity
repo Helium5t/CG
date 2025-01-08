@@ -262,11 +262,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mat: {fileID: 2100000, guid: b0e33cfe583ed4d3999e973e6c83baf8, type: 2}
   mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
-  resolution: 50
+  resolution: 153
   shape: 2
   instanceScale: 1
-  displacement: 191
-  seed: 0
+  displacement: 0.1
+  genSettings:
+    seed: 0
+    frequency: 1
+    octaves: 3
   domain:
     translation:
       x: 0
@@ -280,7 +283,7 @@ MonoBehaviour:
       x: 8
       y: 8
       z: 8
-  noiseType: 0
+  noiseType: 8
 --- !u!1 &1601959135
 GameObject:
   m_ObjectHideFlags: 0

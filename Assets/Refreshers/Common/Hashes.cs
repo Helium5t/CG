@@ -21,6 +21,8 @@ public readonly struct SmallXXHashVectorized {
 	public SmallXXHashVectorized (uint4 seed) {
 		this.accumulator = seed + primeE;
 	}
+
+    /*         OPERATORS         */
     public static implicit operator SmallXXHashVectorized (uint4 accumulator) =>
 		new SmallXXHashVectorized(accumulator);
 
@@ -37,6 +39,11 @@ public readonly struct SmallXXHashVectorized {
 		avalanche ^= avalanche >> 16;
 		return avalanche;
     }
+
+    public static SmallXXHashVectorized operator + (SmallXXHashVectorized h, int v)=>
+        h.accumulator + (uint)v;
+
+    /*     END OPERATORS      */
 
     /// <summary>
     /// Updates the accumulator multiplying a prime with data and rotating the bits
@@ -90,6 +97,9 @@ public readonly struct SmallXXHash {
 	public SmallXXHash (uint seed) {
 		this.accumulator = seed + primeE;
 	}
+
+    /*        OPERATORS        */
+    
     public static implicit operator SmallXXHash (uint accumulator) =>
 		new SmallXXHash(accumulator);
 
@@ -106,6 +116,12 @@ public readonly struct SmallXXHash {
 		avalanche ^= avalanche >> 16;
 		return avalanche;
     }
+
+	public static implicit operator SmallXXHashVectorized (SmallXXHash hash) =>
+		new SmallXXHashVectorized(hash.accumulator);
+
+
+    ////   END OPERATORS   ////
 
     /// <summary>
     /// Updates the accumulator multiplying a prime with data and rotating the bits
@@ -127,8 +143,4 @@ public readonly struct SmallXXHash {
     (data << steps) | (data >> 32 - steps);
 
     public static SmallXXHash Seed (int seed) => (uint)seed + primeE;
-
-
-	public static implicit operator SmallXXHashVectorized (SmallXXHash hash) =>
-		new SmallXXHashVectorized(hash.accumulator);
 }

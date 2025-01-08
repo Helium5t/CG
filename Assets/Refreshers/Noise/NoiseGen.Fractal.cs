@@ -23,7 +23,7 @@ public static partial class NoiseGen {
         
 		public static GenSettings Default => new GenSettings {
             frequency = 4,
-
+            octaves = 1,
         };
     }
 }
