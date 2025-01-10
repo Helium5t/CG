@@ -27,7 +27,7 @@ public static partial class NoiseGen {
 	public struct LatticeNoise1D<T> : INoiseGenerator where T: struct, ILattice{
 
 		public float4 GenerateVectorizedNoise(float4x3 coords, SmallXXHashVectorized hash, int frequency) {
-			LatticeValuesVectorized x = default(T).GenerateLatticeValues(coords.c0, frequency);// get all x coordinates
+			LatticeValuesVectorized x = default(T).GenerateLatticePoint(coords.c0, frequency);// get all x coordinates
 								
 
 			// Map coordinates to [-1,1] space
@@ -45,8 +45,8 @@ public static partial class NoiseGen {
 	public struct LatticeNoise2D<T> : INoiseGenerator where T: struct, ILattice{
 
 		public float4 GenerateVectorizedNoise(float4x3 coords, SmallXXHashVectorized hash, int frequency) {
-			LatticeValuesVectorized x = default(T).GenerateLatticeValues(coords.c0,frequency),// get all x coordinates
-									z = default(T).GenerateLatticeValues(coords.c2, frequency);// get all z coordinates
+			LatticeValuesVectorized x = default(T).GenerateLatticePoint(coords.c0,frequency),// get all x coordinates
+									z = default(T).GenerateLatticePoint(coords.c2, frequency);// get all z coordinates
 
 			// Map coordinates to [-1,1] space
 			// hash the values, mask the first byte and then convert to float. [0.0,255.0]
@@ -66,9 +66,9 @@ public static partial class NoiseGen {
 	public struct LatticeNoise3D<T> : INoiseGenerator where T: struct, ILattice{
 
 		public float4 GenerateVectorizedNoise(float4x3 coords, SmallXXHashVectorized hash, int frequency) {
-			LatticeValuesVectorized x = default(T).GenerateLatticeValues(coords.c0, frequency),// get all x coordinates
-									y = default(T).GenerateLatticeValues(coords.c1, frequency),// get all y coordinates
-									z = default(T).GenerateLatticeValues(coords.c2, frequency);// get all z coordinates
+			LatticeValuesVectorized x = default(T).GenerateLatticePoint(coords.c0, frequency),// get all x coordinates
+									y = default(T).GenerateLatticePoint(coords.c1, frequency),// get all y coordinates
+									z = default(T).GenerateLatticePoint(coords.c2, frequency);// get all z coordinates
 
 			// Map coordinates to [-1,1] space
 			// hash the values, mask the first byte and then convert to float. [0.0,255.0]

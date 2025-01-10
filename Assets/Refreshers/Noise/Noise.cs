@@ -27,6 +27,9 @@ class Noise : Visualizer
         NoiseGenJob<GradientNoise1D<OpenLattice,AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<GradientNoise2D<OpenLattice,AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<GradientNoise3D<OpenLattice,AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
+        NoiseGenJob<Voronoi1D<OpenLattice>>.ScheduleParallel,
+        NoiseGenJob<Voronoi2D<OpenLattice>>.ScheduleParallel,
+        NoiseGenJob<Voronoi3D<OpenLattice>>.ScheduleParallel,
     };
     public static ScheduleDelegate[] tilingNoiseGenerators = {
         NoiseGenJob<LatticeNoise1D<TilingLattice>>.ScheduleParallel,
@@ -44,6 +47,9 @@ class Noise : Visualizer
         NoiseGenJob<GradientNoise1D<TilingLattice,AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<GradientNoise2D<TilingLattice,AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<GradientNoise3D<TilingLattice,AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
+        NoiseGenJob<Voronoi1D<TilingLattice>>.ScheduleParallel,
+        NoiseGenJob<Voronoi2D<TilingLattice>>.ScheduleParallel,
+        NoiseGenJob<Voronoi3D<TilingLattice>>.ScheduleParallel,
     };
 
     static int noiseId = Shader.PropertyToID("_Noises");
@@ -58,25 +64,20 @@ class Noise : Visualizer
 
 
     enum NoiseType{
-        Lattice1D,
-        Lattice2D,
-        Lattice3D,
-        Gradient1D,
-        Gradient2D,
-        Gradient3D,
-        TurbulentGradient1D,
-        TurbulentGradient2D,
-        TurbulentGradient3D,
-        Perlin1D,
-        Perlin2D,
-        Perlin3D,
-        TurbulentPerlin1D,
-        TurbulentPerlin2D,
-        TurbulentPerlin3D,
+        Lattice,
+        Gradient,
+        TurbulentGradient,
+        Perlin,
+        TurbulentPerlin,        
+        Voronoi,
+
     }
 
     [SerializeField]
-    NoiseType noiseType  = NoiseType.Lattice1D;
+    NoiseType noiseType  = NoiseType.Lattice;
+
+    [SerializeField, Range(1,3)]
+    int dimensions = 1;
 
     NativeArray<float4> noises;
 
@@ -100,6 +101,8 @@ class Noise : Visualizer
     {
         shapeGenJob.Complete();
 
+        int noiseIdx = ((int)noiseType*3) + dimensions-1;
+
         // string log = "10 coords:";
         // for (int i=0 ; i < 10 && i < coords.Length; i++){
         //      log += "-" + coords[i].c0.ToString();
@@ -110,7 +113,7 @@ class Noise : Visualizer
         // log += domain.Matrix.ToString();
         // Debug.Log(log);
         if (tiling){
-            tilingNoiseGenerators[(int)noiseType](
+            tilingNoiseGenerators[noiseIdx](
                 coords,
                 noises,
                 genSettings, 
@@ -119,7 +122,7 @@ class Noise : Visualizer
                 shapeGenJob 
             ).Complete();
         }else{
-            noiseGenerators[(int)noiseType](
+            noiseGenerators[noiseIdx](
                 coords,
                 noises,
                 genSettings, 
