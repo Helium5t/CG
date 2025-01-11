@@ -57,6 +57,16 @@ public readonly struct SmallXXHashVectorized {
 
     public static SmallXXHashVectorized Seed (int4 seed) => (uint4)seed + primeE;
 
+    /// <summary>
+    /// Shift generated number to the right rShift times and mask out the first count bits
+    /// </summary>
+    public uint4 GenerateBits(int bitCount, int rShift) => 
+        ((uint4) this >> rShift) & (uint)(1 << bitCount) -1;
+
+
+    public float4 GenerateBitsTo01(int bitCount, int rShift) => 
+        (float4) GenerateBits(bitCount, rShift) * (1f / ((1<<bitCount) -1));
+
 
     // mask the first byte[0 ,255]
     public uint4 FirstByte => (uint4)this & 255;
