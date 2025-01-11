@@ -1,4 +1,5 @@
 
+using System;
 using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
@@ -27,9 +28,24 @@ class Noise : Visualizer
         NoiseGenJob<GradientNoise1D<OpenLattice,AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<GradientNoise2D<OpenLattice,AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<GradientNoise3D<OpenLattice,AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
-        NoiseGenJob<Voronoi1D<OpenLattice>>.ScheduleParallel,
-        NoiseGenJob<Voronoi2D<OpenLattice>>.ScheduleParallel,
-        NoiseGenJob<Voronoi3D<OpenLattice>>.ScheduleParallel,
+        NoiseGenJob<Voronoi1D<OpenLattice, EuclideanDistance, F1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi2D<OpenLattice, EuclideanDistance, F1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi3D<OpenLattice, EuclideanDistance, F1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi1D<OpenLattice, EuclideanDistance, F2>>.ScheduleParallel,
+        NoiseGenJob<Voronoi2D<OpenLattice, EuclideanDistance, F2>>.ScheduleParallel,
+        NoiseGenJob<Voronoi3D<OpenLattice, EuclideanDistance, F2>>.ScheduleParallel,
+        NoiseGenJob<Voronoi1D<OpenLattice, EuclideanDistance, F2MinusF1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi2D<OpenLattice, EuclideanDistance, F2MinusF1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi3D<OpenLattice, EuclideanDistance, F2MinusF1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi1D<OpenLattice, ChessboardDistance, F1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi2D<OpenLattice, ChessboardDistance, F1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi3D<OpenLattice, ChessboardDistance, F1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi1D<OpenLattice, ChessboardDistance, F2>>.ScheduleParallel,
+        NoiseGenJob<Voronoi2D<OpenLattice, ChessboardDistance, F2>>.ScheduleParallel,
+        NoiseGenJob<Voronoi3D<OpenLattice, ChessboardDistance, F2>>.ScheduleParallel,
+        NoiseGenJob<Voronoi1D<OpenLattice, ChessboardDistance, F2MinusF1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi2D<OpenLattice, ChessboardDistance, F2MinusF1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi3D<OpenLattice, ChessboardDistance, F2MinusF1>>.ScheduleParallel,
     };
     public static ScheduleDelegate[] tilingNoiseGenerators = {
         NoiseGenJob<LatticeNoise1D<TilingLattice>>.ScheduleParallel,
@@ -47,9 +63,24 @@ class Noise : Visualizer
         NoiseGenJob<GradientNoise1D<TilingLattice,AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<GradientNoise2D<TilingLattice,AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<GradientNoise3D<TilingLattice,AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
-        NoiseGenJob<Voronoi1D<TilingLattice>>.ScheduleParallel,
-        NoiseGenJob<Voronoi2D<TilingLattice>>.ScheduleParallel,
-        NoiseGenJob<Voronoi3D<TilingLattice>>.ScheduleParallel,
+        NoiseGenJob<Voronoi1D<TilingLattice,EuclideanDistance, F1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi2D<TilingLattice,EuclideanDistance, F1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi3D<TilingLattice,EuclideanDistance, F1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi1D<TilingLattice,EuclideanDistance, F2>>.ScheduleParallel,
+        NoiseGenJob<Voronoi2D<TilingLattice,EuclideanDistance, F2>>.ScheduleParallel,
+        NoiseGenJob<Voronoi3D<TilingLattice,EuclideanDistance, F2>>.ScheduleParallel,
+        NoiseGenJob<Voronoi1D<TilingLattice,EuclideanDistance, F2MinusF1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi2D<TilingLattice,EuclideanDistance, F2MinusF1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi3D<TilingLattice,EuclideanDistance, F2MinusF1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi1D<TilingLattice,ChessboardDistance, F1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi2D<TilingLattice,ChessboardDistance, F1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi3D<TilingLattice,ChessboardDistance, F1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi1D<TilingLattice,ChessboardDistance, F2>>.ScheduleParallel,
+        NoiseGenJob<Voronoi2D<TilingLattice,ChessboardDistance, F2>>.ScheduleParallel,
+        NoiseGenJob<Voronoi3D<TilingLattice,ChessboardDistance, F2>>.ScheduleParallel,
+        NoiseGenJob<Voronoi1D<TilingLattice,ChessboardDistance, F2MinusF1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi2D<TilingLattice,ChessboardDistance, F2MinusF1>>.ScheduleParallel,
+        NoiseGenJob<Voronoi3D<TilingLattice,ChessboardDistance, F2MinusF1>>.ScheduleParallel,
     };
 
     static int noiseId = Shader.PropertyToID("_Noises");
@@ -68,10 +99,22 @@ class Noise : Visualizer
         Gradient,
         TurbulentGradient,
         Perlin,
-        TurbulentPerlin,        
-        Voronoi,
+        TurbulentPerlin, 
+        /// <summary>
+        /// Use shortest distance as noise value
+        /// </summary>
+        VoronoiWorleyF1,   
+        /// <summary>
+        /// Use second shortest distance as noise value
+        /// </summary>
+        VoronoiWorleyF2,   
+        VoronoiWorleyF2MinusF1,   
+        VoronoiChebyshevF1,   
+        VoronoiChebyshevF2,   
+        VoronoiChebyshevF2MinusF1,   
 
     }
+
 
     [SerializeField]
     NoiseType noiseType  = NoiseType.Lattice;
