@@ -11,14 +11,6 @@ using System;
 
 
 public static partial class NoiseGen {
-
-
-
-    public static Type WorleyNoise1DF1 = typeof(Voronoi1D<OpenLattice, EuclideanDistance, F1>);
-    public static Type WorleyNoise2DF1 = typeof(Voronoi1D<OpenLattice, EuclideanDistance, F1>);
-    public static Type WorleyNoise3DF1 = typeof(Voronoi1D<OpenLattice, EuclideanDistance, F1>);
-
-
     public interface IDistanceFunction {
         float4 GetDistance(float4 x);
         float4 GetDistance(float4 x,float4 y);
@@ -31,6 +23,30 @@ public static partial class NoiseGen {
 		float4x2 Finalize3D (float4x2 shortest);
     }
 
+    public struct ManhattanDistance : IDistanceFunction{
+        public float4 GetDistance(float4 x) => abs(x);
+        public float4 GetDistance(float4 x,float4 y) => abs(x) + abs(y);
+        public float4 GetDistance(float4 x,float4 y,float4 z) => abs(x) + abs(y) + abs(z);
+		public float4x2 Finalize1D (float4x2 shortest) =>shortest;
+		public float4x2 Finalize2D (float4x2 shortest)=> Clamp(shortest);//RestrictRange(shortest, 2f);
+        public float4x2 Finalize3D (float4x2 shortest)=> Clamp(shortest); //RestrictRange(shortest, 3f);
+
+        private float4x2 Clamp(float4x2 shortest){
+            return float4x2(
+                min(shortest.c0, 1f),
+                min(shortest.c1, 1f)
+            );
+        }
+        /// <summary>
+        /// Given we sum each dimension, we need to
+        /// scale the range based on the maximum value to keep a [0,1] range
+        /// </summary>
+        private float4x2 RestrictRange(float4x2 shortest, float range){
+            shortest.c0 /= range;
+            shortest.c1 /= range;
+            return shortest;
+        }
+    }
 
     /// <summary>
     /// When using Euclidean Distance, Voronoi noise is the same as Worley noise.
