@@ -78,7 +78,7 @@ public static partial class NoiseGen {
 	public struct GradientNoise1D<T,G> : INoiseGenerator where G: struct, IGradientEval where T: struct, ILattice {
 
 		public float4 GenerateVectorizedNoise(float4x3 coords, SmallXXHashVectorized hash, int frequency) {
-			LatticeValuesVectorized x = default(T).GenerateLatticeValues(coords.c0, frequency);// get all x (lattice is 1D)
+			LatticeValuesVectorized x = default(T).GenerateLatticePoint(coords.c0, frequency);// get all x (lattice is 1D)
 
 			var g = default(G); // Allow for different gradients
 			// Map coordinates to [-1,1] space
@@ -97,8 +97,8 @@ public static partial class NoiseGen {
 	public struct GradientNoise2D<T,G> : INoiseGenerator where G: struct, IGradientEval where T: struct, ILattice {
 
 		public float4 GenerateVectorizedNoise(float4x3 coords, SmallXXHashVectorized hash, int frequency) {
-			LatticeValuesVectorized x = default(T).GenerateLatticeValues(coords.c0, frequency),// get all x coordinates
-									z = default(T).GenerateLatticeValues(coords.c2, frequency);// get all z coordinates
+			LatticeValuesVectorized x = default(T).GenerateLatticePoint(coords.c0, frequency),// get all x coordinates
+									z = default(T).GenerateLatticePoint(coords.c2, frequency);// get all z coordinates
             var g = default(G);
 
 			// Map coordinates to [-1,1] space
@@ -126,9 +126,9 @@ public static partial class NoiseGen {
 	public struct GradientNoise3D<T,G> : INoiseGenerator where G: struct, IGradientEval where T: struct, ILattice {
 
 		public float4 GenerateVectorizedNoise(float4x3 coords, SmallXXHashVectorized hash, int frequency) {
-			LatticeValuesVectorized x = default(T).GenerateLatticeValues(coords.c0, frequency),// get all x coordinates
-									y = default(T).GenerateLatticeValues(coords.c1, frequency),// get all y coordinates
-									z = default(T).GenerateLatticeValues(coords.c2, frequency);// get all z coordinates
+			LatticeValuesVectorized x = default(T).GenerateLatticePoint(coords.c0, frequency),// get all x coordinates
+									y = default(T).GenerateLatticePoint(coords.c1, frequency),// get all y coordinates
+									z = default(T).GenerateLatticePoint(coords.c2, frequency);// get all z coordinates
 
             var g = default(G);
 			// Map coordinates to [-1,1] space
