@@ -1,4 +1,3 @@
-
 using System;
 using Unity.Collections;
 using Unity.Jobs;
@@ -28,6 +27,18 @@ class Noise : Visualizer
         NoiseGenJob<GradientNoise1D<OpenLattice, AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<GradientNoise2D<OpenLattice, AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<GradientNoise3D<OpenLattice, AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
+        NoiseGenJob<Simplex1D<FractionalGradient>>.ScheduleParallel,
+        NoiseGenJob<Simplex2D<FractionalGradient>>.ScheduleParallel,
+        NoiseGenJob<Simplex3D<FractionalGradient>>.ScheduleParallel,
+        NoiseGenJob<Simplex1D<AbsoluteTurbulent<FractionalGradient>>>.ScheduleParallel,
+        NoiseGenJob<Simplex2D<AbsoluteTurbulent<FractionalGradient>>>.ScheduleParallel,
+        NoiseGenJob<Simplex3D<AbsoluteTurbulent<FractionalGradient>>>.ScheduleParallel,
+        NoiseGenJob<Simplex1D<PerlinGradient>>.ScheduleParallel,
+        NoiseGenJob<Simplex2D<PerlinGradient>>.ScheduleParallel,
+        NoiseGenJob<Simplex3D<FractionalGradient>>.ScheduleParallel,
+        NoiseGenJob<Simplex1D<AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
+        NoiseGenJob<Simplex2D<AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
+        NoiseGenJob<Simplex3D<AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<Voronoi1D<OpenLattice, EuclideanDistance, F1>>.ScheduleParallel,
         NoiseGenJob<Voronoi2D<OpenLattice, EuclideanDistance, F1>>.ScheduleParallel,
         NoiseGenJob<Voronoi3D<OpenLattice, EuclideanDistance, F1>>.ScheduleParallel,
@@ -72,6 +83,18 @@ class Noise : Visualizer
         NoiseGenJob<GradientNoise1D<TilingLattice, AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<GradientNoise2D<TilingLattice, AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<GradientNoise3D<TilingLattice, AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
+        NoiseGenJob<Simplex1D<FractionalGradient>>.ScheduleParallel,
+        NoiseGenJob<Simplex2D<FractionalGradient>>.ScheduleParallel,
+        NoiseGenJob<Simplex3D<FractionalGradient>>.ScheduleParallel,
+        NoiseGenJob<Simplex1D<AbsoluteTurbulent<FractionalGradient>>>.ScheduleParallel,
+        NoiseGenJob<Simplex2D<AbsoluteTurbulent<FractionalGradient>>>.ScheduleParallel,
+        NoiseGenJob<Simplex3D<AbsoluteTurbulent<FractionalGradient>>>.ScheduleParallel,
+        NoiseGenJob<Simplex1D<PerlinGradient>>.ScheduleParallel,
+        NoiseGenJob<Simplex2D<PerlinGradient>>.ScheduleParallel,
+        NoiseGenJob<Simplex3D<FractionalGradient>>.ScheduleParallel,
+        NoiseGenJob<Simplex1D<AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
+        NoiseGenJob<Simplex2D<AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
+        NoiseGenJob<Simplex3D<AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<Voronoi1D<TilingLattice, EuclideanDistance, F1>>.ScheduleParallel,
         NoiseGenJob<Voronoi2D<TilingLattice, EuclideanDistance, F1>>.ScheduleParallel,
         NoiseGenJob<Voronoi3D<TilingLattice, EuclideanDistance, F1>>.ScheduleParallel,
@@ -117,6 +140,10 @@ class Noise : Visualizer
         TurbulentGradient,
         Perlin,
         TurbulentPerlin, 
+        Simplex,
+        TurbulentSimplex,
+        PerlinSimplex,
+        PerlinTurbulentSimplex,
         /// <summary>
         /// Use shortest distance as noise value
         /// </summary>

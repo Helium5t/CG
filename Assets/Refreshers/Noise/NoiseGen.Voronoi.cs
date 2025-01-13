@@ -129,14 +129,14 @@ public static partial class NoiseGen {
     /// generating a point inside the [0.01,0.99] range (fract of hash).
     /// Distance is computed as distance from that point
     /// </summary>
-    public struct Voronoi1D<L, D, F> : INoiseGenerator where L: struct, ILattice where F: struct, IDistanceSelectionFunction where D: struct, IDistanceFunction{
+    public struct Voronoi1D<L, D, F> : INoiseGenerator where L: struct, INoiseStructure where F: struct, IDistanceSelectionFunction where D: struct, IDistanceFunction{
         
 
 
         public float4 GenerateVectorizedNoise(float4x3 positions, SmallXXHashVectorized hash, int frequency)
         {
             D df = default(D);
-            LatticeValuesVectorized x = default(L).GenerateLatticePoint(positions.c0, frequency);
+            StructureValuesVectorized x = default(L).GenerateNoiseStructure(positions.c0, frequency);
             float4x2 shortestDist = 2f; // 2 is the max value as range value is [0,1] so max dist is double that.
             for (int pi = -1; pi <= 1; pi++ ){
 
@@ -146,15 +146,15 @@ public static partial class NoiseGen {
             return default(F).EvaluateDistances(df.Finalize1D(shortestDist));
         }
     }
-    public struct Voronoi2D<L, D, F> : INoiseGenerator where L: struct, ILattice where F: struct, IDistanceSelectionFunction where D:struct, IDistanceFunction{
+    public struct Voronoi2D<L, D, F> : INoiseGenerator where L: struct, INoiseStructure where F: struct, IDistanceSelectionFunction where D:struct, IDistanceFunction{
         
 
         public float4 GenerateVectorizedNoise(float4x3 positions, SmallXXHashVectorized hash, int frequency)
         {
             D df = default(D);
             L lat = default(L);
-            LatticeValuesVectorized x = lat.GenerateLatticePoint(positions.c0, frequency),
-                                    z = lat.GenerateLatticePoint(positions.c2, frequency);
+            StructureValuesVectorized x = lat.GenerateNoiseStructure(positions.c0, frequency),
+                                    z = lat.GenerateNoiseStructure(positions.c2, frequency);
             float4x2 shortestDist = 2f; // max distance can at most be 1 sqrt(2) * 2 given the lattice structure
             for (int xi = -1 ; xi <= 1; xi ++){
                 SmallXXHashVectorized hx = hash.Eat(lat.GetValidPoint(x.p0 + xi, frequency)); 
@@ -173,16 +173,16 @@ public static partial class NoiseGen {
             return default(F).EvaluateDistances(df.Finalize2D(shortestDist));
         }
     }
-    public struct Voronoi3D<L, D, F> : INoiseGenerator where L: struct, ILattice where F: struct, IDistanceSelectionFunction where D: struct,IDistanceFunction{
+    public struct Voronoi3D<L, D, F> : INoiseGenerator where L: struct, INoiseStructure where F: struct, IDistanceSelectionFunction where D: struct,IDistanceFunction{
         
 
         public float4 GenerateVectorizedNoise(float4x3 positions, SmallXXHashVectorized hash, int frequency)
         {   
             D df = default(D);
             L lat = default(L);
-            LatticeValuesVectorized x = lat.GenerateLatticePoint(positions.c0, frequency),
-                                    y = lat.GenerateLatticePoint(positions.c1, frequency),
-                                    z = lat.GenerateLatticePoint(positions.c2, frequency);
+            StructureValuesVectorized x = lat.GenerateNoiseStructure(positions.c0, frequency),
+                                    y = lat.GenerateNoiseStructure(positions.c1, frequency),
+                                    z = lat.GenerateNoiseStructure(positions.c2, frequency);
             float4x2 shortestDist = 2f; // max distance can at most be sqrt(3) * 2 given the lattice structure
             for (int xi = -1 ; xi <= 1; xi ++){
                 SmallXXHashVectorized hx = hash.Eat(lat.GetValidPoint(x.p0 + xi, frequency));
