@@ -12,9 +12,11 @@ class Noise : Visualizer
     public bool tiling = false;
 
     public static ScheduleDelegate[] noiseGenerators = {
+        // LATTICE NOISE
         NoiseGenJob<LatticeNoise1D<OpenLattice>>.ScheduleParallel,
         NoiseGenJob<LatticeNoise2D<OpenLattice>>.ScheduleParallel,
         NoiseGenJob<LatticeNoise3D<OpenLattice>>.ScheduleParallel,
+        // GRADIENT AND PERLIN NOISE
         NoiseGenJob<GradientNoise1D<OpenLattice, FractionalGradient>>.ScheduleParallel,
         NoiseGenJob<GradientNoise2D<OpenLattice, FractionalGradient>>.ScheduleParallel,
         NoiseGenJob<GradientNoise3D<OpenLattice, FractionalGradient>>.ScheduleParallel,
@@ -27,6 +29,7 @@ class Noise : Visualizer
         NoiseGenJob<GradientNoise1D<OpenLattice, AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<GradientNoise2D<OpenLattice, AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<GradientNoise3D<OpenLattice, AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
+        // SIMPLEX NOISE
         NoiseGenJob<Simplex1D<FractionalGradient>>.ScheduleParallel,
         NoiseGenJob<Simplex2D<FractionalGradient>>.ScheduleParallel,
         NoiseGenJob<Simplex3D<FractionalGradient>>.ScheduleParallel,
@@ -39,6 +42,13 @@ class Noise : Visualizer
         NoiseGenJob<Simplex1D<AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<Simplex2D<AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<Simplex3D<AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
+        NoiseGenJob<Simplex1D<SimplexGradient>>.ScheduleParallel,
+        NoiseGenJob<Simplex2D<SimplexGradient>>.ScheduleParallel,
+        NoiseGenJob<Simplex3D<SimplexGradient>>.ScheduleParallel,
+        NoiseGenJob<Simplex1D<AbsoluteTurbulent<SimplexGradient>>>.ScheduleParallel,
+        NoiseGenJob<Simplex2D<AbsoluteTurbulent<SimplexGradient>>>.ScheduleParallel,
+        NoiseGenJob<Simplex3D<AbsoluteTurbulent<SimplexGradient>>>.ScheduleParallel,
+        // VORONOI NOISE
         NoiseGenJob<Voronoi1D<OpenLattice, EuclideanDistance, F1>>.ScheduleParallel,
         NoiseGenJob<Voronoi2D<OpenLattice, EuclideanDistance, F1>>.ScheduleParallel,
         NoiseGenJob<Voronoi3D<OpenLattice, EuclideanDistance, F1>>.ScheduleParallel,
@@ -68,9 +78,11 @@ class Noise : Visualizer
         NoiseGenJob<Voronoi3D<OpenLattice, ManhattanDistance, F2MinusF1>>.ScheduleParallel,
     };
     public static ScheduleDelegate[] tilingNoiseGenerators = {
+        // LATTICE NOISE
         NoiseGenJob<LatticeNoise1D<TilingLattice>>.ScheduleParallel,
         NoiseGenJob<LatticeNoise2D<TilingLattice>>.ScheduleParallel,
         NoiseGenJob<LatticeNoise3D<TilingLattice>>.ScheduleParallel,
+        // GRADIENT AND PERLIN NOISE
         NoiseGenJob<GradientNoise1D<TilingLattice, FractionalGradient>>.ScheduleParallel,
         NoiseGenJob<GradientNoise2D<TilingLattice, FractionalGradient>>.ScheduleParallel,
         NoiseGenJob<GradientNoise3D<TilingLattice, FractionalGradient>>.ScheduleParallel,
@@ -83,6 +95,7 @@ class Noise : Visualizer
         NoiseGenJob<GradientNoise1D<TilingLattice, AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<GradientNoise2D<TilingLattice, AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<GradientNoise3D<TilingLattice, AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
+        // SIMPLEX NOISE
         NoiseGenJob<Simplex1D<FractionalGradient>>.ScheduleParallel,
         NoiseGenJob<Simplex2D<FractionalGradient>>.ScheduleParallel,
         NoiseGenJob<Simplex3D<FractionalGradient>>.ScheduleParallel,
@@ -95,6 +108,13 @@ class Noise : Visualizer
         NoiseGenJob<Simplex1D<AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<Simplex2D<AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
         NoiseGenJob<Simplex3D<AbsoluteTurbulent<PerlinGradient>>>.ScheduleParallel,
+        NoiseGenJob<Simplex1D<SimplexGradient>>.ScheduleParallel,
+        NoiseGenJob<Simplex2D<SimplexGradient>>.ScheduleParallel,
+        NoiseGenJob<Simplex3D<SimplexGradient>>.ScheduleParallel,
+        NoiseGenJob<Simplex1D<AbsoluteTurbulent<SimplexGradient>>>.ScheduleParallel,
+        NoiseGenJob<Simplex2D<AbsoluteTurbulent<SimplexGradient>>>.ScheduleParallel,
+        NoiseGenJob<Simplex3D<AbsoluteTurbulent<SimplexGradient>>>.ScheduleParallel,
+        // VORONOI NOISE
         NoiseGenJob<Voronoi1D<TilingLattice, EuclideanDistance, F1>>.ScheduleParallel,
         NoiseGenJob<Voronoi2D<TilingLattice, EuclideanDistance, F1>>.ScheduleParallel,
         NoiseGenJob<Voronoi3D<TilingLattice, EuclideanDistance, F1>>.ScheduleParallel,
@@ -140,10 +160,12 @@ class Noise : Visualizer
         TurbulentGradient,
         Perlin,
         TurbulentPerlin, 
-        Simplex,
-        TurbulentSimplex,
+        FractionalSimplex,
+        FractionalTurbulentSimplex,
         PerlinSimplex,
         PerlinTurbulentSimplex,
+        PureSimplex,
+        PureTurbulentSimplex,
         /// <summary>
         /// Use shortest distance as noise value
         /// </summary>

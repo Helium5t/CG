@@ -29,7 +29,7 @@ public static partial class NoiseGen {
     }
 
     public static class VectorGenerator {
-        public static float4 GenerateGradient(SmallXXHashVectorized hash, float4 x) =>
+        public static float4 GenerateLineGradient(SmallXXHashVectorized hash, float4 x) =>
             	(1f + hash.MapATo01) * select(-x, x, ((uint4)hash & 1 << 8/*avoids dependency on same byte */) == 0); // [0,2]
             
         /// <summary>
@@ -49,11 +49,11 @@ public static partial class NoiseGen {
         static float4x3 GenerateOctahedronCoordinates( SmallXXHashVectorized h) {
             float4x3 g;
             g.c0 = h.MapATo01 * 2f - 1f;
-            g.c1 = h.MapDTo01 * 2f - 1f;
+            g.c1 = h.MapBTo01 * 2f - 1f;
             g.c2 = 1f - abs(g.c0) - abs(g.c1); // Same approach as square to "fold" a onedmensional line
             float4 offset = max(-g.c2, 0f); 
             g.c0 +=  select(-offset, offset, g.c0 < 0f); // Fold again beyond the midpoint;
-            g.c1 += select(-offset, offset, g.c1 < 0f);
+            g.c1 +=  select(-offset, offset, g.c1 < 0f);
             return g;
         }
 
@@ -95,7 +95,7 @@ public static partial class NoiseGen {
     /// Generated a value follwing Perlin noise from Hash and point gradient.
     /// </summary>
     public struct PerlinGradient: IGradientEval{
-        public float4 Evaluate(SmallXXHashVectorized hash, float4 x )  =>	VectorGenerator.GenerateGradient(hash, x);
+        public float4 Evaluate(SmallXXHashVectorized hash, float4 x )  =>	VectorGenerator.GenerateLineGradient(hash, x);
 		public float4 Evaluate (SmallXXHashVectorized hash, float4 x, float4 y) {
             return VectorGenerator.GenerateSquareGradient(hash, x, y) * (2f / 0.53528f);
             /*
@@ -133,6 +133,17 @@ public static partial class NoiseGen {
     }
 
     
+    public struct SimplexGradient : IGradientEval{
+        public float4 Evaluate(SmallXXHashVectorized hash, float4 x)=>
+            VectorGenerator.GenerateLineGradient(hash, x)  * (32f / 27f); // scale to normalize.
+
+        public float4 Evaluate(SmallXXHashVectorized hash, float4 x, float4 y)=>
+            VectorGenerator.GenerateSquareGradient(hash, x, y)* (5.832f / sqrt(2f));
+        public float4 Evaluate(SmallXXHashVectorized hash, float4 x, float4 y, float4 z)=>
+            VectorGenerator.GenerateOctahedronGradient(hash, x,y,z)* (1024f / (125f * sqrt(3f)));
+
+        public float4 EvaluateFinal(float4 value) => value;
+    }
 
 	public struct GradientNoise1D<T,G> : INoiseGenerator where G: struct, IGradientEval where T: struct, INoiseStructure {
 
