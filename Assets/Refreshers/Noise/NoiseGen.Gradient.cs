@@ -138,9 +138,9 @@ public static partial class NoiseGen {
             VectorGenerator.GenerateLineGradient(hash, x)  * (32f / 27f); // scale to normalize.
 
         public float4 Evaluate(SmallXXHashVectorized hash, float4 x, float4 y)=>
-            VectorGenerator.GenerateSquareGradient(hash, x, y)* (5.832f / sqrt(2f));
+            VectorGenerator.GenerateCircleGradient(hash, x, y)* (5.832f / sqrt(2f));
         public float4 Evaluate(SmallXXHashVectorized hash, float4 x, float4 y, float4 z)=>
-            VectorGenerator.GenerateOctahedronGradient(hash, x,y,z)* (1024f / (125f * sqrt(3f)));
+            VectorGenerator.GenerateSphereGradient(hash, x,y,z)* (1024f / (125f * sqrt(3f)));
 
         public float4 EvaluateFinal(float4 value) => value;
     }

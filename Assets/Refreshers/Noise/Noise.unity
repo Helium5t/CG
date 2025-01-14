@@ -269,7 +269,7 @@ MonoBehaviour:
   tiling: 0
   genSettings:
     seed: 0
-    frequency: 3
+    frequency: 4
     octaves: 1
     lacunarity: 2
     persistence: 0.5
@@ -283,11 +283,11 @@ MonoBehaviour:
       y: 0
       z: 0
     scale:
-      x: 2
-      y: 2
-      z: 2
-  noiseType: 5
-  dimensions: 2
+      x: 8
+      y: 8
+      z: 8
+  noiseType: 9
+  dimensions: 3
 --- !u!1 &1601959135
 GameObject:
   m_ObjectHideFlags: 0
