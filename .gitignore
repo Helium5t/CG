@@ -1,3 +1,9 @@
+
+# COMPLETED PROJECTS, SO WE CAN KEEP THEM IN REPO AND DELETE THEM LOCALLY # 
+/[Aa]ssets/[Rr]efreshers/[Gg]raph/*
+/[Aa]ssets/[Rr]efreshers/[Hh]ash/*
+/[Aa]ssets/[Rr]efreshers/[Nn]oise/*
+
 ########## ADDED BY HELIUM5T ##########
 # Makes the repo only code focused, ignores the rest. (Also imports, so beware!)
 /[Pp]ackages/
