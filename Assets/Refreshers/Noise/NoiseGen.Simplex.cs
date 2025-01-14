@@ -1,5 +1,5 @@
 using Unity.Mathematics;
-
+using UnityEngine.Rendering;
 using static Unity.Mathematics.math;
 
 public static partial class NoiseGen {
@@ -64,13 +64,13 @@ public static partial class NoiseGen {
             int4
                 xC = select(x0, x1, inLowerTriangle),
                 zC = select(z1, z0, inLowerTriangle); // Choose x and z based on the side of the triangle (so fract(p))
-            SmallXXHashVectorized 
-                h0 = hash.Eat(x0), 
+            SmallXXHashVectorized
+                h0 = hash.Eat(x0),
                 h1 = hash.Eat(x1),
                 hC = SmallXXHashVectorized.Select(h0, h1, inLowerTriangle);
-            
+
             // Sum over all kernels computed with respct to the 4 different lattice points;
-            float4 noise = 
+            float4 noise =
                     Kernel(h0.Eat(z0), x0, z0, coords) +
                     Kernel(h1.Eat(z1), x1, z1, coords) +
                     Kernel(h0.Eat(z1), x0, z1, coords) +
@@ -104,8 +104,70 @@ public static partial class NoiseGen {
 	}
 
 	public struct Simplex3D<G> : INoiseGenerator where G : struct, IGradientEval {
-		public float4 GenerateVectorizedNoise (float4x3 positions, SmallXXHashVectorized hash, int frequency) {
-			return default(G).EvaluateFinal(0f);
+        /// <summary>
+        /// We collapse the lattice of cubes into a lattice of isorombohedrons.
+        /// </summary>
+		public float4 GenerateVectorizedNoise (float4x3 coords, SmallXXHashVectorized hash, int frequency) {
+            coords *= frequency * 0.6f; // just to have a comparbale scale.
+
+            // k = 1/3 to go from simplex to euclidean.
+            float4 skewFactor = (coords.c0 + coords.c1 + coords.c2) * (1f/3f);
+            float4 
+                sx =  coords.c0 + skewFactor,
+                sy =  coords.c1 + skewFactor,
+                sz =  coords.c2 + skewFactor;
+            
+            int4 
+                x0 = (int4) floor(sx), x1 = x0 + 1,
+                y0 = (int4) floor(sy), y1 = y0 + 1,
+                z0 = (int4) floor(sz), z1 = z0 + 1;
+            
+            bool4 // the cube is partitioned in 2 dodecahedron per face => 12 choices
+                YlowerX = sx - x0 > sy - y0,
+                ZlowerX = sx - x0 > sz - z0,
+                ZlowerY = sy - y0 > sz - z0;
+            
+            bool4  // Find dodecahedron section
+                xA = YlowerX & ZlowerX, 
+				xB = YlowerX | (ZlowerX & ZlowerY), 
+				yA = !YlowerX & ZlowerY,
+				yB = !YlowerX | (ZlowerX & ZlowerY),
+				zA = (YlowerX & !ZlowerX) | (!YlowerX & !ZlowerY),
+				zB = !(ZlowerX & ZlowerY);
+            
+            int4  // select dodecahedron coordinates for lattice
+				xCA = select(x0, x1, xA), 
+				xCB = select(x0, x1, xB), 
+				yCA = select(y0, y1, yA), 
+				yCB = select(y0, y1, yB), 
+				zCA = select(z0, z1, zA), 
+				zCB = select(z0, z1, zB);
+
+
+            
+            SmallXXHashVectorized h0 = hash.Eat(x0), h1 = hash.Eat(x1),
+                hA = SmallXXHashVectorized.Select(h0,h1,xA),
+                hB = SmallXXHashVectorized.Select(h0,h1, xB);
+
+            return default(G).EvaluateFinal(
+                Kernel(h0.Eat(y0).Eat(z0), x0, y0, z0, coords)+
+                Kernel(h1.Eat(y1).Eat(z1), x1, y1, z1, coords)+
+                Kernel(hA.Eat(yCA).Eat(zCA), xCA, yCA, zCA, coords) +
+				Kernel(hB.Eat(yCB).Eat(zCB), xCB, yCB, zCB, coords)
+            );
 		}
+
+        public float4 Kernel(SmallXXHashVectorized h, float4 latticePx, float4 latticePy, float4 latticePz, float4x3 coords){
+            // k = 1/6 to go from euclidean to simplex space.
+            float4 skewFactor = (latticePx + latticePy + latticePz) * (1f/6f); 
+            float4
+                dx = coords.c0 - latticePx + skewFactor,
+                dy = coords.c1 - latticePy + skewFactor,
+                dz = coords.c2 - latticePz + skewFactor;
+            
+            float4 g = 0.5f - dx*dx - dy*dy - dz*dz;
+            float4 f = 8 * g * g * g;
+            return max(0f, f) * default(G).Evaluate(h, dx, dy, dz);
+        }
 	}
 }
