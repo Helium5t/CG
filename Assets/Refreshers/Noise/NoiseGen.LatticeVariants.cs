@@ -4,8 +4,11 @@ using static Unity.Mathematics.math;
 
 public static partial class NoiseGen {
 
-    public interface ILattice{
-        LatticeValuesVectorized GenerateLatticePoint(float4 coordinates, int frequency);
+    public interface INoiseStructure{
+        /// <summary>
+        /// Generate the structure values on which to base the noise.
+        /// </summary>
+        StructureValuesVectorized GenerateNoiseStructure(float4 coordinates, int frequency);
         
         /// <summary>
         /// Given a point it will return it's equivalent that is valid inside the lattice.
@@ -16,14 +19,14 @@ public static partial class NoiseGen {
     /// <summary>
     /// Generates lattice points based on an infinite lattice scaled by frequency
     /// </summary>
-    public struct OpenLattice : ILattice{
-        public LatticeValuesVectorized GenerateLatticePoint(float4 coordinates, int frequency){ // frequency to be able to generate a tiling noise over the frequency
+    public struct OpenLattice : INoiseStructure{
+        public StructureValuesVectorized GenerateNoiseStructure(float4 coordinates, int frequency){ // frequency to be able to generate a tiling noise over the frequency
             // Scale the coordinate up by the frequency to increase rate of change across same value space
             coordinates *= frequency; 
             // get integer part
             float4 points = floor(coordinates);
             int4 ip = (int4) points;
-            return new LatticeValuesVectorized{
+            return new StructureValuesVectorized{
                 p0 = ip,
                 p1 = ip+1,
                 t = customSmoothing(coordinates - points), // map linear 0-1 range to Hermite interpolation 0-1
@@ -39,14 +42,14 @@ public static partial class NoiseGen {
     /// <summary>
     /// Generates lattice points that tiles with space size = frequency.
     /// </summary>
-    public struct TilingLattice : ILattice{
-        public LatticeValuesVectorized GenerateLatticePoint(float4 coordinates, int frequency){ // frequency to be able to generate a tiling noise over the frequency
+    public struct TilingLattice : INoiseStructure{
+        public StructureValuesVectorized GenerateNoiseStructure(float4 coordinates, int frequency){ // frequency to be able to generate a tiling noise over the frequency
             // Scale the coordinate up by the frequency to increase rate of change across same value space
             coordinates *= frequency; 
             // get integer part
             float4 points = floor(coordinates);
             int4 ip = (int4) points;
-            LatticeValuesVectorized lvv =  new LatticeValuesVectorized{
+            StructureValuesVectorized lvv =  new StructureValuesVectorized{
                 p0 = ip,
                 t = customSmoothing(coordinates - points), // map linear 0-1 range to Hermite interpolation 0-1
                 g0 = coordinates - ip, // 0.01 to 0.99

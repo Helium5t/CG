@@ -17,17 +17,17 @@ public static partial class NoiseGen {
 	// The c2 continuity ensures that there wont' be major changes in value at the thresholds between one value and the next in the noise
 	private static float4 customSmoothing(float4 t) => t * t * t * (t * (t * 6f - 15f) + 10f);
 	
-	public struct LatticeValuesVectorized{
+	public struct StructureValuesVectorized{
 		public int4 p0, p1;
 		public float4 g0, g1; // To represent gradient with respect to each point.
 		public float4 t;
 	}
 
 
-	public struct LatticeNoise1D<T> : INoiseGenerator where T: struct, ILattice{
+	public struct LatticeNoise1D<T> : INoiseGenerator where T: struct, INoiseStructure{
 
 		public float4 GenerateVectorizedNoise(float4x3 coords, SmallXXHashVectorized hash, int frequency) {
-			LatticeValuesVectorized x = default(T).GenerateLatticePoint(coords.c0, frequency);// get all x coordinates
+			StructureValuesVectorized x = default(T).GenerateNoiseStructure(coords.c0, frequency);// get all x coordinates
 								
 
 			// Map coordinates to [-1,1] space
@@ -42,11 +42,11 @@ public static partial class NoiseGen {
 		}
 	}
 
-	public struct LatticeNoise2D<T> : INoiseGenerator where T: struct, ILattice{
+	public struct LatticeNoise2D<T> : INoiseGenerator where T: struct, INoiseStructure{
 
 		public float4 GenerateVectorizedNoise(float4x3 coords, SmallXXHashVectorized hash, int frequency) {
-			LatticeValuesVectorized x = default(T).GenerateLatticePoint(coords.c0,frequency),// get all x coordinates
-									z = default(T).GenerateLatticePoint(coords.c2, frequency);// get all z coordinates
+			StructureValuesVectorized x = default(T).GenerateNoiseStructure(coords.c0,frequency),// get all x coordinates
+									z = default(T).GenerateNoiseStructure(coords.c2, frequency);// get all z coordinates
 
 			// Map coordinates to [-1,1] space
 			// hash the values, mask the first byte and then convert to float. [0.0,255.0]
@@ -63,12 +63,12 @@ public static partial class NoiseGen {
 			return finalPoint *2f - 1f;
 		}
 	}
-	public struct LatticeNoise3D<T> : INoiseGenerator where T: struct, ILattice{
+	public struct LatticeNoise3D<T> : INoiseGenerator where T: struct, INoiseStructure{
 
 		public float4 GenerateVectorizedNoise(float4x3 coords, SmallXXHashVectorized hash, int frequency) {
-			LatticeValuesVectorized x = default(T).GenerateLatticePoint(coords.c0, frequency),// get all x coordinates
-									y = default(T).GenerateLatticePoint(coords.c1, frequency),// get all y coordinates
-									z = default(T).GenerateLatticePoint(coords.c2, frequency);// get all z coordinates
+			StructureValuesVectorized x = default(T).GenerateNoiseStructure(coords.c0, frequency),// get all x coordinates
+									y = default(T).GenerateNoiseStructure(coords.c1, frequency),// get all y coordinates
+									z = default(T).GenerateNoiseStructure(coords.c2, frequency);// get all z coordinates
 
 			// Map coordinates to [-1,1] space
 			// hash the values, mask the first byte and then convert to float. [0.0,255.0]

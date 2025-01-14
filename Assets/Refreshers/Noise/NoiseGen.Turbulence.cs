@@ -24,9 +24,9 @@ public static partial class NoiseGen {
             return default(G).Evaluate(hash, x,y,z);
         }
 
-        public float4 EvaluateAfterInterpolation(float4 value)
+        public float4 EvaluateFinal(float4 value)
         {
-           return abs(default(G).EvaluateAfterInterpolation(value));
+           return abs(default(G).EvaluateFinal(value));
         }
     }
 }

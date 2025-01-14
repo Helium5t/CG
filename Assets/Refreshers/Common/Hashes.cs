@@ -90,6 +90,9 @@ public readonly struct SmallXXHashVectorized {
 
     // Return the fourth byte mapped to [0.0,1.0] range
     public float4 MapDTo01 => (float4) FourthByte*(1f/255f);
+
+    public static SmallXXHashVectorized Select (SmallXXHashVectorized falseHash, SmallXXHashVectorized trueHash, bool4 c) =>
+		math.select(falseHash.accumulator,trueHash.accumulator, c);
 }
 
 
@@ -153,4 +156,5 @@ public readonly struct SmallXXHash {
     (data << steps) | (data >> 32 - steps);
 
     public static SmallXXHash Seed (int seed) => (uint)seed + primeE;
+
 }
