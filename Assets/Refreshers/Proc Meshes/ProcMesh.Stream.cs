@@ -47,7 +47,7 @@ namespace ProcMesh{
         NativeArray<StreamVertex> stream0;
 
         [NativeDisableContainerSafetyRestriction]
-        NativeArray<int3> indices;
+        NativeArray<utri16> indices;
 
         private static readonly int numOfVertexAttributes = 4;
         public void SetTriangle(int index, int3 triangleIndices)
@@ -84,7 +84,7 @@ namespace ProcMesh{
             data.SetVertexBufferParams(numOfVertices, vaArray);
             vaArray.Dispose();
 
-            data.SetIndexBufferParams(numOfIndices, IndexFormat.UInt32);
+            data.SetIndexBufferParams(numOfIndices, IndexFormat.UInt16);
             data.SetSubMesh(0,
                 new SubMeshDescriptor(
                     0, 
@@ -104,7 +104,7 @@ namespace ProcMesh{
             //  i+0 => i.x
             //  i+1 => i.y
             //  i+2 => i.z
-            indices = data.GetIndexData<int>().Reinterpret<int3>(4);
+            indices = data.GetIndexData<ushort>().Reinterpret<utri16>(4);
         }
 
         // Always force inlining of this call as it is going to be more optimized vs
@@ -121,6 +121,115 @@ namespace ProcMesh{
                 tangent  = v.tangent,
                 uv0 = v.uv0,
             };
+        }
+    }
+
+    public struct MultiStream : IMeshStream
+    {
+        /// <summary>
+        /// Positions
+        /// </summary>
+        [NativeDisableContainerSafetyRestriction]
+        NativeArray<float3> stream0;
+
+        /// <summary>
+        /// Normals
+        /// </summary>
+        [NativeDisableContainerSafetyRestriction]
+        NativeArray<float3> stream1;
+
+        /// <summary>
+        /// Tangents
+        /// </summary>
+        [NativeDisableContainerSafetyRestriction]
+        NativeArray<float4> stream2;
+
+        /// <summary>
+        /// First set of UVs (UV0)
+        /// </summary>
+        [NativeDisableContainerSafetyRestriction]
+        NativeArray<float2> stream3;
+
+        [NativeDisableContainerSafetyRestriction]
+        NativeArray<utri16> indices;
+
+        private static readonly int numOfVertexAttributes = 4;
+        public void SetTriangle(int index, int3 triangleIndices)
+        {
+            indices[index] = triangleIndices;
+        }
+
+        public void Setup(Mesh.MeshData data, int numOfVertices, int numOfIndices, Bounds b)
+        {
+            data.subMeshCount = 1;
+            NativeArray<VertexAttributeDescriptor> vaArray = new NativeArray<VertexAttributeDescriptor>(
+                numOfVertexAttributes, Allocator.Temp, NativeArrayOptions.UninitializedMemory
+            );
+            vaArray[0] = new VertexAttributeDescriptor(
+                attribute: VertexAttribute.Position,
+                format: VertexAttributeFormat.Float32,
+                dimension: 3,
+                stream: 0
+            );
+            vaArray[1] = new VertexAttributeDescriptor(
+                attribute: VertexAttribute.Normal,
+                format: VertexAttributeFormat.Float32,
+                dimension: 3,
+                stream: 1
+            );
+            vaArray[2] = new VertexAttributeDescriptor(
+                attribute: VertexAttribute.Tangent,
+                format: VertexAttributeFormat.Float32,
+                dimension: 4,
+                stream: 2
+            );
+            vaArray[3] = new VertexAttributeDescriptor(
+                attribute: VertexAttribute.TexCoord0,
+                format: VertexAttributeFormat.Float32,
+                dimension: 2,
+                stream: 3
+            );
+            data.SetVertexBufferParams(numOfVertices, vaArray);
+            vaArray.Dispose();
+
+            data.SetIndexBufferParams(numOfIndices, IndexFormat.UInt16);
+            data.SetSubMesh(0,
+                new SubMeshDescriptor(
+                    0, 
+                    numOfIndices, 
+                    MeshTopology.Triangles){
+                        bounds = b,
+                        vertexCount = numOfVertices,
+                },
+            // We need to disable index checks here because we first set the submesh and 
+            // we then fill the data in with vertex and index information. 
+            // Check CreateAndLaunch() in ProcMesh.Burst.cs 
+            // As for the bounds it's just optimization.
+                MeshUpdateFlags.DontRecalculateBounds | MeshUpdateFlags.DontValidateIndices
+                );
+            stream0 = data.GetVertexData<float3>();
+            stream1 = data.GetVertexData<float3>(1);
+            stream2 = data.GetVertexData<float4>(2);
+            stream3 = data.GetVertexData<float2>(3);
+            // reinterpret index data as int3 to facilitate setting a triangle by vectorizing the call.
+            //  i+0 => i.x
+            //  i+1 => i.y
+            //  i+2 => i.z
+            indices = data.GetIndexData<ushort>().Reinterpret<utri16>(2);
+        }
+
+        // Always force inlining of this call as it is going to be more optimized vs
+        // burst's automatic choice when we add conversions.
+        // Small methods are inlined automatically and those that are used only one are also inlined.
+        // Issue arises for code that is a bit more complex and is called often, like the case of this function
+        // if it had conversions. 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] 
+        public void SetVertexBuffer(int index, VertexInfo v)
+        {
+            stream0[index] = v.position;
+            stream1[index] = v.normal;
+            stream2[index] = v.tangent;
+            stream3[index] = v.uv0;
         }
     }
 }

@@ -23,7 +23,7 @@ public class MeshProcedural : MonoBehaviour {
 
         MeshData md = mdArray[0];
 
-        var jh = MeshJob<SquareGrid, SingleStream>.CreateAndLaunch(
+        var jh = MeshJob<SquareGrid, MultiStream>.CreateAndLaunch(
             generatedMesh, md, default
         );
 
