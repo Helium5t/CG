@@ -17,7 +17,7 @@ namespace ProcMesh {
         public void Execute(int index) => gen.Execute(index, stream);
 
         public static JobHandle CreateAndLaunch(
-            Mesh m, Mesh.MeshData md, JobHandle dep
+           int resolution,  Mesh m, Mesh.MeshData md, JobHandle dep
         ){
             MeshJob<G,S> job =  new MeshJob<G,S>();
             /*  the following section is not needed as it's default behaviour 
@@ -25,6 +25,7 @@ namespace ProcMesh {
             job.gen = default(G);
             job.stream = default(S);
             */
+            job.gen.resolution = resolution;
             m.bounds = job.gen.bounds;
             job.stream.Setup(md, job.gen.verticesCount, job.gen.indicesCount, job.gen.bounds);
             return job.ScheduleParallel(job.gen.jobLength, 1, dep);
