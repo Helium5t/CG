@@ -26,48 +26,58 @@ namespace ProcMesh{
 
         public int indicesCount => 6 * resolution * resolution;
 
-        public int jobLength => resolution * resolution;
+        public int jobLength => resolution;
 
         public int resolution { get; set; }
         
         public Bounds bounds => new Bounds(Vector3.zero, Vector3.one);
 
 
-        public void Execute<S>(int i, S stream) where S : struct, IMeshStream
+        // Each execute takes care of a row of quads from x=0 to x=1
+        public void Execute<S>(int z, S stream) where S : struct, IMeshStream
         {
-            // i in [0, resolution * resolution]
+            // z goes from 0 to resolution, so we can use that to "skip"
+            // and let the previous index generate the row up until 
+            // the end of the row.
+            int iVertStart = 4 * resolution * z;
+            int iIndexStart = 2 * z * resolution;
+
+
+            // optimization to leverage z never changing
+            float2 cz = float2(z, z+1f) / resolution - 0.5f;
+
+
+            // z in [0, resolution]
             // Get the lower left corner of the quad
-            // Coordinates will go from 0 to resolution.
-            // Each quad is size 1.
-            // X is going to be each row so i % resolution
-            // Y is going to be each column so i // resolution
-            int quadZ = i / resolution,         // [0, resolution]
-                quadX = i - resolution* quadZ; //  [0, resolution -1]
-        
+            // Coordinates will go 
+            // z = z
+            // x from 0 to resolution
+            for (int x = 0; x < resolution; x++){
+                int quadX = x, quadZ = z;
             // Keeps size fixed to 1 and centers plane in the center 
-            float4 coord = float4(quadX, quadX +1f,quadZ, quadZ + 1f) / resolution - 0.5f;
-            int iVertStart = 4*i;
+            float2 cx = float2(x, x+1f)/resolution - 0.5f;
             VertexInfo vi = new VertexInfo{
-                position = float3(coord.x, 0f, coord.z),
+                position = float3(cx.x, 0f, cz.x),
                 normal = float3(0f,1f,0f),
                 tangent = float4(1f,0f,0f,-1f)
             };
             stream.SetVertexBuffer(iVertStart, vi);
-            vi.position.x = coord.y;
+            vi.position.x = cx.y;
             // uv coordinates will always go from 0 to 1, so we 
             // have to divide by resolution again, in order to 
             // get the section of uv to read.
             // For now we repeat the uv sample to see each quad
             vi.uv0.x = 1f;
             stream.SetVertexBuffer(iVertStart + 1,vi);
-            vi.position.xz = coord.xw;
+            vi.position.x = cx.x;
+            vi.position.z = cz.y;
             vi.uv0.xy =  float2(0f,1f);
             stream.SetVertexBuffer(iVertStart + 2,vi);
-            vi.position.xz = coord.yw;
+            vi.position.x = cx.y;
+            vi.position.z = cz.y;
             vi.uv0.xy = 1f;
             stream.SetVertexBuffer(iVertStart + 3,vi);
             
-            int iIndexStart = 2 * i;
             stream.SetTriangle(
                 iIndexStart, 
                 iVertStart + int3(0,2,1)
@@ -76,6 +86,10 @@ namespace ProcMesh{
                 iIndexStart + 1, 
                 iVertStart + int3(1,2,3)
                 );
+            // Increase index starts for the next quad
+            iVertStart += 4;
+            iIndexStart += 2;
+            }
         }
 
     }
