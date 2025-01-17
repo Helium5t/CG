@@ -422,6 +422,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   resolution: 2
+  multiStreamPacking: 0
+  geometryGenerator: 1
 --- !u!1 &2101387544
 GameObject:
   m_ObjectHideFlags: 0
