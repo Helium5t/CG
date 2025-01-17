@@ -12,6 +12,7 @@ Shader "ProcMesh/RippleAnimShader"
         _Frequency("Frequency", Range(0,3)) = 0.3
         _Glossiness ("Smoothness", Range(0,1)) = 0.5
         _Metallic ("Metallic", Range(0,1)) = 0.0
+        _Animate ("Animate", Integer) = 1
     }
     SubShader
     {
@@ -34,6 +35,7 @@ Shader "ProcMesh/RippleAnimShader"
         half _Amplitude;
         half _Frequency;
         half _Period;
+        int _Animate;
 
         struct Input
         {
@@ -41,10 +43,15 @@ Shader "ProcMesh/RippleAnimShader"
         };
 
         void vert(inout appdata_full v){
+            float animate = step(0.5, _Animate); 
             float2 c = v.texcoord.xy - 0.5;
             float l = length(c);
             float f = 2.0 * PI * _Period * (l -  _Frequency * _Time.y);
-            v.vertex.xyz += v.normal * _Amplitude * cos(f);
+            v.vertex.xyz += animate * v.normal * _Amplitude * cos(f);
+            float2 d = (2.0 * PI * _Period * _Amplitude * -sin(f)/ max(l, 0.0001)) * c.xy;
+            v.tangent = (1.0-animate) * v.tangent +  float4(1.0, d.x, 0.0,1.0) * animate;
+            float3 vNormal = cross(float3(0.0, d.y, 1.0), v.tangent);            
+            v.normal = (1.0-animate) * v.normal + vNormal * animate;
         }
 
         half _Glossiness;
@@ -59,7 +66,7 @@ Shader "ProcMesh/RippleAnimShader"
         UNITY_INSTANCING_BUFFER_END(Props)
 
         void surf (Input IN, inout SurfaceOutputStandard o)
-        {
+        {   
             // Albedo comes from a texture tinted by color
             fixed4 c = tex2D (_MainTex, IN.uv_MainTex) * _Color;
             o.Albedo = c.rgb;
@@ -67,7 +74,7 @@ Shader "ProcMesh/RippleAnimShader"
             o.Metallic = _Metallic;
             o.Smoothness = _Glossiness;
             o.Alpha = c.a;
-            o.Normal = UnpackNormal(tex2D(_Normal, IN.uv_MainTex));
+            o.Normal =   UnpackNormal(tex2D(_Normal, IN.uv_MainTex));
         }
         ENDCG
     }
