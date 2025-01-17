@@ -56,9 +56,9 @@ public class MeshProcedural : MonoBehaviour {
 
         ScheduleMeshJobDelegate geometryGeneratorLauncher;
         if (multiStreamPacking){
-            geometryGeneratorLauncher =  singleStreamjobs[(int)geometryGenerator];
-        }else{
             geometryGeneratorLauncher =  multiStreamjobs[(int)geometryGenerator];
+        }else{
+            geometryGeneratorLauncher =  singleStreamjobs[(int)geometryGenerator];
         }
         JobHandle jh = geometryGeneratorLauncher(resolution, generatedMesh, md, default);
         jh.Complete();
