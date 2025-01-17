@@ -104,7 +104,7 @@ namespace ProcMesh{
             //  i+0 => i.x
             //  i+1 => i.y
             //  i+2 => i.z
-            indices = data.GetIndexData<ushort>().Reinterpret<utri16>(4);
+            indices = data.GetIndexData<ushort>().Reinterpret<utri16>(2);
         }
 
         // Always force inlining of this call as it is going to be more optimized vs

@@ -31,4 +31,6 @@ namespace ProcMesh {
             return job.ScheduleParallel(job.gen.jobLength, 1, dep);
         }
     }
+
+    public delegate JobHandle ScheduleMeshJobDelegate(int r, Mesh m, Mesh.MeshData md, JobHandle d);
 }
