@@ -19,6 +19,8 @@ public class MeshProcedural : MonoBehaviour {
         SquarePlane,
         OptimizedSquarePlane,
         TrianglePlane,
+        HexPlaneVertical, 
+        HexPlaneHorizontal, 
     }
 
     [SerializeField]
@@ -28,11 +30,15 @@ public class MeshProcedural : MonoBehaviour {
         MeshJob<SquarePlane, SingleStream>.CreateAndLaunch,
         MeshJob<OptimizedSquarePlane, SingleStream>.CreateAndLaunch,
         MeshJob<TrianglePlane, SingleStream>.CreateAndLaunch,
+        MeshJob<HexPlaneVertical, SingleStream>.CreateAndLaunch,
+        MeshJob<HexPlaneHorizontal, SingleStream>.CreateAndLaunch,
     };
     ScheduleMeshJobDelegate[] multiStreamjobs ={
         MeshJob<SquarePlane, MultiStream>.CreateAndLaunch,
         MeshJob<OptimizedSquarePlane, MultiStream>.CreateAndLaunch,
         MeshJob<TrianglePlane, MultiStream>.CreateAndLaunch,
+        MeshJob<HexPlaneVertical, MultiStream>.CreateAndLaunch,
+        MeshJob<HexPlaneHorizontal, MultiStream>.CreateAndLaunch,
     };
 
     public void OnValidate(){
