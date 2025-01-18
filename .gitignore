@@ -3,6 +3,7 @@
 /[Aa]ssets/[Rr]efreshers/[Gg]raph/*
 /[Aa]ssets/[Rr]efreshers/[Hh]ash/*
 /[Aa]ssets/[Rr]efreshers/[Nn]oise/*
+/[Tt]extMesh [Pp]ro/*
 
 ########## ADDED BY HELIUM5T ##########
 # Makes the repo only code focused, ignores the rest. (Also imports, so beware!)
