@@ -421,9 +421,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a3b6b9eeec744fc3beb67fb24116fbf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  resolution: 2
+  resolution: 3
   multiStreamPacking: 0
-  geometryGenerator: 1
+  geometryGenerator: 3
 --- !u!1 &2101387544
 GameObject:
   m_ObjectHideFlags: 0

@@ -13,6 +13,7 @@ Shader "ProcMesh/RippleAnimShader"
         _Glossiness ("Smoothness", Range(0,1)) = 0.5
         _Metallic ("Metallic", Range(0,1)) = 0.0
         _Animate ("Animate", Integer) = 1
+        _RippleCenter ("Ripple Center", Vector) = (0,0,0,0) 
     }
     SubShader
     {
@@ -36,6 +37,7 @@ Shader "ProcMesh/RippleAnimShader"
         half _Frequency;
         half _Period;
         int _Animate;
+        float2 _RippleCenter;
 
         struct Input
         {
@@ -44,7 +46,7 @@ Shader "ProcMesh/RippleAnimShader"
 
         void vert(inout appdata_full v){
             float animate = step(0.5, _Animate); 
-            float2 c = v.texcoord.xy - 0.5;
+            float2 c = v.vertex.xz - _RippleCenter.xy;
             float l = length(c);
             float f = 2.0 * PI * _Period * (l -  _Frequency * _Time.y);
             v.vertex.xyz += animate * v.normal * _Amplitude * cos(f);

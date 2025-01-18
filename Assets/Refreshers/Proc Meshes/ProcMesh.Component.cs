@@ -16,20 +16,29 @@ public class MeshProcedural : MonoBehaviour {
     public bool multiStreamPacking = false;
 
     enum GeometryGenerator{
-        SquareGrid,
-        OptimizedSquareGrid
+        SquarePlane,
+        OptimizedSquarePlane,
+        TrianglePlane,
+        HexPlaneVertical, 
+        HexPlaneHorizontal, 
     }
 
     [SerializeField]
-    GeometryGenerator geometryGenerator = GeometryGenerator.SquareGrid;
+    GeometryGenerator geometryGenerator = GeometryGenerator.SquarePlane;
 
     ScheduleMeshJobDelegate[] singleStreamjobs ={
-        MeshJob<SquareGrid, SingleStream>.CreateAndLaunch,
-        MeshJob<OptimizedSquareGrid, SingleStream>.CreateAndLaunch,
+        MeshJob<SquarePlane, SingleStream>.CreateAndLaunch,
+        MeshJob<OptimizedSquarePlane, SingleStream>.CreateAndLaunch,
+        MeshJob<TrianglePlane, SingleStream>.CreateAndLaunch,
+        MeshJob<HexPlaneVertical, SingleStream>.CreateAndLaunch,
+        MeshJob<HexPlaneHorizontal, SingleStream>.CreateAndLaunch,
     };
     ScheduleMeshJobDelegate[] multiStreamjobs ={
-        MeshJob<SquareGrid, MultiStream>.CreateAndLaunch,
-        MeshJob<OptimizedSquareGrid, MultiStream>.CreateAndLaunch,
+        MeshJob<SquarePlane, MultiStream>.CreateAndLaunch,
+        MeshJob<OptimizedSquarePlane, MultiStream>.CreateAndLaunch,
+        MeshJob<TrianglePlane, MultiStream>.CreateAndLaunch,
+        MeshJob<HexPlaneVertical, MultiStream>.CreateAndLaunch,
+        MeshJob<HexPlaneHorizontal, MultiStream>.CreateAndLaunch,
     };
 
     public void OnValidate(){
