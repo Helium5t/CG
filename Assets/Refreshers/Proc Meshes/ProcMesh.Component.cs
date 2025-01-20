@@ -53,7 +53,6 @@ public class MeshProcedural : MonoBehaviour {
         HexPlaneVertical, 
         HexPlaneHorizontal, 
         SphereFromSquarePlane,
-        BrokenSphere,
     }
 
 
@@ -67,7 +66,6 @@ public class MeshProcedural : MonoBehaviour {
         MeshJob<HexPlaneVertical, SingleStream>.CreateAndLaunch,
         MeshJob<HexPlaneHorizontal, SingleStream>.CreateAndLaunch,
         MeshJob<UVSphere, SingleStream>.CreateAndLaunch,
-        MeshJob<UVSphereB, SingleStream>.CreateAndLaunch,
     };
     ScheduleMeshJobDelegate[] multiStreamjobs ={
         MeshJob<SquarePlane, MultiStream>.CreateAndLaunch,
@@ -76,7 +74,6 @@ public class MeshProcedural : MonoBehaviour {
         MeshJob<HexPlaneVertical, MultiStream>.CreateAndLaunch,
         MeshJob<HexPlaneHorizontal, MultiStream>.CreateAndLaunch,
         MeshJob<UVSphere, MultiStream>.CreateAndLaunch,
-        MeshJob<UVSphereB, MultiStream>.CreateAndLaunch,
     };
 
     public void OnValidate(){
