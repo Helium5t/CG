@@ -457,7 +457,8 @@ namespace ProcMesh{
     /// </summary>
     public struct UVSphere : IMeshGenerator
     {
-        public int verticesCount => (latResolution+1) * (longResolution+1);
+        // The seam line does not generate poles => -2
+        public int verticesCount => (latResolution+1) * (longResolution+1)-2;
 
         public int indicesCount => 6 * latResolution * (longResolution-1/*Due to last row being triangles not quads*/);
 
@@ -482,8 +483,12 @@ namespace ProcMesh{
         // Each execute takes care of a row of quads from x=0 to x=1
         public void GenerateStrip<S>(int u, S stream) where S : struct, IMeshStream
         {
+            // The second vertical line connects to the seam (the previous and first line).
+            // It has no pole vertices, so we need to account that by going forward by one with
+            // the index 
+            int prevRowIdx = (u==1?0:-1)-longResolution;
             float u01 = (float)u/latResolution;
-            int vertIdx = (longResolution+1)*u,
+            int vertIdx = (longResolution+1)*u - 2,
                 triIdx = 2*(longResolution-1)*(u-1);
 
             VertexInfo vi = new VertexInfo{
@@ -491,8 +496,11 @@ namespace ProcMesh{
                 normal = float3(0f,-1f,0f),
                 tangent = float4(1f,0f,0f,1f)
             };
-            vi.tangent.x = cos(2f * PI * (u - 0.5f) / latResolution);
-			vi.tangent.z = sin(2f * PI * (u - 0.5f) / latResolution);
+            sincos(
+                2f * PI * (u-0.5f)/latResolution, 
+                out vi.tangent.z, 
+                out vi.tangent.x
+            );
             vi.tangent.w = -1f;
             // Loop unrolling so we can vectorize 
             // triangle and vertex generation together.
@@ -507,24 +515,30 @@ namespace ProcMesh{
             // Set triangles
             stream.SetTriangle(
                 triIdx,
-                vertIdx + int3(-1, -longResolution-1, 0)
+                vertIdx + int3(-1, prevRowIdx, 0)
             );
             triIdx++;
 
-            float3 circleCoords = float3(
-                sin(2f * PI * u01),
-                0f,
-                -cos(2f * PI * u01)  
+            float3 circleCoords = 0f;
+            sincos( 
+                2f * PI * u01,
+                out circleCoords.x,
+                out circleCoords.z
             );
             // Reset parameters for not-pole vertices
             vi.uv0.x = u01; 
-            vi.tangent = float4(-circleCoords.z,0f,circleCoords.x, 1f);
-
+            vi.tangent = float4(circleCoords.z,0f,circleCoords.x, 1f);
+            circleCoords.z *= -1f;
             for(int v=1; v< longResolution; v++, vertIdx++){
                 float v01 = (float)v/longResolution;
-                float s = sin(PI * v01);
+
+                sincos(
+                    PI - PI * v01, 
+                    out float s, 
+                    out float py
+                );
                 vi.position  = circleCoords * s;
-                vi.position.y = -cos(PI * v01);
+                vi.position.y = py;
                 vi.normal = normalize(vi.position);
                 vi.uv0.y = v01;
                 stream.SetVertexBuffer(vertIdx, vi);
@@ -533,11 +547,11 @@ namespace ProcMesh{
                 if (v >1){
                     stream.SetTriangle(
                         triIdx,
-                        vertIdx + int3(-1, -longResolution-1, 0)
+                        vertIdx + int3(-1, prevRowIdx, 0)
                     );
                     stream.SetTriangle(
                         triIdx+1,
-                        vertIdx + int3(-longResolution-2, -longResolution-1, -1)
+                        vertIdx + int3(prevRowIdx-1, prevRowIdx, -1)
                     );
                     triIdx +=2;
                 }
@@ -545,7 +559,7 @@ namespace ProcMesh{
             // Loop unrolling because we took out north pole
             stream.SetTriangle(
                 triIdx,
-                vertIdx + int3(-longResolution-2, 0, -1)
+                vertIdx + int3(prevRowIdx-1, 0, -1)
             );
         }
 
@@ -556,37 +570,25 @@ namespace ProcMesh{
         {
 
             VertexInfo vi = new VertexInfo{
-                position = float3(0f,-1f,0f),
-                normal = float3(0f,-1f,0f),
                 tangent = float4(1f,0f,0f,1f)
             };
-            vi.tangent.x = cos(2f * PI * 0.5f / latResolution);
-			vi.tangent.z = sin(2f * PI * 0.5f / latResolution);
-            vi.tangent.w = -1f;
-            
-            // Not 0 so we can have the shift in the UV and correct texture twisting.
-            vi.uv0.x = 0.5f/ latResolution;
-            // Set south pole vertex
-            stream.SetVertexBuffer(0, vi);
-
-            // Set north pole vertex
-            vi.position.y = vi.normal.y = vi.uv0.y = 1f;
-            stream.SetVertexBuffer(longResolution, vi);
-
             // Reset values for non-pole vertices
-            vi.uv0.x = 0f;
-            vi.position = 0f;
-            vi.tangent = float4(-1f, 0f, 0f, 1f);
             for(int v=1; v< longResolution; v++){
                 float v01 = (float)v/longResolution;
-                float s = sin(PI * v01);
+                sincos(
+                    // Starting from 180 and decreasing keeps the same sin and inverts cos values
+                    PI - PI * v01,
+                    out float s,
+                    out vi.position.y
+                );
                 vi.position.z  = -s;
-                vi.position.y = -cos(PI * v01);
+                // No need for next line due to PI - ....
+                // vi.position.y *= -1f;
                 vi.normal = normalize(vi.position);
                 vi.uv0.y = v01;
                 // when u =0, north and south pole will be v = 0 and v = longResolution
                 // so in this cycle v =[1..longRes) = vertIdx. No need for vertIdx
-                stream.SetVertexBuffer(v, vi);
+                stream.SetVertexBuffer(v-1, vi);
             }
         }
 

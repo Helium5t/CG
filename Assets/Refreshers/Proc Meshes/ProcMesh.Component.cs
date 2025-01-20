@@ -31,6 +31,13 @@ public class MeshProcedural : MonoBehaviour {
     DebugFlags activeGizmos = 0;
 
 
+    public enum MaterialMode { Flat, Ripple}
+    [Header("Geometry Parameters")]
+    [SerializeField]
+    MaterialMode choosenMat;
+
+    [SerializeField]
+    Material[] mats;
 
 
     [Header("Generation parameters")]
@@ -106,6 +113,8 @@ public class MeshProcedural : MonoBehaviour {
         }else if (tangents != null){
             tangents = null;
         }
+
+		GetComponent<MeshRenderer>().material = mats[(int)choosenMat];
     }
 
     void OnDrawGizmos(){
