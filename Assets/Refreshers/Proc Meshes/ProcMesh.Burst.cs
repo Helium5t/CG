@@ -14,7 +14,7 @@ namespace ProcMesh {
         G gen;
         [WriteOnly]
         S stream;
-        public void Execute(int index) => gen.GenerateStrip(index, stream);
+        public void Execute(int index) => gen.Execute(index, stream);
 
         public static JobHandle CreateAndLaunch(
            int resolution,  Mesh m, Mesh.MeshData md, JobHandle dep
