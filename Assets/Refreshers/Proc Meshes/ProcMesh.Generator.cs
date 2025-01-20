@@ -94,6 +94,7 @@ namespace ProcMesh{
         }
 
     }
+
     /// <summary>
     /// Optimized version of SquareGrid that generates a plane of quads.
     /// Vertices in the same position are only generated once. 
@@ -444,6 +445,113 @@ namespace ProcMesh{
                 // Increase index starts for the next quad
                 iVertStart += 7;
                 iIndexStart += 6;
+            }
+        }
+
+    }
+
+    public struct UVSphere : IMeshGenerator
+    {
+        public int verticesCount => (resolution+1) * (resolution+1);
+
+        public int indicesCount => 6 * resolution * resolution;
+
+        public int jobLength => resolution + 1;
+
+        public int resolution { get; set; }
+        
+        public Bounds bounds => new Bounds(Vector3.zero, Vector3.one);
+
+
+        // Each execute takes care of a row of quads from x=0 to x=1
+        public void Execute<S>(int u, S stream) where S : struct, IMeshStream
+        {
+            float u01 = (float)u/resolution;
+            int vertIdx = (resolution+1)*u,
+                triIdx = 2*resolution*(u-1);
+            VertexInfo vi = new VertexInfo{
+                position = float3(
+                   u01,0f,0f
+                ),
+                normal = float3(0f,0f,-1f),
+                tangent = float4(1f,0f,0f,-1f)
+            };
+            // Loop unrolling so we can vectorize 
+            // triangle and vertex generation together.
+            vi.uv0.x = u01;
+            stream.SetVertexBuffer(vertIdx, vi);
+            vertIdx++;
+            for(int v=1; v<= resolution; v++, vertIdx++, triIdx +=2){
+                float v01 = (float)v/resolution;
+                vi.position.y = v01;
+                vi.uv0.y = v01;
+                stream.SetVertexBuffer(vertIdx, vi);
+                if (u> 0){ // skip first row
+                stream.SetTriangle(
+                    triIdx,
+                    vertIdx + int3(-resolution-1,0,-1)
+                );
+                stream.SetTriangle(
+                    triIdx+1,
+                    vertIdx + int3(-resolution-2,-resolution-1,-1)
+                );
+                }
+            }
+        }
+
+    }
+
+    /// <summary>
+    /// Sphere starting from a square grid. Due to the wrapping of a constant size flat plane,
+    /// the point distribution will be uneven once wrapped.
+    /// </summary>
+    public struct UVSphereB : IMeshGenerator
+    {
+        public int verticesCount => (resolution+1) * (resolution+1);
+
+        public int indicesCount => 6 * resolution * resolution;
+
+        public int jobLength => resolution + 1;
+
+        public int resolution { get; set; }
+        
+        // Size of bound is 2 as geometry is computed on r=1 
+        public Bounds bounds => new Bounds(Vector3.zero, Vector3.one * 2f);
+
+
+        // Each execute takes care of a row of quads from x=0 to x=1
+        public void Execute<S>(int u, S stream) where S : struct, IMeshStream
+        {
+            float u01 = (float)u/resolution;
+            int vertIdx = (resolution+1)*u,
+                triIdx = 2*resolution*(u-1);
+            VertexInfo vi = new VertexInfo{
+                position = float3(
+                   u01, 0f, 0f
+                ),
+                normal = float3(0f,0f,-1f),
+                tangent = float4(1f,0f,0f,-1f)
+            };
+            // Loop unrolling so we can vectorize 
+            // triangle and vertex generation together.
+            vi.uv0.x = u01;
+            stream.SetVertexBuffer(vertIdx, vi);
+            vertIdx++;
+            for(int v=1; v<= resolution; v++, vertIdx++, triIdx +=2){
+                float v01 = (float)v/resolution;
+                vi.position.y = v01;
+                vi.uv0.y = v01;
+                stream.SetVertexBuffer(vertIdx, vi);
+                if (u> 0){ // skip first row
+                stream.SetTriangle(
+                    triIdx,
+                    vertIdx + int3(-1,-resolution-1,0)
+                );
+                stream.SetTriangle(
+                    triIdx+1,
+                    vertIdx + int3(-resolution-2,resolution-1,-1)
+                );
+                }
             }
         }
 
