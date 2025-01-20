@@ -18,7 +18,7 @@ namespace ProcMesh{
         /// Generate mesh info for index i and pack them using stream S
         /// The result will be inside the S.VertexInfo 
         /// </summary>
-        void Execute<S>(int i, S stream) where S: struct, IMeshStream;
+        void GenerateStrip<S>(int i, S stream) where S: struct, IMeshStream;
     }
 
     public struct SquarePlane : IMeshGenerator
@@ -35,7 +35,7 @@ namespace ProcMesh{
 
 
         // Each execute takes care of a row of quads from x=0 to x=1
-        public void Execute<S>(int z, S stream) where S : struct, IMeshStream
+        public void GenerateStrip<S>(int z, S stream) where S : struct, IMeshStream
         {
             // z goes from 0 to resolution, so we can use that to "skip"
             // and let the previous index generate the row up until 
@@ -113,7 +113,7 @@ namespace ProcMesh{
 
 
         // Each execute takes care of a row of quads from x=0 to x=1
-        public void Execute<S>(int z, S stream) where S : struct, IMeshStream
+        public void GenerateStrip<S>(int z, S stream) where S : struct, IMeshStream
         {
             float z01 = (float)z/resolution;
             int vertIdx = (resolution+1)*z,
@@ -166,7 +166,7 @@ namespace ProcMesh{
         private static readonly float rad3halved = 0.86602540378f;
         
         // Each execute takes care of a row of quads from x=0 to x=1
-        public void Execute<S>(int z, S stream) where S : struct, IMeshStream
+        public void GenerateStrip<S>(int z, S stream) where S : struct, IMeshStream
         {
             float z01 = (float)z*rad3halved/resolution;
             float offsetOdd = select(0.5f/resolution, 0f, (z & 1) == 0);
@@ -239,7 +239,7 @@ namespace ProcMesh{
         /// </summary>
         private static readonly float triHeight = 0.86602540378f/2f;
 
-        public void Execute<S>(int z, S stream) where S : struct, IMeshStream
+        public void GenerateStrip<S>(int z, S stream) where S : struct, IMeshStream
         {
             int iVertStart = 7 * resolution * z;
             int iIndexStart = 6 * z * resolution;
@@ -354,7 +354,7 @@ namespace ProcMesh{
         /// </summary>
         private static readonly float triHeight = 0.86602540378f/2f;
 
-        public void Execute<S>(int x, S stream) where S : struct, IMeshStream
+        public void GenerateStrip<S>(int x, S stream) where S : struct, IMeshStream
         {
             int iVertStart = 7 * resolution * x;
             int iIndexStart = 6 * x * resolution;
@@ -453,14 +453,21 @@ namespace ProcMesh{
     /// <summary>
     /// Sphere starting from a square grid. Due to the wrapping of a constant size flat plane,
     /// the point distribution will be uneven once wrapped.
+    /// Given a sphere cannot have less than 4 quadrants and 2 hemispheres, minimum resolution is 8.
+    /// Resolution will be multiplied by 
+    ///     4 along the latitude (1 => 4 "slices")
+    ///     2 along the longitude (1 => 3 vertices => 2 hemispheres)
     /// </summary>
     public struct UVSphere : IMeshGenerator
     {
-        public int verticesCount => (resolution+1) * (resolution+1);
+        public int verticesCount => (latResolution+1) * (longResolution+1) -2;
 
-        public int indicesCount => 6 * resolution * resolution;
+        public int indicesCount => 6 * latResolution * (longResolution-1);
 
-        public int jobLength => resolution + 1;
+        public int jobLength => latResolution + 1;
+
+        private int latResolution => resolution*4;
+        private int longResolution => resolution *2;
 
         public int resolution { get; set; }
         
@@ -468,39 +475,115 @@ namespace ProcMesh{
         public Bounds bounds => new Bounds(Vector3.zero, Vector3.one * 2f);
 
 
-        // Each execute takes care of a row of quads from x=0 to x=1
-        public void Execute<S>(int u, S stream) where S : struct, IMeshStream
+        public void Execute<S>(int u, S stream) where S : struct, IMeshStream{
+            if (u == 0){
+                GenerateSeam(stream);
+            }else{
+                GenerateStrip(u,stream);
+            }
+        }
+
+        // Each GenerateStrip takes care of a row of quads from x=0 to x=1
+        public void GenerateStrip<S>(int u, S stream) where S : struct, IMeshStream
         {
-            float u01 = (float)u/resolution;
-            int vertIdx = (resolution+1)*u,
-                triIdx = 2*resolution*(u-1);
+            float u01 = (float)u/latResolution;
+            int vertIdx = (longResolution+1)*u -2,
+                triIdx = 2*(longResolution-1)*(u-1);
+
             VertexInfo vi = new VertexInfo{
-                position = float3(
-                   u01, 0f, 0f
-                ),
-                normal = float3(0f,0f,-1f),
-                tangent = float4(1f,0f,0f,-1f)
+                position = float3(0f,-1f,0f),
+                normal = float3(0f,-1f,0f),
+                tangent = float4(1f,0f,0f,1f),
+                uv0 = float2((u-0.5f) / latResolution,0f),
             };
+            float3 cylinderCoord = float3(
+                sin(2f * PI * u01),
+                0f,
+                -cos(2f * PI * u01)  
+            );
+            vi.tangent.x = cos(2f * PI * (u-0.5f) / latResolution);
+            vi.tangent.z = sin(2f * PI * (u-0.5f) / latResolution);
             // Loop unrolling so we can vectorize 
             // triangle and vertex generation together.
-            vi.uv0.x = u01;
             stream.SetVertexBuffer(vertIdx, vi);
+            vi.position.y = 1f;
+            vi.normal.y = 1f;
+            vi.uv0.y = 1f;
+            stream.SetVertexBuffer(vertIdx + longResolution, vi);
             vertIdx++;
-            for(int v=1; v<= resolution; v++, vertIdx++, triIdx +=2){
-                float v01 = (float)v/resolution;
-                vi.position.y = v01;
+            vi.tangent = float4(-cylinderCoord.z,0f,cylinderCoord.x, 1f);
+            vi.uv0.x = u01;
+            stream.SetTriangle(
+                triIdx + 1,
+                vertIdx + int3(-1, -longResolution-1,0)
+            );
+            triIdx++;
+            for(int v=1; v< longResolution; v++, vertIdx++){
+                float v01 = (float)v/longResolution;
+                float s = sin(PI * v01);
+                vi.position  = cylinderCoord * s;
+                vi.position.y = -cos(PI * v01);
+                vi.normal = normalize(vi.position);
                 vi.uv0.y = v01;
                 stream.SetVertexBuffer(vertIdx, vi);
-                if (u> 0){ // skip first row
-                stream.SetTriangle(
-                    triIdx,
-                    vertIdx + int3(-1, -resolution-1, 0)
-                );
-                stream.SetTriangle(
-                    triIdx+1,
-                    vertIdx + int3(-resolution-2, -resolution-1, -1)
-                );
+                if (v > 1){ // skip first vertex
+                    stream.SetTriangle(
+                        triIdx,
+                        vertIdx + int3(-1, -longResolution-1, 0)
+                    );
+                    stream.SetTriangle(
+                        triIdx+1,
+                        vertIdx + int3(-longResolution-2, -longResolution-1, -1)
+                    );
+                    triIdx += 2; // progress triangle index only when setting them
                 }
+            }
+            stream.SetTriangle(
+                triIdx,
+                vertIdx + int3(-longResolution-2, 0, -1)
+            );
+        }
+
+
+        /// <summary>
+        /// Generates the seam between beginning of folded plane and end of it.
+        /// Here U = 0  and no triangle is set, only vertices are generated.
+        /// </summary>
+        /// <typeparam name="S"></typeparam>
+        /// <param name="u"></param>
+        /// <param name="stream"></param>
+        public void GenerateSeam<S>(S stream) where S : struct, IMeshStream
+        {
+            VertexInfo vi = new VertexInfo{
+                position = float3(0f,-1f,0f),
+                normal = float3(0f,-1f,0f),
+                tangent = float4(1f,0f,0f,1f),
+                uv0 = float2(0.5f / latResolution,0f),
+            };
+            float3 cylinderCoord = float3(
+                0f,
+                0f,
+                1f
+            );
+            vi.tangent.x = cos(2f * PI * 0.5f / latResolution);
+            vi.tangent.z = sin(2f * PI * 0.5f / latResolution);
+            // Loop unrolling so we can vectorize 
+            // triangle and vertex generation together.
+            stream.SetVertexBuffer(0, vi);
+            vi.position.y = 1f;
+            vi.normal.y = 1f;
+            vi.uv0.y = 1f;
+            stream.SetVertexBuffer(0 + longResolution, vi);
+            vi.tangent = float4(cylinderCoord.z,0f,cylinderCoord.x, 1f);
+            vi.uv0.x = 0f;
+            for(int v=1; v< longResolution; v++){
+                float v01 = (float)v/longResolution;
+                float s = sin(PI * v01);
+                vi.position  = cylinderCoord * s;
+                vi.position.y = -cos(PI * v01);
+                vi.normal = normalize(vi.position);
+                vi.uv0.y = v01;
+                stream.SetVertexBuffer(v, vi);
             }
         }
 
