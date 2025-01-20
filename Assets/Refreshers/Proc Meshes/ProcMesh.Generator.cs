@@ -509,15 +509,17 @@ namespace ProcMesh{
                 triIdx,
                 vertIdx + int3(-1, -longResolution-1, 0)
             );
-            triIdx +=1;
+            triIdx++;
 
             float3 circleCoords = float3(
                 sin(2f * PI * u01),
                 0f,
                 -cos(2f * PI * u01)  
             );
-            vi.uv0.x = u01; //reset UV
+            // Reset parameters for not-pole vertices
+            vi.uv0.x = u01; 
             vi.tangent = float4(-circleCoords.z,0f,circleCoords.x, 1f);
+
             for(int v=1; v< longResolution; v++, vertIdx++){
                 float v01 = (float)v/longResolution;
                 float s = sin(PI * v01);
@@ -549,9 +551,9 @@ namespace ProcMesh{
 
         // Generates first line of vertices. U = 0
         // Does not generate triangles
+        
         public void GenerateSeam<S>(S stream) where S : struct, IMeshStream
         {
-            int vertIdx = 0;
 
             VertexInfo vi = new VertexInfo{
                 position = float3(0f,-1f,0f),
@@ -564,28 +566,27 @@ namespace ProcMesh{
             
             // Not 0 so we can have the shift in the UV and correct texture twisting.
             vi.uv0.x = 0.5f/ latResolution;
-            stream.SetVertexBuffer(vertIdx, vi);
-            // Set north pole
+            // Set south pole vertex
+            stream.SetVertexBuffer(0, vi);
+
+            // Set north pole vertex
             vi.position.y = vi.normal.y = vi.uv0.y = 1f;
-            stream.SetVertexBuffer(vertIdx + longResolution, vi);
+            stream.SetVertexBuffer(longResolution, vi);
 
-            vertIdx++;
-
-            float3 circleCoords = float3(
-                0f,
-                0f,
-                -1f
-            );
+            // Reset values for non-pole vertices
             vi.uv0.x = 0f;
+            vi.position = 0f;
             vi.tangent = float4(-1f, 0f, 0f, 1f);
-            for(int v=1; v< longResolution; v++, vertIdx++){
+            for(int v=1; v< longResolution; v++){
                 float v01 = (float)v/longResolution;
                 float s = sin(PI * v01);
-                vi.position  = circleCoords * s;
+                vi.position.z  = -s;
                 vi.position.y = -cos(PI * v01);
                 vi.normal = normalize(vi.position);
                 vi.uv0.y = v01;
-                stream.SetVertexBuffer(vertIdx, vi);
+                // when u =0, north and south pole will be v = 0 and v = longResolution
+                // so in this cycle v =[1..longRes) = vertIdx. No need for vertIdx
+                stream.SetVertexBuffer(v, vi);
             }
         }
 
