@@ -364,7 +364,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: feb575e51ac6e4bd18641f22370aa628, type: 2}
+  - {fileID: 0}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -421,9 +421,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a3b6b9eeec744fc3beb67fb24116fbf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  resolution: 3
+  gizmoSphereSize: 0.015
+  gizmoVectorsSize: 0.05
+  debugVertexColor: {r: 0.72067463, g: 0.745283, b: 0.745283, a: 1}
+  debugNormalColor: {r: 1, g: 0, b: 0.009691238, a: 1}
+  debugTangentColor: {r: 0, g: 0.2627451, b: 1, a: 1}
+  activeGizmos: 6
+  choosenMat: 0
+  mats:
+  - {fileID: 2100000, guid: 040accf78b2c24862b3c6505afe6b3d3, type: 2}
+  - {fileID: 2100000, guid: feb575e51ac6e4bd18641f22370aa628, type: 2}
+  resolution: 1
   multiStreamPacking: 0
-  geometryGenerator: 3
+  geometryGenerator: 5
 --- !u!1 &2101387544
 GameObject:
   m_ObjectHideFlags: 0
