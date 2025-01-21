@@ -429,7 +429,7 @@ MonoBehaviour:
   activeGizmos: 6
   choosenMat: 0
   mats:
-  - {fileID: 2100000, guid: c82768488ba9f4230901ef951ac855a1, type: 2}
+  - {fileID: 2100000, guid: 040accf78b2c24862b3c6505afe6b3d3, type: 2}
   - {fileID: 2100000, guid: feb575e51ac6e4bd18641f22370aa628, type: 2}
   resolution: 1
   multiStreamPacking: 0
