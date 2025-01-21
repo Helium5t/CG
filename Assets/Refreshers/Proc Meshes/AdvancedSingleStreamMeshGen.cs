@@ -28,7 +28,7 @@ public class AdvancedSingleStreamProceduralMesh : MonoBehaviour {
     /// Otherwise Unity might change the order at compile time to optimize processes.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
-    struct VertexInfo{
+    struct VertexOptimized{
         public float3 position, normal;
         public half4 tangent;
         public half2 uv0;
@@ -76,9 +76,9 @@ public class AdvancedSingleStreamProceduralMesh : MonoBehaviour {
         // GetVertexData always returns the first stream in the mesh data.
         // So it will retrieve positions just because we set the first stream to that.
         // It returns a pointer, there are no intermediary steps to save on resources.
-        NativeArray<VertexInfo> pos = meshData.GetVertexData<VertexInfo>(/*0 by default*/);
+        NativeArray<VertexOptimized> pos = meshData.GetVertexData<VertexOptimized>(/*0 by default*/);
         half h0 = half(0f), h1 = half(1f);
-        VertexInfo vi = new VertexInfo{
+        VertexOptimized vi = new VertexOptimized{
             normal = back(),
             tangent = half4(h1,h0,h0, half(-1f)),
         };
@@ -98,7 +98,7 @@ public class AdvancedSingleStreamProceduralMesh : MonoBehaviour {
         vi.position = float3(1f,1f,0f);
         vi.uv0 = h1;
         pos[3] = vi;
-        
+
         // uint16 = mathematics' ushort
         meshData.SetIndexBufferParams(numberOfTriangleIndices, IndexFormat.UInt16);
         // Define submeshes: only 1, made up of the two triangles
