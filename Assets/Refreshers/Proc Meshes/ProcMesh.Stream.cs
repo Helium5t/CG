@@ -232,4 +232,71 @@ namespace ProcMesh{
             stream3[index] = v.uv0;
         }
     }
+
+    public struct PositionOnlyStream : IMeshStream
+    {
+        /// <summary>
+        /// Positions
+        /// </summary>
+        [NativeDisableContainerSafetyRestriction]
+        NativeArray<float3> stream0;
+
+        [NativeDisableContainerSafetyRestriction]
+        NativeArray<utri16> indices;
+
+        private static readonly int numOfVertexAttributes = 1;
+        public void SetTriangle(int index, int3 triangleIndices)
+        {
+            indices[index] = triangleIndices;
+        }
+
+        public void Setup(Mesh.MeshData data, int numOfVertices, int numOfIndices, Bounds b)
+        {
+            data.subMeshCount = 1;
+            NativeArray<VertexAttributeDescriptor> vaArray = new NativeArray<VertexAttributeDescriptor>(
+                numOfVertexAttributes, Allocator.Temp, NativeArrayOptions.UninitializedMemory
+            );
+            vaArray[0] = new VertexAttributeDescriptor(
+                attribute: VertexAttribute.Position,
+                format: VertexAttributeFormat.Float32,
+                dimension: 3,
+                stream: 0
+            );
+            data.SetVertexBufferParams(numOfVertices, vaArray);
+            vaArray.Dispose();
+
+            data.SetIndexBufferParams(numOfIndices, IndexFormat.UInt16);
+            data.SetSubMesh(0,
+                new SubMeshDescriptor(
+                    0, 
+                    numOfIndices, 
+                    MeshTopology.Triangles){
+                        bounds = b,
+                        vertexCount = numOfVertices,
+                },
+            // We need to disable index checks here because we first set the submesh and 
+            // we then fill the data in with vertex and index information. 
+            // Check CreateAndLaunch() in ProcMesh.Burst.cs 
+            // As for the bounds it's just optimization.
+                MeshUpdateFlags.DontRecalculateBounds | MeshUpdateFlags.DontValidateIndices
+                );
+            stream0 = data.GetVertexData<float3>();
+            // reinterpret index data as int3 to facilitate setting a triangle by vectorizing the call.
+            //  i+0 => i.x
+            //  i+1 => i.y
+            //  i+2 => i.z
+            indices = data.GetIndexData<ushort>().Reinterpret<utri16>(2);
+        }
+
+        // Always force inlining of this call as it is going to be more optimized vs
+        // burst's automatic choice when we add conversions.
+        // Small methods are inlined automatically and those that are used only one are also inlined.
+        // Issue arises for code that is a bit more complex and is called often, like the case of this function
+        // if it had conversions. 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] 
+        public void SetVertexBuffer(int index, VertexInfo v)
+        {
+            stream0[index] = v.position;
+        }
+    }
 }
