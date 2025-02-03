@@ -60,6 +60,9 @@ public class MeshProcedural : MonoBehaviour {
         HexPlaneVertical, 
         HexPlaneHorizontal, 
         SphereFromSquarePlane,
+        SphereFromCube,
+        UniformSphereFromCube,
+        OptimizedSphereFromCube
     }
 
 
@@ -73,6 +76,9 @@ public class MeshProcedural : MonoBehaviour {
         MeshJob<HexPlaneVertical, SingleStream>.CreateAndLaunch,
         MeshJob<HexPlaneHorizontal, SingleStream>.CreateAndLaunch,
         MeshJob<UVSphere, SingleStream>.CreateAndLaunch,
+        MeshJob<SphereFromCube, SingleStream>.CreateAndLaunch,
+        MeshJob<UniformSphereFromCube, SingleStream>.CreateAndLaunch,
+        MeshJob<OptimizedSphereFromCube, SingleStream>.CreateAndLaunch,
     };
     ScheduleMeshJobDelegate[] multiStreamjobs ={
         MeshJob<SquarePlane, MultiStream>.CreateAndLaunch,
@@ -81,6 +87,9 @@ public class MeshProcedural : MonoBehaviour {
         MeshJob<HexPlaneVertical, MultiStream>.CreateAndLaunch,
         MeshJob<HexPlaneHorizontal, MultiStream>.CreateAndLaunch,
         MeshJob<UVSphere, MultiStream>.CreateAndLaunch,
+        MeshJob<SphereFromCube, MultiStream>.CreateAndLaunch,
+        MeshJob<UniformSphereFromCube, MultiStream>.CreateAndLaunch,
+        MeshJob<OptimizedSphereFromCube, MultiStream>.CreateAndLaunch,
     };
 
     public void OnValidate(){
@@ -104,16 +113,25 @@ public class MeshProcedural : MonoBehaviour {
             vertices = null;
         }
         if ((DebugFlags.Normals & activeGizmos) != 0 ){
-            normals = generatedMesh.normals;
+            if (generatedMesh.HasVertexAttribute(VertexAttribute.Normal)){
+                normals = generatedMesh.normals;
+            }else{
+                Debug.Log("No normals can be retrieved from mesh");
+                activeGizmos = activeGizmos & ~DebugFlags.Normals;
+            }
         }else if (normals != null){
             normals = null;
         }
         if ((DebugFlags.Tangents & activeGizmos) != 0 ){
-            tangents = generatedMesh.tangents;
+            if (generatedMesh.HasVertexAttribute(VertexAttribute.Tangent)){
+                tangents = generatedMesh.tangents;
+            }else{
+                Debug.Log("No tangents can be retrieved from mesh");
+                activeGizmos = activeGizmos & ~DebugFlags.Tangents;
+            }
         }else if (tangents != null){
             tangents = null;
         }
-
 		GetComponent<MeshRenderer>().material = mats[(int)choosenMat];
     }
 

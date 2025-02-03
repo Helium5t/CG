@@ -593,4 +593,540 @@ namespace ProcMesh{
         }
 
     }
+
+
+    public struct SphereFromCube : IMeshGenerator
+    {
+
+        /// <summary>
+        /// Represent the side of the cube.
+        /// side origin is the origin of the cube side.
+        /// uAxis and vAxis represent the vector that goes from 0 to 1 along the u and v axis, respectively.
+        /// Will essentially dictate the direction and total side size along which to generate the quads.
+        /// </summary>
+        struct Side {
+            public int id;
+            public float3 origin,
+            uAxis,
+            vAxis,
+            normal;
+            public float4 tangent; 
+        };
+
+        public int verticesCount => 6 * 4 * resolution * resolution;
+
+        public int indicesCount => 6 * 6 * resolution * resolution;
+
+        public int jobLength => 6 * resolution;
+
+        public int resolution { get; set; }
+        
+        public Bounds bounds => new Bounds(Vector3.zero , Vector3.one * 2f);
+
+
+        /*
+        Normal vectors for each side (and thus where they are facing)
+        0 = back
+        1 = right
+        2 = down
+        3 = front
+        4 = left
+        5 = up
+        */
+        static Side GetSide(int id) =>id switch{ 
+            0 => new Side{
+                id = id,
+                origin = -1f,
+                uAxis = 2f * right(),
+                vAxis = 2f * up(),
+            },
+            1 => new Side{
+                id = id,
+                origin = float3(1f, -1f, -1f),
+                uAxis = 2f * forward(),
+                vAxis = 2f * up(),
+            },
+            2 => new Side{
+                id = id,
+                origin = -1f,
+                uAxis = 2f * forward(),
+                vAxis = 2f * right(),
+            },
+            3 => new Side{
+                id = id,
+                origin = float3(-1f, -1f, 1f),
+                uAxis = 2f * up(),
+                vAxis = 2f * right(),
+            },
+            4 => new Side{
+                id = id,
+                origin = -1f,
+                uAxis = 2f * up(),
+                vAxis = 2f * forward(),
+            },
+            5 => new Side{
+                id = id,
+                origin = float3(-1f, 1f, -1f),
+                uAxis = 2f * right(),
+                vAxis = 2f * forward(),
+            },
+            _ => new Side{
+                id = id,
+                origin = float3(1f, -1f, -1f),
+                uAxis = 2f * forward(),
+                vAxis = 2f * up(),
+            }
+        };
+
+        static float3 CubeToSphere (float3 p) => normalize(p);
+
+        // Each execute takes care of a row of quads from x=0 to x=1
+        // The side will also change based on the value of i.
+        public void Execute<S>(int i, S stream) where S : struct, IMeshStream
+        {
+
+            /*
+            Normal vectors for each side (and thus where they are facing)
+            0 = back
+            1 = right
+            2 = front
+            3 = left
+            4 = down
+            5 = up
+            */
+            int u = i/6;
+            var side = GetSide(i - 6 *u);
+            int iVertStart = 4 * resolution * (resolution * side.id + u);
+            int iIndexStart = 2 * resolution * (resolution * side.id + u);
+
+            float3 cuCur, cuNext;
+            cuCur = side.uAxis * u/resolution;
+            cuNext =  side.uAxis * (u+1)/ resolution;
+
+            // u in [0, resolution]
+            // Get the lower left corner of the quad
+            // Coordinates will go 
+            // u = u
+            // v from 0 to resolution
+            for (int v = 0; v < resolution; v++){
+                float3 cvCur = side.vAxis * v / resolution;
+                float3 cvNext = side.vAxis * (v+1) / resolution;     
+
+                // Bottom left corner of quad
+                float3 pBL   =  CubeToSphere(side.origin + cuCur + cvCur),
+                // Bottom right corner of quad
+                pBR = CubeToSphere( side.origin  + cuNext + cvCur),
+                // Top left corner
+                pTL = CubeToSphere(side.origin + cuCur + cvNext),
+                // Top right corner
+                pTR = CubeToSphere(side.origin + cuNext + cvNext);
+                
+                VertexInfo vi = new VertexInfo{
+                    position = pBL,
+                    normal = pBL,
+                    tangent = float4(normalize(pBR-pBL),-1f)
+                };
+                stream.SetVertexBuffer(iVertStart, vi);
+
+                vi.position = vi.normal = pBR;
+                // vi.tangent.xyz = normalize(pNext-pCur);
+                vi.uv0.x = 1f;
+                stream.SetVertexBuffer(iVertStart + 1,vi);
+
+                vi.position = vi.normal = pTL;
+                vi.tangent.xyz = normalize(pTR-pTL);
+                vi.uv0.xy =  float2(0f,1f);
+                stream.SetVertexBuffer(iVertStart + 2,vi);
+
+                vi.position = vi.normal = pTR;
+                // vi.tangent = float4(normalize(pNext-pCur),1f);
+                vi.uv0.xy = 1f;
+                stream.SetVertexBuffer(iVertStart + 3,vi);
+                
+                stream.SetTriangle(
+                    iIndexStart, 
+                    iVertStart + int3(0,2,1)
+                        );
+                stream.SetTriangle(
+                    iIndexStart + 1, 
+                    iVertStart + int3(1,2,3)
+                    );
+                // Increase index starts for the next quad
+                iVertStart += 4;
+                iIndexStart += 2;
+            }
+        }
+
+    }
+
+    public struct UniformSphereFromCube : IMeshGenerator
+    {
+
+        /// <summary>
+        /// Represent the side of the cube.
+        /// side origin is the origin of the cube side.
+        /// uAxis and vAxis represent the vector that goes from 0 to 1 along the u and v axis, respectively.
+        /// Will essentially dictate the direction and total side size along which to generate the quads.
+        /// </summary>
+        struct Side {
+            public int id;
+            public float3 origin,
+            uAxis,
+            vAxis,
+            normal;
+            public float4 tangent; 
+        };
+
+        public int verticesCount => 6 * 4 * resolution * resolution;
+
+        public int indicesCount => 6 * 6 * resolution * resolution;
+
+        public int jobLength => 6 * resolution;
+
+        public int resolution { get; set; }
+        
+        public Bounds bounds => new Bounds(Vector3.zero , Vector3.one * 2f);
+
+
+        /*
+        Normal vectors for each side (and thus where they are facing)
+        0 = back
+        1 = right
+        2 = down
+        3 = front
+        4 = left
+        5 = up
+        */
+        static Side GetSide(int id) =>id switch{ 
+            0 => new Side{
+                id = id,
+                origin = -1f,
+                uAxis = 2f * right(),
+                vAxis = 2f * up(),
+            },
+            1 => new Side{
+                id = id,
+                origin = float3(1f, -1f, -1f),
+                uAxis = 2f * forward(),
+                vAxis = 2f * up(),
+            },
+            2 => new Side{
+                id = id,
+                origin = -1f,
+                uAxis = 2f * forward(),
+                vAxis = 2f * right(),
+            },
+            3 => new Side{
+                id = id,
+                origin = float3(-1f, -1f, 1f),
+                uAxis = 2f * up(),
+                vAxis = 2f * right(),
+            },
+            4 => new Side{
+                id = id,
+                origin = -1f,
+                uAxis = 2f * up(),
+                vAxis = 2f * forward(),
+            },
+            5 => new Side{
+                id = id,
+                origin = float3(-1f, 1f, -1f),
+                uAxis = 2f * right(),
+                vAxis = 2f * forward(),
+            },
+            _ => new Side{
+                id = id,
+                origin = float3(1f, -1f, -1f),
+                uAxis = 2f * forward(),
+                vAxis = 2f * up(),
+            }
+        };
+
+        static float3 CubeToSphere (float3 p) => p * sqrt(
+			1f - ((p * p).yxx + (p * p).zzy) / 2f + (p * p).yxx * (p * p).zzy / 3f
+		);
+
+        // Each execute takes care of a row of quads from x=0 to x=1
+        // The side will also change based on the value of i.
+        public void Execute<S>(int i, S stream) where S : struct, IMeshStream
+        {
+
+            /*
+            Normal vectors for each side (and thus where they are facing)
+            0 = back
+            1 = right
+            2 = front
+            3 = left
+            4 = down
+            5 = up
+            */
+            int u = i/6;
+            var side = GetSide(i - 6 *u);
+            int iVertStart = 4 * resolution * (resolution * side.id + u);
+            int iIndexStart = 2 * resolution * (resolution * side.id + u);
+
+            float3 cuCur, cuNext;
+            cuCur = side.uAxis * u/resolution;
+            cuNext =  side.uAxis * (u+1)/ resolution;
+
+            // u in [0, resolution]
+            // Get the lower left corner of the quad
+            // Coordinates will go 
+            // u = u
+            // v from 0 to resolution
+            for (int v = 0; v < resolution; v++){
+                float3 cvCur = side.vAxis * v / resolution;
+                float3 cvNext = side.vAxis * (v+1) / resolution;     
+
+                // Bottom left corner of quad
+                float3 pBL   =  CubeToSphere(side.origin + cuCur + cvCur),
+                // Bottom right corner of quad
+                pBR = CubeToSphere( side.origin  + cuNext + cvCur),
+                // Top left corner
+                pTL = CubeToSphere(side.origin + cuCur + cvNext),
+                // Top right corner
+                pTR = CubeToSphere(side.origin + cuNext + cvNext);
+                
+                VertexInfo vi = new VertexInfo{
+                    position = pBL,
+                    normal = pBL,
+                    tangent = float4(normalize(pBR-pBL),-1f)
+                };
+                stream.SetVertexBuffer(iVertStart, vi);
+
+                vi.position = vi.normal = pBR;
+                // vi.tangent.xyz = normalize(pNext-pCur);
+                vi.uv0.x = 1f;
+                stream.SetVertexBuffer(iVertStart + 1,vi);
+
+                vi.position = vi.normal = pTL;
+                vi.tangent.xyz = normalize(pTR-pTL);
+                vi.uv0.xy =  float2(0f,1f);
+                stream.SetVertexBuffer(iVertStart + 2,vi);
+
+                vi.position = vi.normal = pTR;
+                // vi.tangent = float4(normalize(pNext-pCur),1f);
+                vi.uv0.xy = 1f;
+                stream.SetVertexBuffer(iVertStart + 3,vi);
+                
+                stream.SetTriangle(
+                    iIndexStart, 
+                    iVertStart + int3(0,2,1)
+                        );
+                stream.SetTriangle(
+                    iIndexStart + 1, 
+                    iVertStart + int3(1,2,3)
+                    );
+                // Increase index starts for the next quad
+                iVertStart += 4;
+                iIndexStart += 2;
+            }
+        }
+
+    }
+
+    public struct OptimizedSphereFromCube : IMeshGenerator
+    {
+
+        /// <summary>
+        /// Represent the side of the cube.
+        /// side origin is the origin of the cube side.
+        /// uAxis and vAxis represent the vector that goes from 0 to 1 along the u and v axis, respectively.
+        /// Will essentially dictate the direction and total side size along which to generate the quads.
+        /// </summary>
+        struct Side {
+            public int id;
+            public float3 origin,
+            uAxis,
+            vAxis;
+
+            // How much to step across when creating the seam
+            public int seamStep;
+            public bool HasLowerPoleCorner => (id & 1) == 0;
+        };
+
+        public int verticesCount => 6 * resolution * resolution + 2;
+
+        public int indicesCount => 6 * 6 * resolution * resolution;
+
+        public int jobLength => 6 * resolution;
+
+        public int resolution { get; set; }
+        
+        public Bounds bounds => new Bounds(Vector3.zero , Vector3.one * 2f);
+
+
+        /*
+        Normal vectors for each side (and thus where they are facing)
+        0 = back
+        1 = right
+        2 = down
+        3 = front
+        4 = left
+        5 = up
+        */
+        static Side GetSide(int id) =>id switch{ 
+            0 => new Side{
+                id = id,
+                origin = -1f,
+                uAxis = 2f * right(),
+                vAxis = 2f * up(),
+                seamStep = 4,
+            },
+            1 => new Side{
+                id = id,
+                origin = float3(1f, -1f, -1f),
+                uAxis = 2f * forward(),
+                vAxis = 2f * up(),
+                seamStep = 4,
+            },
+            2 => new Side{
+                id = id,
+                origin = -1f,
+                uAxis = 2f * forward(),
+                vAxis = 2f * right(),
+                seamStep = -2,
+            },
+            3 => new Side{
+                id = id,
+                origin = float3(-1f, -1f, 1f),
+                uAxis = 2f * up(),
+                vAxis = 2f * right(),
+                seamStep =- -2,
+            },
+            4 => new Side{
+                id = id,
+                origin = -1f,
+                uAxis = 2f * up(),
+                vAxis = 2f * forward(),
+                seamStep = -2,
+            },
+            5 => new Side{
+                id = id,
+                origin = float3(-1f, 1f, -1f),
+                uAxis = 2f * right(),
+                vAxis = 2f * forward(),
+                seamStep = -2,
+            },
+            _ => new Side{
+                id = id,
+                origin = float3(1f, -1f, -1f),
+                uAxis = 2f * forward(),
+                vAxis = 2f * up(),
+                seamStep = -2,
+            }
+        };
+
+        static float3 MapToSphere (float3 p) => p * sqrt(
+			1f - ((p * p).yxx + (p * p).zzy) / 2f + (p * p).yxx * (p * p).zzy / 3f
+		);
+
+        // Each execute takes care of a line of vertices.
+        // The side will also change based on the value of i.
+        public void Execute<S>(int i, S stream) where S : struct, IMeshStream
+        {
+
+            int u = i/6;
+            var side = GetSide(i - 6 *u);
+            int iVertStart = resolution * (resolution * side.id + u) + 2;
+            int iIndexStart = 2 * resolution * (resolution * side.id + u);
+            // Check if the column of the side is the first to be generated
+            // needed to handle stitching across sides.
+            bool isFirstSideColumn = u == 0;
+            // Increment u to start at 1, allows alignment
+            u++;
+            
+            float3 cuCur;
+            cuCur = side.uAxis * u/resolution;
+            // Point at the base of the vertex line.
+            float3 pBase = side.origin + cuCur;
+            // cuNext =  side.uAxis * (u+1)/ resolution;
+            VertexInfo vi = new VertexInfo{};
+            // set vertices at the poles of the sphere
+            if (i == 0) {
+                vi.position = -sqrt(1f / 3f);
+                stream.SetVertexBuffer(0, vi);
+                vi.position = sqrt(1f / 3f);
+                stream.SetVertexBuffer(1, vi);
+            }
+            vi.position = MapToSphere(pBase);
+            stream.SetVertexBuffer(iVertStart, vi);
+
+            var vertIndices = int3(
+				iVertStart,
+				isFirstSideColumn && side.HasLowerPoleCorner ? 0 : iVertStart - resolution,
+				iVertStart + (isFirstSideColumn ?
+					side.HasLowerPoleCorner ?
+						side.seamStep * resolution * resolution :
+						resolution == 1 ? side.seamStep : -resolution + 1 :
+					-resolution + 1
+				)
+			);
+            stream.SetTriangle(
+                iIndexStart, 
+                vertIndices);
+			iVertStart ++;
+			iIndexStart ++;
+
+            // If first corner, skip to next row, else just by one
+            // if last vertex, skip to next side.
+            int thirdVertStep = isFirstSideColumn && side.HasLowerPoleCorner ? resolution : 1;
+            int thirdVertLastStep = isFirstSideColumn && side.HasLowerPoleCorner ?
+                resolution : !isFirstSideColumn && !side.HasLowerPoleCorner ?
+                    resolution * ((side.seamStep +1) * resolution - u) + u:
+                    (side.seamStep + 1) * resolution * resolution - resolution + 1;
+
+            for (int v = 1; v < resolution; v++){
+                float3 cvCur = side.vAxis * v / resolution;
+                // float3 cvNext = side.vAxis * (v+1) / resolution;     
+
+                // Bottom left corner of quad
+                float3 pBL   =  MapToSphere(pBase + cvCur);
+                // Bottom right corner of quad
+                // pBR = CubeToSphere( side.origin  + cuNext + cvCur),
+                // // Top left corner
+                // pTL = CubeToSphere(side.origin + cuStart + cvNext),
+                // // Top right corner
+                // pTR = CubeToSphere(side.origin + cuNext + cvNext);
+                
+               
+
+                vi.position = pBL;
+                stream.SetVertexBuffer(iVertStart, vi);
+                
+                vertIndices.x ++;
+                vertIndices.y = vertIndices.z;
+                vertIndices.z += v==resolution-1 ? thirdVertLastStep : thirdVertStep;
+
+                stream.SetTriangle(
+                    iIndexStart + 1, 
+                    int3(
+                        vertIndices.x-1,
+                        vertIndices.y,
+                        vertIndices.x
+                    )
+                    );
+                stream.SetTriangle(
+                    iIndexStart, 
+                    vertIndices
+                        );
+
+                // Increase index starts for the next quad
+                iVertStart ++;
+                iIndexStart += 2;
+            }
+
+            stream.SetTriangle(iVertStart, 
+             int3(
+				vertIndices.x,
+				vertIndices.z,
+				side.HasLowerPoleCorner ? vertIndices.z + resolution : 
+                    u == resolution? 1: vertIndices.z + 1
+             )
+            );
+        }
+
+    }
+
+
 }
