@@ -61,7 +61,8 @@ public class MeshProcedural : MonoBehaviour {
         HexPlaneHorizontal, 
         SphereFromSquarePlane,
         SphereFromCube,
-        UniformSphereFromCube
+        UniformSphereFromCube,
+        OptimizedSphereFromCube
     }
 
 
@@ -77,6 +78,7 @@ public class MeshProcedural : MonoBehaviour {
         MeshJob<UVSphere, SingleStream>.CreateAndLaunch,
         MeshJob<SphereFromCube, SingleStream>.CreateAndLaunch,
         MeshJob<UniformSphereFromCube, SingleStream>.CreateAndLaunch,
+        MeshJob<OptimizedSphereFromCube, SingleStream>.CreateAndLaunch,
     };
     ScheduleMeshJobDelegate[] multiStreamjobs ={
         MeshJob<SquarePlane, MultiStream>.CreateAndLaunch,
@@ -87,6 +89,7 @@ public class MeshProcedural : MonoBehaviour {
         MeshJob<UVSphere, MultiStream>.CreateAndLaunch,
         MeshJob<SphereFromCube, MultiStream>.CreateAndLaunch,
         MeshJob<UniformSphereFromCube, MultiStream>.CreateAndLaunch,
+        MeshJob<OptimizedSphereFromCube, MultiStream>.CreateAndLaunch,
     };
 
     public void OnValidate(){
