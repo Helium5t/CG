@@ -1,3 +1,7 @@
+#if !defined(HELIUM_LIGHTING_INCLUDED)
+#define HELIUM_LIGHTING_INCLUDED
+
+
 // cginc because it is an include file
 // #include "UnityCG.cginc" // Already included by UnityStandardBRDF
 // #include "UnityStandardBRDF.cginc" // in UnityPBSLighting
@@ -6,6 +10,8 @@
 
 // To prove TRANSFORM_TEX is just a define
 #define HELIUM_TRANSFORM_TEX(x,y) (x.xy * y##_ST.xy + y##_ST.zw)
+
+
 
 sampler2D _Tex;
 float4 _Tex_ST;
@@ -38,14 +44,18 @@ vOutput vert(vInput i){
     return o;
 }
 
+UnityLight CreateLight(vOutput vo){
+    UnityLight l;
+    l.dir = _WorldSpaceLightPos0.xyz;
+    l.color = _LightColor0;
+    // angle with surface normal
+    l.ndotl =  DotClamped(vo.n, _WorldSpaceLightPos0.xyz);
+}
+
 float4 frag(vOutput vo): SV_Target{
     float3 albedo =  tex2D(_Tex, vo.uvM);
 
-    UnityLight l;
-    l.color = _LightColor0;
-    l.dir = _WorldSpaceLightPos0.xyz;
-    // angle with surface normal
-    l.ndotl = DotClamped(vo.n, _WorldSpaceLightPos0.xyz);
+    UnityLight l = CreateLight(vo);
 
     UnityIndirect il;
     il.diffuse = 0;  // Ambient light
@@ -73,3 +83,7 @@ float4 frag(vOutput vo): SV_Target{
     );
     // return finalDiffuse * albedo  /*Corrects linear to gamma transformation*/;
 }
+
+
+
+#endif
