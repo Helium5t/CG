@@ -23,7 +23,7 @@ Shader "Refreshers/MultiLightPhysicallyBased"
             // Compile a version that computes light per vertex, much cheaper than per fragment.
             // Only point is supported
             #pragma multi_compile _ VERTEXLIGHT_ON
-
+            
             #pragma multi_compile_fwdadd // equivalent of the following
             // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
 
@@ -62,7 +62,7 @@ Shader "Refreshers/MultiLightPhysicallyBased"
             //#pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
             // Equivalent of the one above
             #pragma multi_compile_fwdadd
-
+            
             #define HELIUM_ADD_PASS
             
             #pragma vertex vert

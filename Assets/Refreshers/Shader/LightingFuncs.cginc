@@ -100,6 +100,9 @@ UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo){
     #if defined(VERTEXLIGHT_ON)
         il.diffuse = vo.lColor;
     #endif
+    #if !defined(HELIUM_ADD_PASS)
+        il.diffuse += max(0, ShadeSH9(float4(vo.n, 1)));
+    #endif
     return il;
 }
 
@@ -123,20 +126,21 @@ UnityLight CreateLight(vOutput vo){
 float4 frag(vOutput vo): SV_Target{
     float3 albedo =  tex2D(_Tex, vo.uvM);
 
-    UnityLight l = CreateLight(vo);
-
-    UnityIndirect il = CreateIndirectLightAndDeriveFromVertex(vo);
-
-
+    
+    
     float invertedReflectivity;
     float3 specularColor;
     // specularColor and invertedReflectivity are out parameters
     albedo = DiffuseAndSpecularFromMetallic(
         albedo, _Metallic, specularColor, invertedReflectivity
-    ); 
+        ); 
     float3 viewdir = normalize(_WorldSpaceCameraPos - vo.wPos);
     
     vo.n = normalize(vo.n);
+    float3 approximatedCol = ShadeSH9(float4(vo.n, 1));
+        
+    UnityLight l = CreateLight(vo);
+    UnityIndirect il = CreateIndirectLightAndDeriveFromVertex(vo);
     return UNITY_BRDF_PBS(
         albedo,
         specularColor,
