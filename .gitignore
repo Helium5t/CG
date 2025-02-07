@@ -1,4 +1,7 @@
 
+# Vulkan ignores
+/Vulkan/build*
+
 # COMPLETED PROJECTS, SO WE CAN KEEP THEM IN REPO AND DELETE THEM LOCALLY # 
 /[Aa]ssets/[Rr]efreshers/[Gg]raph/*
 /[Aa]ssets/[Rr]efreshers/[Hh]ash/*
