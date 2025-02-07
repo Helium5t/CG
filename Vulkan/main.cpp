@@ -30,6 +30,7 @@ int main() {
     HelloTriangleApplication app;
 
     try {
+        std::cout << "hello" << std::endl;
         app.run();
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
