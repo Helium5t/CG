@@ -20,6 +20,15 @@
 
 
 sampler2D _Tex;
+#ifdef HELIUM_HEIGHT_MAPPING
+sampler2D _Height;
+// e.g. resolution is 1000x2000 => texel size is u=1/1000, v  = 1/2000
+// the minimum amount of change for u and v that moves sampling to another pixel
+float4 _Height_TexelSize;
+#endif
+#ifdef HELIUM_NORMAL_MAPPING
+sampler2D _Normal;
+#endif
 float4 _Tex_ST;
 
 float _Roughness, _Metallic;
@@ -123,9 +132,40 @@ UnityLight CreateLight(vOutput vo){
     return l;
 }
 
+void InitFragNormal(inout vOutput vo){
+    #if defined(HELIUM_HEIGHT_MAPPING)
+    float2 du = float2(_Height_TexelSize.x * 0.5, 0);
+    float u1 = tex2D(_Height, vo.uvM - du);
+    float u2 = tex2D(_Height, vo.uvM + du);
+    float2 dv = float2(0, _Height_TexelSize.y * 0.5);
+    float v1 = tex2D(_Height, vo.uvM - dv);
+    float v2 = tex2D(_Height, vo.uvM + dv);
+
+    // Normal is the inverse of the tangent (rate of change)
+    vo.n = float3(u2-u1, 1 , v2-v1); // Temporary TODO: delete, only applicable to plane
+    vo.n = normalize(vo.n);
+    // Tangent space transformation
+    // float3 tv = float3(0, v2 - v1, 1);
+    // float3 tu = float3(1, u2 - u1, 0);
+    // float3x3 worldToTangent = transpose( float3x3(tu, tv, vo.n));
+    // vo.wPos  = float4(mul(worldToTan, vo.n),1);
+    #endif
+    #ifdef HELIUM_NORMAL_MAPPING
+    vo.n.xy = tex2D(_Normal, vo.uvM).wy *2 -1;
+    vo.n.z = sqrt(1 - saturate(dot(vo.n.xy, vo.n.xy)));
+
+    // Normal maps store the up direction in the z component 
+    // vo.n = vo.n.xzy;
+    vo.n = normalize(vo.n.xzy);
+    #endif
+}
+
 float4 frag(vOutput vo): SV_Target{
     float3 albedo =  tex2D(_Tex, vo.uvM);
 
+    #if defined(HELIUM_HEIGHT_MAPPING) || defined(HELIUM_NORMAL_MAPPING)
+    InitFragNormal(vo);
+    #endif
     
     
     float invertedReflectivity;
@@ -134,22 +174,24 @@ float4 frag(vOutput vo): SV_Target{
     albedo = DiffuseAndSpecularFromMetallic(
         albedo, _Metallic, specularColor, invertedReflectivity
         ); 
-    float3 viewdir = normalize(_WorldSpaceCameraPos - vo.wPos);
-    
-    vo.n = normalize(vo.n);
-    float3 approximatedCol = ShadeSH9(float4(vo.n, 1));
+        float3 viewdir = normalize(_WorldSpaceCameraPos - vo.wPos);
         
+    #if !defined(HELIUM_HEIGHT_MAPPING)
+        vo.n = normalize(vo.n);
+    #endif
+    float3 approximatedCol = ShadeSH9(float4(vo.n, 1));
+    
     UnityLight l = CreateLight(vo);
     UnityIndirect il = CreateIndirectLightAndDeriveFromVertex(vo);
     return UNITY_BRDF_PBS(
-        albedo,
-        specularColor,
-        invertedReflectivity,
-        1.0-_Roughness,
-        vo.n,
-        viewdir,
-        l,
-        il
+    albedo,
+    specularColor,
+    invertedReflectivity,
+    1.0-_Roughness,
+    vo.n,
+    viewdir,
+    l,
+    il
     );
     // return finalDiffuse * albedo  /*Corrects linear to gamma transformation*/;
 }
