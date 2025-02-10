@@ -63,13 +63,25 @@ private:
         // As vulkan is platform aognistic, we need an extension to add GLFW interfaces and bindings
         uint32_t glfwRequiredExtCount = 0;
         const char** glfwRequiredExtNames;
-        glfwRequiredExtNames = glfwGetRequiredInstanceExtensions(&glfwRequiredExtCount);
+        glfwRequiredExtNames = glfwGetRequiredInstanceExtensions(&glfwRequiredExtCount); 
         icInfo.enabledExtensionCount = glfwRequiredExtCount;
-        icInfo.ppEnabledExtensionNames = glfwRequiredExtNames;
         // validation layers, unused atm
         icInfo.enabledLayerCount = 0;
         // unneeded, explicit clarity
         icInfo.pNext = nullptr;
+
+        // Extra changes for macOS compatibility :) 
+        icInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR; //macOS req
+
+        std::vector<const char*> requiredExtNames;
+        for(int i =0; i<icInfo.enabledExtensionCount; i++){
+            requiredExtNames.emplace_back(glfwRequiredExtNames[i]);
+        }
+        icInfo.enabledExtensionCount ++;
+        requiredExtNames.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME); // macOS req
+        // end of extra changes
+
+        icInfo.ppEnabledExtensionNames = requiredExtNames.data();
         VkResult res = vkCreateInstance(&icInfo, nullptr, &instance);
         std::cout << "Instance creation result:"<< VkResultToString(res) << std::endl;
         if (res != VK_SUCCESS){
