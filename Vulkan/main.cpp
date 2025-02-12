@@ -82,6 +82,17 @@ private:
         // end of extra changes
 
         icInfo.ppEnabledExtensionNames = requiredExtNames.data();
+
+        uint32_t supportedExtensionCount = 0;
+        // Get just the number
+        vkEnumerateInstanceExtensionProperties(nullptr, &supportedExtensionCount, nullptr);
+        std::vector<VkExtensionProperties> supportedExtensions(supportedExtensionCount);
+        // Get the full list
+        vkEnumerateInstanceExtensionProperties(nullptr, &supportedExtensionCount, supportedExtensions.data());
+        std::cout<<"Supported extensions:"<< std::endl;
+        for (const VkExtensionProperties& e : supportedExtensions){
+            std::cout << "\t" << e.extensionName << std::endl;
+        }
         VkResult res = vkCreateInstance(&icInfo, nullptr, &instance);
         std::cout << "Instance creation result:"<< VkResultToString(res) << std::endl;
         if (res != VK_SUCCESS){
@@ -101,6 +112,7 @@ private:
     }
 
     void cleanup() {
+        vkDestroyInstance(instance, nullptr/*Optional callback pointer*/);
         glfwDestroyWindow(window);
         glfwTerminate(); // Once this function is called, glfwInit(L#30) must be called again before using most GLFW functions. This deallocates everything GLFW related.
     }
