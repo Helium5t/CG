@@ -174,7 +174,7 @@ private:
         toBeFilled.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
         toBeFilled.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT  | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
         toBeFilled.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_TOOL_PURPOSE_VALIDATION_BIT_EXT;
-        toBeFilled.pfnUserCallback = parseDebugCallback;
+        toBeFilled.pfnUserCallback = parseDebugCallbackInstance;
         // This will be passed back to the debug handler when emitting the callback, this way you can access some data you want to emit into the debug callback 
         toBeFilled.pUserData = nullptr;
         // Added because I was getting a warning
@@ -185,6 +185,7 @@ private:
         if(!validationLayerEnabled) return;
         VkDebugUtilsMessengerCreateInfoEXT mcInfo;
         fillCreateInfoForDebugHandler(mcInfo);
+        mcInfo.pfnUserCallback = parseDebugCallbackLoop; /* To check if this actually works later on*/
         if (CreateDebugMessengerExtension(instance /* <- Debug messengers are specific to instances and layers, so we need this */, &mcInfo, nullptr, &debugCallbackHandler) != VK_SUCCESS) {
             throw std::runtime_error("failed to set up debug messenger");
         }
@@ -198,7 +199,7 @@ private:
 
     void cleanup() {
         if(validationLayerEnabled){
-            // DestroyDebugMessengerExtension(instance, debugCallbackHandler, nullptr);
+            DestroyDebugMessengerExtension(instance, debugCallbackHandler, nullptr); // Ideally this should be caught by the debug messenger when destroy is not called, and yet it doesn't happen
         }
 
         vkDestroyInstance(instance, nullptr/*Optional callback pointer*/);

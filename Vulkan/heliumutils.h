@@ -48,4 +48,15 @@ inline const char* VkDebugMessageTypeToString(VkDebugUtilsMessageTypeFlagsEXT r)
     }
 }
 
+inline const char* VkDebugMessageSeverityToString(VkDebugUtilsMessageSeverityFlagBitsEXT r) {
+    switch (r) {
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT: return "WARN";
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT: return "INFO";
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: return "VERB";
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT: return "ERRR";
+
+        default: return "UNKNOWN_SEV";
+    }
+}
+
 #endif
