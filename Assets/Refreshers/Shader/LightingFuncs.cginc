@@ -27,7 +27,10 @@ sampler2D _Height;
 float4 _Height_TexelSize;
 #endif
 #ifdef HELIUM_NORMAL_MAPPING
-sampler2D _Normal;
+sampler2D _Normal, _SecondaryTex, _SecondaryNormal;
+float _NormalStrength,_SecondaryNormalStrength;
+float4 _SecondaryTex_ST;
+
 #endif
 float4 _Tex_ST;
 
@@ -43,7 +46,11 @@ struct vInput{
 struct vOutput{
     float4 csPos : SV_Position; // Clip Space
     float3 n :   TEXCOORD0;
+    #ifdef HELIUM_NORMAL_MAPPING
+    float4 uvM : TEXCOORD1; // Main(xy) and Secondary(zw)
+    #else
     float2 uvM : TEXCOORD1; // Main
+    #endif
     float4 wPos : TEXCOORD2; // World Space Position
 
     #if defined(VERTEXLIGHT_ON)
@@ -92,7 +99,11 @@ void ComputeVertexLight(inout vOutput v){
 vOutput vert(vInput i){
     vOutput o;
 
-    o.uvM = HELIUM_TRANSFORM_TEX(i.uv, _Tex);  // QOL command that summarizes texture tiling and offset
+    o.uvM = 0;
+    o.uvM.xy = HELIUM_TRANSFORM_TEX(i.uv, _Tex);  // QOL command that summarizes texture tiling and offset
+    #ifdef HELIUM_NORMAL_MAPPING
+    o.uvM.zw = HELIUM_TRANSFORM_TEX(i.uv, _SecondaryTex);
+    #endif
     o.csPos = UnityObjectToClipPos(i.pos);
     o.wPos = mul(unity_ObjectToWorld, i.pos);
 
@@ -151,20 +162,49 @@ void InitFragNormal(inout vOutput vo){
     // vo.wPos  = float4(mul(worldToTan, vo.n),1);
     #endif
     #ifdef HELIUM_NORMAL_MAPPING
+
+    /*
     vo.n.xy = tex2D(_Normal, vo.uvM).wy *2 -1;
+    vo.n.xy *= _NormalStrength;
     vo.n.z = sqrt(1 - saturate(dot(vo.n.xy, vo.n.xy)));
+    */
+    // Same as previous 3 lines
+    vo.n = UnpackScaleNormal(tex2D(_Normal, vo.uvM.xy), -_NormalStrength); 
+    float3 n2 = UnpackScaleNormal(tex2D(_SecondaryNormal, vo.uvM.zw), -_SecondaryNormalStrength);
+    
+    // Drawback of this approach is loss of detail for steeper slopers (the bigger the slope the greater the z thus the smaller weight in the addition)
+    // vo.n = float3(  // Break the two normals in their respective x and y derivative components, add those and recompute normal
+    //     vo.n.xy / vo.n.z + 
+    //     n2.xy / n2.z,
+    //     1
+    // ) 
+    // Use z instead as scaling factor
+    // This will behave the opposite of previous approach and normals will be stronger for steeper slopes.
+    // vo.n = float3(  // Break the two normals in their respective x and y derivative components, add those and recompute normal
+    //     vo.n.xy +
+    //     n2.xy,
+    //     vo.n.z * n2.z
+    // );
+    // Same as previous line (whiteout blending)
+    vo.n = BlendNormals(vo.n, n2);
 
     // Normal maps store the up direction in the z component 
-    // vo.n = vo.n.xzy;
-    vo.n = normalize(vo.n.xzy);
+    vo.n = vo.n.xzy;
+    // Not needed anymore because of BlendNormals()
+    // vo.n = normalize(vo.n.xzy);
     #endif
 }
 
 float4 frag(vOutput vo): SV_Target{
-    float3 albedo =  tex2D(_Tex, vo.uvM);
+    float3 albedo =  tex2D(_Tex, vo.uvM.xy);
 
     #if defined(HELIUM_HEIGHT_MAPPING) || defined(HELIUM_NORMAL_MAPPING)
     InitFragNormal(vo);
+    #endif
+
+    #ifdef HELIUM_NORMAL_MAPPING
+
+    albedo *= tex2D(_SecondaryTex, vo.uvM.zw) * unity_ColorSpaceDouble;
     #endif
     
     

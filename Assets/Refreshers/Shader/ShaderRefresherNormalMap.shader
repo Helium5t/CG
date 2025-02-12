@@ -7,6 +7,10 @@ Shader "Refreshers/NormalMappedPBShader"
     Properties{
         _Tex ("Texture", 2D) = "white" {}
         [NoScaleOffset] _Normal ("Normal map", 2D) = "bump" {}
+        _NormalStrength("Normal Strength", Float) = 1
+        _SecondaryTex("Secondary Texture", 2D) = "gray"{}
+        [NoScaleOffset] _SecondaryNormal("Secondary Normal map", 2D) = "bump" {}
+        _SecondaryNormalStrength("Secondary Normal Strength", Float) = 1
         _Roughness("Roughness", Range(0,1)) = 0.5
         _Metallic("Metallic", Range(0,1)) = 0.1
     }
