@@ -3,6 +3,13 @@
 
 #include <string>
 #define GLFW_INCLUDE_VULKAN // tells glfw to add vulkan api
+#define VK_KHRONOS_VALIDATION_VALIDATE_BEST_PRACTICES true
+#define VK_VALIDATION_VALIDATE_BEST_PRACTICES true
+#define VK_VALIDATE_BEST_PRACTICES true
+#define VK_KHRONOS_VALIDATION_VALIDATE_BEST_PRACTICES_ARM  true
+#define VK_VALIDATION_VALIDATE_BEST_PRACTICES_ARM  true
+#define VK_VALIDATE_BEST_PRACTICES_ARM true
+
 #include <GLFW/glfw3.h>
 
 inline const char* VkResultToString(VkResult r) {
@@ -27,8 +34,17 @@ inline const char* VkResultToString(VkResult r) {
         case VK_ERROR_FORMAT_NOT_SUPPORTED: return "ERROR_FORMAT_NOT_SUPPORTED";
         case VK_ERROR_FRAGMENTED_POOL: return "ERROR_FRAGMENTED_POOL";
         case VK_ERROR_UNKNOWN: return "ERROR_UNKNOWN";
-        // Add more cases for newer VkResult values as needed
         default: return "UNKNOWN_RESULT";
+    }
+}
+
+inline const char* VkDebugMessageTypeToString(VkDebugUtilsMessageTypeFlagsEXT r) {
+    switch (r) {
+        case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT: return "GENERAL";
+        case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT: return "PERFORMANCE";
+        case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT: return "VALIDATION";
+
+        default: return "UNKNOWN_TYPE";
     }
 }
 

@@ -8,9 +8,15 @@
 #include "heliumutils.h"
 #include "heliumdebug.h"
 
+
 class HelloTriangleApplication {
 public:
     void run() {
+        if (validationLayerEnabled){
+            std::cout<< "VL Enabled" << std::endl;
+        }else{
+            std::cout<< "VL Disabled" << std::endl;
+        }
         initWindow();
         initVulkan();
         mainLoop();
@@ -113,32 +119,22 @@ private:
         // all of them can be found at https://registry.khronos.org/vulkan/
         // Validation layers are just layers that verify data is being formatted and passed around correctly, it is a set of calls 
         // added between Vulkan API Layer and the Graphics driver layer, allows easier debugging. (https://vulkan-tutorial.com/Overview#page_Validation-layers)
-        VkInstanceCreateInfo icInfo{};
-        icInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-        icInfo.pApplicationInfo = &aInfo;
+        VkInstanceCreateInfo iInfo{};
+        iInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        iInfo.pApplicationInfo = &aInfo;
         // As vulkan is platform aognistic, we need an extension to add GLFW interfaces and bindings
         std::vector<const char*> glfwRequiredExtNames = getRequiredExtensions(); 
-        icInfo.enabledExtensionCount = static_cast<uint32_t>(glfwRequiredExtNames.size());
-
-        if(validationLayerEnabled){
-            icInfo.enabledLayerCount = static_cast<uint32_t>(validationLayerNames.size());
-            icInfo.ppEnabledLayerNames = validationLayerNames.data();
-        }else{
-            icInfo.enabledExtensionCount = 0;
-        }
-        // unneeded, explicit clarity
-        icInfo.pNext = nullptr;
+        iInfo.enabledExtensionCount = static_cast<uint32_t>(glfwRequiredExtNames.size());
 
         // Extra changes for macOS compatibility :) 
-        icInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR; //macOS req
+        iInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR; //macOS req
 
         std::vector<const char*> requiredExtNames = glfwRequiredExtNames;
-        icInfo.enabledExtensionCount ++;
+        iInfo.enabledExtensionCount ++;
         requiredExtNames.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME); // macOS req
         // end of extra changes
 
-        icInfo.ppEnabledExtensionNames = requiredExtNames.data();
-
+        iInfo.ppEnabledExtensionNames = requiredExtNames.data();
 
         uint32_t supportedExtensionCount = 0;
         // Get just the number
@@ -146,11 +142,21 @@ private:
         std::vector<VkExtensionProperties> supportedExtensions(supportedExtensionCount);
         // Get the full list
         vkEnumerateInstanceExtensionProperties(nullptr, &supportedExtensionCount, supportedExtensions.data());
-        std::cout<<"Supported extensions:"<< std::endl;
-        for (const VkExtensionProperties& e : supportedExtensions){
-            std::cout << "\t" << e.extensionName << std::endl;
+
+        VkDebugUtilsMessengerCreateInfoEXT createInstanceDebuggerCI{};
+        if(validationLayerEnabled){
+            iInfo.enabledLayerCount = static_cast<uint32_t>(validationLayerNames.size());
+            iInfo.ppEnabledLayerNames = validationLayerNames.data();
+
+            fillCreateInfoForDebugHandler(createInstanceDebuggerCI);
+            
+            iInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*) &createInstanceDebuggerCI; 
+        }else{
+            iInfo.enabledLayerCount = 0;
+            iInfo.pNext = nullptr;
         }
-        VkResult res = vkCreateInstance(&icInfo, nullptr, &instance);
+
+        VkResult res = vkCreateInstance(&iInfo, nullptr, &instance);
         std::cout << "Instance creation result: "<< VkResultToString(res) << std::endl;
         if (res != VK_SUCCESS){
             throw std::runtime_error("instance creation failure");
@@ -160,17 +166,28 @@ private:
 
     void initVulkan() {
         createInstance();
+        setupDebugMessenger();
     }
 
-    void setupDebugHandler(){
-        if(!validationLayerEnabled) return;
-        VkDebugUtilsMessengerCreateInfoEXT icInfo {};
-        icInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-        icInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-        icInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_TOOL_PURPOSE_VALIDATION_BIT_EXT;
-        icInfo.pfnUserCallback = parseDebugCallback;
+    void fillCreateInfoForDebugHandler(VkDebugUtilsMessengerCreateInfoEXT& toBeFilled){
+        std::cout<< "create info for debug handler" << std::endl;
+        toBeFilled.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+        toBeFilled.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT  | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+        toBeFilled.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_TOOL_PURPOSE_VALIDATION_BIT_EXT;
+        toBeFilled.pfnUserCallback = parseDebugCallback;
         // This will be passed back to the debug handler when emitting the callback, this way you can access some data you want to emit into the debug callback 
-        icInfo.pUserData = nullptr;
+        toBeFilled.pUserData = nullptr;
+        // Added because I was getting a warning
+        toBeFilled.flags = 0;
+    }
+
+    void setupDebugMessenger(){
+        if(!validationLayerEnabled) return;
+        VkDebugUtilsMessengerCreateInfoEXT mcInfo;
+        fillCreateInfoForDebugHandler(mcInfo);
+        if (CreateDebugMessengerExtension(instance /* <- Debug messengers are specific to instances and layers, so we need this */, &mcInfo, nullptr, &debugCallbackHandler) != VK_SUCCESS) {
+            throw std::runtime_error("failed to set up debug messenger");
+        }
     }
 
     void mainLoop() {
@@ -180,6 +197,10 @@ private:
     }
 
     void cleanup() {
+        if(validationLayerEnabled){
+            // DestroyDebugMessengerExtension(instance, debugCallbackHandler, nullptr);
+        }
+
         vkDestroyInstance(instance, nullptr/*Optional callback pointer*/);
         glfwDestroyWindow(window);
         glfwTerminate(); // Once this function is called, glfwInit(L#30) must be called again before using most GLFW functions. This deallocates everything GLFW related.

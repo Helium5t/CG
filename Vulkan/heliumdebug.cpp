@@ -1,34 +1,22 @@
 #include "heliumdebug.h"
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL parseDebugCallback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT sev,
-    VkDebugUtilsMessageTypeFlagsEXT msgType,
-    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-    void* pUserData
-){
-    std::cerr<<"debug callback with msg: "<< pCallbackData->pMessage << std::endl;
-        /*
-        Message types
-        GENERAL     : Unrelated to the specification or performance
-        VALIDATION  : Violation of the specification or a possible PEBCAK
-        PERFORMANCE : Potential non-optimal use of Vulkan
-        */
-        std::cerr<<"type is: " << msgType << std::endl;
-    // Filtering can also be done when creating the debug callback information in the createinfo struct
-    // via the .severity field 
-    if (sev >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT){
-        std::cerr << "THIS IS SERIOUS" << std::endl;
-    }
-    return VK_FALSE;
-}
-
-// Get a pointer to the vkCreateDebugUtilsMessengerEXT function in order to create the debug messenger handler. This needs to be done as this function is not automatically loaded,
+// Gets a pointer to the vkCreateDebugUtilsMessengerEXT function in order to create the debug messenger handler. This needs to be done as this function is not automatically loaded,
 // it being an extension (EXT)
-VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
+VkResult CreateDebugMessengerExtension(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
+    std::cout << "Creating DebugMessengerExtension" << std::endl;
     auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     if (func != nullptr) {
+        // Actually create the debug messenger here
         return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
     } else {
         return VK_ERROR_EXTENSION_NOT_PRESENT;
+    }
+}
+
+void DestroyDebugMessengerExtension(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator){
+    std::cout << "Destroying DebugMessengerExtension" << std::endl;
+    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+    if (func != nullptr){
+        return func(instance, debugMessenger, pAllocator);
     }
 }
