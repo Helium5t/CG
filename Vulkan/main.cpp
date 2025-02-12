@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <cstdlib> // Used for the two success statuses EXIT_SUCCESS and EXIT_FAILURE 
 #include "heliumutils.h"
+#include "heliumdebug.h"
 
 class HelloTriangleApplication {
 public:
@@ -21,9 +22,21 @@ private:
     const uint32_t WIDTH = 800;
     const uint32_t HEIGHT = 600;
 
+    
+    const std::vector<const char*> validationLayerNames = {
+    "VK_LAYER_KHRONOS_validation" // Standard bundle of validation layers included in LunarG SDK
+    };
+
+    #ifdef NDEBUG
+    const bool validationLayerEnabled = false;
+    #else
+    const uint32_t validationLayerEnabled = true;
+    #endif
+
     // Objects
     GLFWwindow* window;
     VkInstance instance;
+    VkDebugUtilsMessengerEXT debugCallbackHandler;
 
     void initWindow() {
         glfwInit();
@@ -39,7 +52,50 @@ private:
 
     }
 
+    bool checkValidationLayerSupport(){
+        uint32_t count;
+        vkEnumerateInstanceLayerProperties(&count, nullptr);
+
+        std::vector<VkLayerProperties> layers(count);
+        vkEnumerateInstanceLayerProperties(&count, layers.data());
+        for (const char* l : validationLayerNames){
+            bool found = false;
+            for (VkLayerProperties lp : layers){
+                if(strcmp(l, lp.layerName) == 0){
+                    found = true;
+                    break;
+                }
+            }
+            if (!found){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    std::vector<const char*> getRequiredExtensions(){
+        uint32_t glfwRequiredExtCount = 0;
+        const char** glfwRequiredExtNames;
+        glfwRequiredExtNames = glfwGetRequiredInstanceExtensions(&glfwRequiredExtCount); 
+        std::vector<const char*> requiredExtNames;
+        for(int i =0; i<glfwRequiredExtCount; i++){
+            requiredExtNames.emplace_back(glfwRequiredExtNames[i]);
+        }
+
+        if (validationLayerEnabled){
+            requiredExtNames.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        }
+        return requiredExtNames;
+    }
+
     void createInstance(){
+        #ifdef NDEBUG
+            std::cout<< "Non Debug mode" << std::endl; 
+        #endif
+        if(validationLayerEnabled && !checkValidationLayerSupport()){
+            throw std::runtime_error("specified validation layers are not supported");
+        }
+
         VkApplicationInfo aInfo{};
         // All parameters here are optional, but allow for optimization by the vulkan library as it poses restrictions on what behaviour is expected of the application.
         aInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO; // defines structure type
@@ -61,27 +117,28 @@ private:
         icInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         icInfo.pApplicationInfo = &aInfo;
         // As vulkan is platform aognistic, we need an extension to add GLFW interfaces and bindings
-        uint32_t glfwRequiredExtCount = 0;
-        const char** glfwRequiredExtNames;
-        glfwRequiredExtNames = glfwGetRequiredInstanceExtensions(&glfwRequiredExtCount); 
-        icInfo.enabledExtensionCount = glfwRequiredExtCount;
-        // validation layers, unused atm
-        icInfo.enabledLayerCount = 0;
+        std::vector<const char*> glfwRequiredExtNames = getRequiredExtensions(); 
+        icInfo.enabledExtensionCount = static_cast<uint32_t>(glfwRequiredExtNames.size());
+
+        if(validationLayerEnabled){
+            icInfo.enabledLayerCount = static_cast<uint32_t>(validationLayerNames.size());
+            icInfo.ppEnabledLayerNames = validationLayerNames.data();
+        }else{
+            icInfo.enabledExtensionCount = 0;
+        }
         // unneeded, explicit clarity
         icInfo.pNext = nullptr;
 
         // Extra changes for macOS compatibility :) 
         icInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR; //macOS req
 
-        std::vector<const char*> requiredExtNames;
-        for(int i =0; i<icInfo.enabledExtensionCount; i++){
-            requiredExtNames.emplace_back(glfwRequiredExtNames[i]);
-        }
+        std::vector<const char*> requiredExtNames = glfwRequiredExtNames;
         icInfo.enabledExtensionCount ++;
         requiredExtNames.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME); // macOS req
         // end of extra changes
 
         icInfo.ppEnabledExtensionNames = requiredExtNames.data();
+
 
         uint32_t supportedExtensionCount = 0;
         // Get just the number
@@ -94,7 +151,7 @@ private:
             std::cout << "\t" << e.extensionName << std::endl;
         }
         VkResult res = vkCreateInstance(&icInfo, nullptr, &instance);
-        std::cout << "Instance creation result:"<< VkResultToString(res) << std::endl;
+        std::cout << "Instance creation result: "<< VkResultToString(res) << std::endl;
         if (res != VK_SUCCESS){
             throw std::runtime_error("instance creation failure");
         }
@@ -103,6 +160,17 @@ private:
 
     void initVulkan() {
         createInstance();
+    }
+
+    void setupDebugHandler(){
+        if(!validationLayerEnabled) return;
+        VkDebugUtilsMessengerCreateInfoEXT icInfo {};
+        icInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+        icInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+        icInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_TOOL_PURPOSE_VALIDATION_BIT_EXT;
+        icInfo.pfnUserCallback = parseDebugCallback;
+        // This will be passed back to the debug handler when emitting the callback, this way you can access some data you want to emit into the debug callback 
+        icInfo.pUserData = nullptr;
     }
 
     void mainLoop() {
