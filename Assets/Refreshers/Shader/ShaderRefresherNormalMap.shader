@@ -14,6 +14,9 @@ Shader "Refreshers/NormalMappedPBShader"
         _Roughness("Roughness", Range(0,1)) = 0.5
         _Metallic("Metallic", Range(0,1)) = 0.1
     }
+    CGINCLUDE
+    #define HELIUM_FRAGMENT_BINORMAL
+    ENDCG
     SubShader{
 
         Pass{

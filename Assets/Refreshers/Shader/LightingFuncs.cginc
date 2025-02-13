@@ -41,6 +41,10 @@ struct vInput{
     float4 pos: POSITION;
     float3 n : NORMAL;
     float2 uv : TEXCOORD0;
+
+    #ifdef HELIUM_NORMAL_MAPPING
+    float4 tan : TANGENT;
+    #endif
 };
 
 struct vOutput{
@@ -48,15 +52,25 @@ struct vOutput{
     float3 n :   TEXCOORD0;
     #ifdef HELIUM_NORMAL_MAPPING
     float4 uvM : TEXCOORD1; // Main(xy) and Secondary(zw)
+    #ifdef HELIUM_FRAGMENT_BINORMAL
+    float4 tan : TEXCOORD3;
+    #else
+    float4 tan : TEXCOORD3;
+    float3 bin : TEXCOORD4;
+    #endif
     #else
     float2 uvM : TEXCOORD1; // Main
     #endif
     float4 wPos : TEXCOORD2; // World Space Position
 
     #if defined(VERTEXLIGHT_ON)
-    float3 lColor: TEXCOORD3; // Computed vertex light
+    float3 lColor: TEXCOORD5; // Computed vertex light
     #endif
 };
+
+float3 ComputeBinormal(float3 n, float3 t, float sign){
+    return cross(n,t) * (sign * unity_WorldTransformParams.w/*Handles cases where object is mirrored in some dimension*/);
+}
 
 void ComputeVertexLight(inout vOutput v){
     #if defined(VERTEXLIGHT_ON)
@@ -103,6 +117,11 @@ vOutput vert(vInput i){
     o.uvM.xy = HELIUM_TRANSFORM_TEX(i.uv, _Tex);  // QOL command that summarizes texture tiling and offset
     #ifdef HELIUM_NORMAL_MAPPING
     o.uvM.zw = HELIUM_TRANSFORM_TEX(i.uv, _SecondaryTex);
+    o.tan = float4(UnityObjectToWorldDir(i.tan.xyz), i.tan.w);
+    #ifndef HELIUM_FRAGMENT_BINORMAL
+    o.bin = ComputeBinormal(i.n, i.tan.xyz, i.tan.w);
+    #endif
+
     #endif
     o.csPos = UnityObjectToClipPos(i.pos);
     o.wPos = mul(unity_ObjectToWorld, i.pos);
@@ -169,9 +188,8 @@ void InitFragNormal(inout vOutput vo){
     vo.n.z = sqrt(1 - saturate(dot(vo.n.xy, vo.n.xy)));
     */
     // Same as previous 3 lines
-    vo.n = UnpackScaleNormal(tex2D(_Normal, vo.uvM.xy), -_NormalStrength); 
+    float3 n1 = UnpackScaleNormal(tex2D(_Normal, vo.uvM.xy), -_NormalStrength); 
     float3 n2 = UnpackScaleNormal(tex2D(_SecondaryNormal, vo.uvM.zw), -_SecondaryNormalStrength);
-    
     // Drawback of this approach is loss of detail for steeper slopers (the bigger the slope the greater the z thus the smaller weight in the addition)
     // vo.n = float3(  // Break the two normals in their respective x and y derivative components, add those and recompute normal
     //     vo.n.xy / vo.n.z + 
@@ -186,12 +204,20 @@ void InitFragNormal(inout vOutput vo){
     //     vo.n.z * n2.z
     // );
     // Same as previous line (whiteout blending)
-    vo.n = BlendNormals(vo.n, n2);
+    float3 tanSpaceNormal = BlendNormals(n1, n2);
 
     // Normal maps store the up direction in the z component 
-    vo.n = vo.n.xzy;
-    // Not needed anymore because of BlendNormals()
-    // vo.n = normalize(vo.n.xzy);
+    tanSpaceNormal = tanSpaceNormal.xzy;
+    #ifdef HELIUM_FRAGMENT_BINORMAL
+    float3 bn = ComputeBinormal(vo.n, vo.tan.xyz, vo.tan.w);
+    #else
+    float3 bn = vo.bin;
+    #endif
+    vo.n = normalize(
+        tanSpaceNormal.x * vo.tan + 
+        tanSpaceNormal.y * vo.n +
+        tanSpaceNormal.z * bn
+    );
     #endif
 }
 
