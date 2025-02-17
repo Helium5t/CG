@@ -5,6 +5,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <cstdlib> // Used for the two success statuses EXIT_SUCCESS and EXIT_FAILURE 
+#include <map>
 #include "heliumutils.h"
 #include "heliumdebug.h"
 
@@ -181,31 +182,39 @@ private:
         }
         std::vector<VkPhysicalDevice> devices(deviceCount);
         vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+        std::multimap<int, VkPhysicalDevice> possibleDevices;
         for( const auto& device : devices){
-            if(deviceMeetsRequirements(device)){
+            int supportScore = rateDevice(device);
+            if(supportScore > 0 ){
                 graphicDevice = device;
-                break;
+                possibleDevices.insert(std::make_pair(supportScore, device));
             }
         }
-        if (graphicDevice == VK_NULL_HANDLE){
+        if (possibleDevices.rbegin() -> first > 0 ){
+            graphicDevice = possibleDevices.rbegin() -> second;
+            std::cout << "Selecting " << graphicDevice << " with support score: " << possibleDevices.cbegin()->first << std::endl;
+        } else {
             throw std::runtime_error("No device meets requirements");
         }
     }
 
-    bool deviceMeetsRequirements(VkPhysicalDevice vkpd){
+    bool rateDevice(VkPhysicalDevice vkpd){
+        /*
+        int score = 0;
         VkPhysicalDeviceProperties properties; // Name, type etc..
         vkGetPhysicalDeviceProperties(vkpd, &properties);
         VkPhysicalDeviceFeatures features; // Supported technologies, hardware accel, vr support etc... 
         vkGetPhysicalDeviceFeatures(vkpd, &features);
-        std::cout << "GPU " << properties.deviceName << " is of type:"<< VkDeviceTypeToString(properties.deviceType) << std::endl;
-        // GPU has to support geometry shaders
-        return properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU /* Tutorial uses DISCRETE (but we're on mac lul)*/ && features.geometryShader;
+        std::cout << "rating GPU " << properties.deviceName << " is of type:"<< VkDeviceTypeToString(properties.deviceType) << std::endl;
+        std::cout << "\tgeometry shader support: "<< std::boolalpha <<  static_cast<bool>(features.geometryShader) << std::endl;
+        */
+        return true;
     }
 
     void fillCreateInfoForDebugHandler(VkDebugUtilsMessengerCreateInfoEXT& toBeFilled){
         std::cout<< "create info for debug handler" << std::endl;
         toBeFilled.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-        toBeFilled.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT  | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+        toBeFilled.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
         toBeFilled.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_TOOL_PURPOSE_VALIDATION_BIT_EXT;
         toBeFilled.pfnUserCallback = parseDebugCallbackInstance;
         // This will be passed back to the debug handler when emitting the callback, this way you can access some data you want to emit into the debug callback 
