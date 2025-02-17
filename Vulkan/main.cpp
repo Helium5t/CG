@@ -43,6 +43,8 @@ private:
     GLFWwindow* window;
     VkInstance instance;
     VkDebugUtilsMessengerEXT debugCallbackHandler;
+    // Automatically destroyed by vulkan so no need to destroy it in cleanup
+    VkPhysicalDevice graphicDevice = VK_NULL_HANDLE;  
 
     void initWindow() {
         glfwInit();
@@ -167,6 +169,37 @@ private:
     void initVulkan() {
         createInstance();
         setupDebugMessenger();
+        setPhysicalDevice();
+    }
+
+    // Builds the vulkan representation of the used GPU
+    void setPhysicalDevice(){
+        uint32_t deviceCount = 0;
+        vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+        if (deviceCount == 0) {
+            throw std::runtime_error("No Vulkan Supported GPUs found");
+        }
+        std::vector<VkPhysicalDevice> devices(deviceCount);
+        vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+        for( const auto& device : devices){
+            if(deviceMeetsRequirements(device)){
+                graphicDevice = device;
+                break;
+            }
+        }
+        if (graphicDevice == VK_NULL_HANDLE){
+            throw std::runtime_error("No device meets requirements");
+        }
+    }
+
+    bool deviceMeetsRequirements(VkPhysicalDevice vkpd){
+        VkPhysicalDeviceProperties properties; // Name, type etc..
+        vkGetPhysicalDeviceProperties(vkpd, &properties);
+        VkPhysicalDeviceFeatures features; // Supported technologies, hardware accel, vr support etc... 
+        vkGetPhysicalDeviceFeatures(vkpd, &features);
+        std::cout << "GPU " << properties.deviceName << " is of type:"<< VkDeviceTypeToString(properties.deviceType) << std::endl;
+        // GPU has to support geometry shaders
+        return properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU /* Tutorial uses DISCRETE (but we're on mac lul)*/ && features.geometryShader;
     }
 
     void fillCreateInfoForDebugHandler(VkDebugUtilsMessengerCreateInfoEXT& toBeFilled){
@@ -211,7 +244,7 @@ private:
 int main() {
     HelloTriangleApplication app;
 
-    try {
+    try { 
         std::cout << "hello" << std::endl;
         app.run();
     } catch (const std::exception& e) {
