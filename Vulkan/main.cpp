@@ -10,6 +10,9 @@
 #include "heliumutils.h"
 #include "heliumdebug.h"
 #include <optional>
+// #include <cstdint> // Necessary for uint32_t
+#include <limits> // Necessary for std::numeric_limits
+#include <algorithm> // Necessary for std::clamp
 
 class HelloTriangleApplication {
 public:
@@ -35,6 +38,10 @@ private:
     "VK_LAYER_KHRONOS_validation" // Standard bundle of validation layers included in LunarG SDK
     };
 
+    const std::vector<const char*> requiredDeviceExtensionNames = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    };
+
     #ifdef NDEBUG
     const bool validationLayerEnabled = false;
     #else
@@ -54,6 +61,11 @@ private:
     VkDevice logiDevice; 
     VkQueue graphicsCommandQueue;
     VkQueue presentCommandQueue;
+    VkSwapchainKHR swapChain;
+
+    std::vector<VkImage> swapChainImages;
+    VkFormat selectedSwapChainFormat;
+    VkExtent2D selectedSwapChainWindowSize;
 
     void initWindow() {
         glfwInit();
@@ -181,6 +193,60 @@ private:
         setupRenderSurface();
         setPhysicalDevice();
         createLogicalDevice();
+        createSwapChain();
+    }
+
+    void createSwapChain(){
+        SwapChainSpecifications swapChainSpecs = checkSwapChainSpecifications(physGraphicDevice);
+
+        VkSurfaceFormatKHR imageFormat = chooseImageFormat(swapChainSpecs.imageFormats);
+        VkPresentModeKHR presentMode = choosePresentMode(swapChainSpecs.presentModes);
+        VkExtent2D windowExtent = chooseWindowSize(swapChainSpecs.surfaceCapabilities);
+
+        uint32_t frameCount = swapChainSpecs.surfaceCapabilities.minImageCount + 1; // +1 ensures we don't have to wait on the graphics driver.
+        if (swapChainSpecs.surfaceCapabilities.maxImageCount > 0 && frameCount > swapChainSpecs.surfaceCapabilities.maxImageCount){
+            frameCount = swapChainSpecs.surfaceCapabilities.maxImageCount;
+        }
+        VkSwapchainCreateInfoKHR swapchainCreateInfo{};
+        swapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        swapchainCreateInfo.surface = renderSurface;
+        swapchainCreateInfo.minImageCount = frameCount;
+        swapchainCreateInfo.imageExtent = windowExtent;
+        swapchainCreateInfo.imageFormat = imageFormat.format;
+        swapchainCreateInfo.imageColorSpace = imageFormat.colorSpace;
+        swapchainCreateInfo.imageArrayLayers = 1; // Used for VR, always 1 unless we need stereoscopic swap chain.
+        /*
+        Too many values : https://registry.khronos.org/vulkan/specs/latest/man/html/VkImageUsageFlagBits.html
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT means the swapchain generates images that can be used for a VkImageView or a Color buffer (vs Depth buffer) in a VkFrameBuffer.
+        */
+        swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+        QueueFamilyIndices qfi = findRequiredQueueFamily(physGraphicDevice);
+        uint32_t familyIndices[] = {qfi.graphicsFamilyIndex.value(), qfi.presentationFamilyIndex.value()};
+        if(qfi.graphicsFamilyIndex != qfi.presentationFamilyIndex){ // We have two different queues for graphics and presentation and thus the chain will be shared among the two.
+            swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+            swapchainCreateInfo.queueFamilyIndexCount = 2;
+            swapchainCreateInfo.pQueueFamilyIndices = familyIndices;
+        }else{ // Graphics and Presentation queue is the same queue, so no sharing needed.
+            swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            swapchainCreateInfo.queueFamilyIndexCount = 0; // Optional when exclusive
+            swapchainCreateInfo.pQueueFamilyIndices = nullptr; // Optional when exclusive
+        }
+        swapchainCreateInfo.preTransform = swapChainSpecs.surfaceCapabilities.currentTransform;
+        swapchainCreateInfo.compositeAlpha =  VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        swapchainCreateInfo.clipped = VK_TRUE;
+        swapchainCreateInfo.presentMode = presentMode;
+        swapchainCreateInfo.oldSwapchain = VK_NULL_HANDLE; // Used when recreating the swapchain for a new surface (e.g. change in window size)
+
+        VkResult swapChainCreationResult = vkCreateSwapchainKHR(logiDevice, &swapchainCreateInfo, nullptr, &swapChain);
+        if (swapChainCreationResult != VK_SUCCESS){
+            throw std::runtime_error("could not create swapchain");
+        }
+        selectedSwapChainFormat = imageFormat.format;
+        selectedSwapChainWindowSize = windowExtent;
+        vkGetSwapchainImagesKHR(logiDevice, swapChain, &frameCount, nullptr);
+        swapChainImages.resize(frameCount);
+        vkGetSwapchainImagesKHR(logiDevice, swapChain, &frameCount, swapChainImages.data());
     }
 
     void setupRenderSurface(){
@@ -221,7 +287,8 @@ private:
         logicalDeviceCreationInfo.pQueueCreateInfos = queueCreationInfos.data();
         logicalDeviceCreationInfo.pEnabledFeatures = &usedPhysicalDeviceFeatures;
 
-        logicalDeviceCreationInfo.enabledExtensionCount = 0; // No extensions needed atm.
+        logicalDeviceCreationInfo.enabledExtensionCount =static_cast<uint32_t>(requiredDeviceExtensionNames.size()); // No extensions needed atm.
+        logicalDeviceCreationInfo.ppEnabledExtensionNames = requiredDeviceExtensionNames.data();
 
         // Actually this is ignored by most recent vulkan (https://docs.vulkan.org/spec/latest/chapters/extensions.html#extendingvulkan-layers-devicelayerdeprecation)
         // This is being filled in just for retrocompatibility.
@@ -256,7 +323,7 @@ private:
         vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
         std::multimap<int, VkPhysicalDevice> possibleDevices;
         for( const auto& device : devices){
-            int supportScore = rateDevice(device);
+            int supportScore = rateDeviceSupport(device);
             if(supportScore > 0 ){
                 physGraphicDevice = device;
                 possibleDevices.insert(std::make_pair(supportScore, device));
@@ -268,6 +335,32 @@ private:
         } else {
             throw std::runtime_error("No device meets requirements");
         }
+    }
+
+    struct SwapChainSpecifications {
+        VkSurfaceCapabilitiesKHR surfaceCapabilities;
+        std::vector<VkSurfaceFormatKHR> imageFormats;
+        std::vector<VkPresentModeKHR> presentModes;
+    };
+
+    SwapChainSpecifications checkSwapChainSpecifications(VkPhysicalDevice vkpd){
+        SwapChainSpecifications scSpecs{};
+
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vkpd, renderSurface, &scSpecs.surfaceCapabilities);
+
+        uint32_t formatCount = 0;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(vkpd, renderSurface, &formatCount, nullptr);
+        if(formatCount != 0){
+            scSpecs.imageFormats.resize(formatCount);
+            vkGetPhysicalDeviceSurfaceFormatsKHR(vkpd, renderSurface, &formatCount, scSpecs.imageFormats.data());
+        }
+        uint32_t presentModeCount = 0;
+        vkGetPhysicalDeviceSurfacePresentModesKHR(vkpd, renderSurface, &presentModeCount, nullptr);
+        if(presentModeCount != 0){
+            scSpecs.presentModes.resize(presentModeCount);
+            vkGetPhysicalDeviceSurfacePresentModesKHR(vkpd, renderSurface, &presentModeCount, scSpecs.presentModes.data());
+        }
+        return scSpecs;
     }
 
     // Contains the index of the queue family we need. The index refers to the position in the array returned by vkGetPhysicalDeviceQueueFamilyProperties.
@@ -320,7 +413,7 @@ private:
         return qfi;
     }
 
-    bool rateDevice(VkPhysicalDevice vkpd){
+    bool rateDeviceSupport(VkPhysicalDevice vkpd){
         /*
         Keeping this here for reference on how to retrieve properties and features (and diff between the two).
 
@@ -334,16 +427,107 @@ private:
         */
 
         QueueFamilyIndices familyIndex = findRequiredQueueFamily(vkpd);
-        if (familyIndex.has_values()){
-            return true;
+        if(!familyIndex.has_values()){
+            return false;
         }
-        return false;
+        if (!supportsRequiredDeviceExtensions(vkpd)){
+            return false;
+        }
+        SwapChainSpecifications swapChainSpecs = checkSwapChainSpecifications(vkpd);
+        if (swapChainSpecs.presentModes.empty() || swapChainSpecs.imageFormats.empty()){
+            return false;
+        }
+        return true;
+    }
+
+    VkSurfaceFormatKHR chooseImageFormat(const std::vector<VkSurfaceFormatKHR>& formats){
+        for(const auto& f:formats){
+            if (f.format == VK_FORMAT_B8G8R8_SRGB && f.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR){
+                return f;
+            }
+        }
+        return formats[0];
+    }
+
+    VkPresentModeKHR choosePresentMode(const std::vector<VkPresentModeKHR>& modes){
+        /*
+        Present modes available
+            IMMEDIATE :                 Present image as soon as it is submitted by application (may cause tearing due to refresh rate and app being out of sync)
+            FIFO :                      Similar to VSync enabled, application fills a queue that is popped at each refresh of the screen (called a vertical blank).
+            FIFO_RELAXED :              Similar to previous one, but if the application is late and the queue is empty, switch to immediate while the queue is empty. (Causes tearing when empty)
+            MAILBOX  :                  Known as "triple buffering" (although not necessarily three frames in buffer). Same as FIFO but when the queue is full replace frames with newer ones. 
+            
+            Provided by the VK_KHR_shared_presentable_image extension
+            SHARED_DEMAND_REFRESH :     app and presenter share the image pointer and app has to REQUEST an update, while presenter ignores the presentation. May cause tearing if out of sync.
+            SHARED_CONTINUOUS_REFRESH : Same as previous, but the refresh request must only be sent once, can still cause tearing.
+
+            Provided by VK_EXT_present_mode_fifo_latest_ready
+            FIFO_LATEST_READY :         Same as FIFO but instead of dequeing one request, the presenter will deque the latest image (if they have a timestamp attached it will deque the one closest to the present but smaller than it.)
+        */
+        for(const auto& m:modes){
+            if(m == VK_PRESENT_MODE_MAILBOX_KHR){
+                return m;
+            }
+        }
+        return VK_PRESENT_MODE_FIFO_KHR; // FIFO is always present
+    }
+
+    VkExtent2D chooseWindowSize(const VkSurfaceCapabilitiesKHR& capabilities){
+        /*
+            currentExtent is the current width and height of the surface, 
+            or the special value (0xFFFFFFFF, 0xFFFFFFFF) indicating that the size will be adapted
+            based on the swapchain that is targeting the surface.
+            (i.e. if the swap chain is passing 1920x1080 frames, the size of the window will adapt to fit that size)
+        */
+        if(capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()/* Same as 0xFFFFFFFF*/){
+            return capabilities.currentExtent;
+        }
+        int w, h;
+        /* 
+        We cannot reuse the previous values (WIDTH, HEIGHT) because in some cases (e.g. Apple Retina display lul) there is a difference between
+         - the hardware pixel, as in the smallest rgb light emitting unit
+         - the "logical" pixel, as in the number of pixels declared by the machine/OS to GLFW and the ones used by GLFW for positioning and sizing of the window. 
+        GLFW uses "logical" pixels for deciding the window size, but vulkan instead uses the hardware ones, so the maxExtent might be a lot more than the logical maximum amount, given
+        you can have a higher pixel count monitor display a lower resolution, this is often the case with retina since they purposefully display a lower resolution to implement image sharpening
+        techniques to make everything look nicer. It's ultimately just a higher resolution screen using fancy antialiasing on a lower resolution image.
+        Moreover, text size is often impacted by the logical resolution, so using a lower one makes the text bigger.
+
+        In the tutorial, logical pixels are referred to as screen coordinates, which to me was extremely confusing given also the term of screen space coordinates, that go from 0 to 1
+        irrespective of the amount of pixels.
+        */
+        glfwGetFramebufferSize(window, &w, &h); 
+        VkExtent2D extent = {
+            static_cast<uint32_t>(w),
+            static_cast<uint32_t>(h)
+        };
+
+        // Clamp size to not overshoot max surface size
+        extent.width = std::clamp(extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+        extent.height = std::clamp(extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+
+        return extent;
+    }
+
+    bool supportsRequiredDeviceExtensions(VkPhysicalDevice vkpd){
+        uint32_t extensionCount;
+        vkEnumerateDeviceExtensionProperties(vkpd, nullptr, &extensionCount, nullptr);
+        if (extensionCount == 0){
+            throw std::runtime_error("no device extensions supported");
+        };
+        std::vector<VkExtensionProperties> extensionProperties(extensionCount);
+        vkEnumerateDeviceExtensionProperties(vkpd, nullptr, &extensionCount, extensionProperties.data());
+        std::set<std::string> requiredExtensions(requiredDeviceExtensionNames.begin(), requiredDeviceExtensionNames.end());
+        for(const auto& ext: extensionProperties){
+            requiredExtensions.erase(ext.extensionName);
+        };
+        return requiredExtensions.empty();
     }
 
     void fillCreateInfoForDebugHandler(VkDebugUtilsMessengerCreateInfoEXT& toBeFilled){
         std::cout<< "create info for debug handler" << std::endl;
         toBeFilled.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
         toBeFilled.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+
         toBeFilled.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_TOOL_PURPOSE_VALIDATION_BIT_EXT;
         toBeFilled.pfnUserCallback = parseDebugCallbackInstance;
         // This will be passed back to the debug handler when emitting the callback, this way you can access some data you want to emit into the debug callback 
@@ -372,6 +556,7 @@ private:
         if(validationLayerEnabled){
             DestroyDebugMessengerExtension(instance, debugCallbackHandler, nullptr); // Ideally this should be caught by the debug messenger when destroy is not called, and yet it doesn't happen
         }
+        vkDestroySwapchainKHR(logiDevice, swapChain, nullptr);
         // In order : Device generating renders -> render surface -> instance -> window -> glfw.
         vkDestroyDevice(logiDevice, nullptr);
         vkDestroySurfaceKHR(instance, renderSurface, nullptr);
