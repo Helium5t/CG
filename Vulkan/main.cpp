@@ -5,9 +5,10 @@
 #include <iostream>
 #include <stdexcept>
 #include <cstdlib> // Used for the two success statuses EXIT_SUCCESS and EXIT_FAILURE 
+#include <map>
 #include "heliumutils.h"
 #include "heliumdebug.h"
-
+#include <optional>
 
 class HelloTriangleApplication {
 public:
@@ -43,6 +44,11 @@ private:
     GLFWwindow* window;
     VkInstance instance;
     VkDebugUtilsMessengerEXT debugCallbackHandler;
+    // Automatically destroyed by vulkan so no need to destroy it in cleanup
+    VkPhysicalDevice physGraphicDevice = VK_NULL_HANDLE;  
+    // The logical device (code interface for the physical device)
+    VkDevice logiDevice; 
+    VkQueue commandQueue;
 
     void initWindow() {
         glfwInit();
@@ -167,12 +173,140 @@ private:
     void initVulkan() {
         createInstance();
         setupDebugMessenger();
+        setPhysicalDevice();
+        createLogicalDevice();
+    }
+
+    void createLogicalDevice(){
+        QueueFamilyIndex qfi = findRequiredQueueFamily(physGraphicDevice);
+        if(!qfi.has_values()){
+            throw std::runtime_error("Selected physical device should have required queues but some are missing.");
+        }
+        VkDeviceQueueCreateInfo queueCreationInfo{};
+        queueCreationInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queueCreationInfo.queueFamilyIndex = qfi.graphicsFamilyIndex.value();
+        queueCreationInfo.queueCount = 1;
+        float priority = 1.0; // always required, needed to give priority weight to each queue during scheduling. (e.g. We want graphics commands to always have priority over compute commands)
+        queueCreationInfo.pQueuePriorities = &priority;
+
+        // What features of the physical device are being actually used.
+        VkPhysicalDeviceFeatures usedPhysicalDeviceFeatures{}; // Empty for now cause we're doing nothing
+
+        VkDeviceCreateInfo logicalDeviceCreationInfo{};
+        logicalDeviceCreationInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        logicalDeviceCreationInfo.queueCreateInfoCount = 1; // Only one set of creation instructions
+        logicalDeviceCreationInfo.pQueueCreateInfos = &queueCreationInfo;
+        logicalDeviceCreationInfo.pEnabledFeatures = &usedPhysicalDeviceFeatures;
+
+        logicalDeviceCreationInfo.enabledExtensionCount = 0; // No extensions needed atm.
+
+        // Actually this is ignored by most recent vulkan (https://docs.vulkan.org/spec/latest/chapters/extensions.html#extendingvulkan-layers-devicelayerdeprecation)
+        // This is being filled in just for retrocompatibility.
+        if(validationLayerEnabled){
+            logicalDeviceCreationInfo.enabledLayerCount = static_cast<uint32_t>(validationLayerNames.size());
+            logicalDeviceCreationInfo.ppEnabledLayerNames = validationLayerNames.data();
+        }else{
+            logicalDeviceCreationInfo.enabledLayerCount = 0;
+        }
+        VkResult logiDeviceCreationResult = vkCreateDevice(physGraphicDevice, &logicalDeviceCreationInfo, nullptr, &logiDevice);
+        if( logiDeviceCreationResult != VK_SUCCESS){
+            throw std::runtime_error(strcat("Failed to create logical device: " , VkResultToString(logiDeviceCreationResult)));
+        }
+        vkGetDeviceQueue(logiDevice, qfi.graphicsFamilyIndex.value(), 0, &commandQueue);
+
+    }
+
+    // Builds the vulkan representation of the used GPU
+    void setPhysicalDevice(){
+        uint32_t deviceCount = 0;
+        vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+        if (deviceCount == 0) {
+            throw std::runtime_error("No Vulkan Supported GPUs found");
+        }
+        std::vector<VkPhysicalDevice> devices(deviceCount);
+        vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+        std::multimap<int, VkPhysicalDevice> possibleDevices;
+        for( const auto& device : devices){
+            int supportScore = rateDevice(device);
+            if(supportScore > 0 ){
+                physGraphicDevice = device;
+                possibleDevices.insert(std::make_pair(supportScore, device));
+            }
+        }
+        if (possibleDevices.rbegin() -> first > 0 ){
+            physGraphicDevice = possibleDevices.rbegin() -> second;
+            std::cout << "Selecting " << physGraphicDevice << " with support score: " << possibleDevices.cbegin()->first << std::endl;
+        } else {
+            throw std::runtime_error("No device meets requirements");
+        }
+    }
+
+    // Contains the index of the queue family we need. The index refers to the position in the array returned by vkGetPhysicalDeviceQueueFamilyProperties.
+    struct QueueFamilyIndex{
+        std::optional<uint32_t> graphicsFamilyIndex; // 0 is a valid family index (each index represents a queue family that supports certain commands) so we need a way to discern between null and 0.
+
+        bool has_values(){
+            return graphicsFamilyIndex.has_value();
+        }
+    };
+
+    QueueFamilyIndex findRequiredQueueFamily(VkPhysicalDevice vkpd){
+        QueueFamilyIndex qfi;
+        uint32_t familyCount;
+        vkGetPhysicalDeviceQueueFamilyProperties(vkpd, &familyCount, nullptr);
+        if (familyCount == 0){
+            throw std::runtime_error("No queue families available.");
+        }
+        std::vector<VkQueueFamilyProperties> families(familyCount);
+        vkGetPhysicalDeviceQueueFamilyProperties(vkpd, &familyCount, families.data());
+        int familyIndex = 0;
+        for (const auto& family : families){
+            /*
+            Available bits for the queue. https://registry.khronos.org/vulkan/specs/latest/man/html/VkQueueFlagBits.html
+            GRAPHICS_BIT            : Graphics operations
+            COMPUTE_BIT             : Compute Operations
+            TRANSFER_BIT            : Memory Transfer Operations
+            SPARSE_BINDING_BIT      : Sparse Memory Operations (https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#sparsememory)
+            PROTECTED_BIT           : Allows Memory protection (https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#memory-protected-memory)
+            VIDEO_DECODE_BIT_KHR    : Video Decoding Ops
+            VIDEO_ENCODE_BIT_KHR    : Video Encoding Ops
+            OPTICAL_FLOW_BIT_NV     : Optical flow operations (Operations for Computer Vision, flow as in the "flow" between two frames of a video of a moving object.)
+             */
+            if (family.queueFlags & VK_QUEUE_GRAPHICS_BIT){ // Find first family to support graphic command queueing.
+                qfi.graphicsFamilyIndex = familyIndex;
+                if(qfi.has_values()){
+                    break;
+                }
+            }
+            familyIndex++;
+        }
+        return qfi;
+    }
+
+    bool rateDevice(VkPhysicalDevice vkpd){
+        /*
+        Keeping this here for reference on how to retrieve properties and features (and diff between the two).
+
+        int score = 0;
+        VkPhysicalDeviceProperties properties; // Name, type etc..
+        vkGetPhysicalDeviceProperties(vkpd, &properties);
+        VkPhysicalDeviceFeatures features; // Supported technologies, hardware accel, vr support etc... 
+        vkGetPhysicalDeviceFeatures(vkpd, &features);
+        std::cout << "rating GPU " << properties.deviceName << " is of type:"<< VkDeviceTypeToString(properties.deviceType) << std::endl;
+        std::cout << "\tgeometry shader support: "<< std::boolalpha <<  static_cast<bool>(features.geometryShader) << std::endl;
+        */
+
+        QueueFamilyIndex familyIndex = findRequiredQueueFamily(vkpd);
+        if (familyIndex.has_values()){
+            return true;
+        }
+        return false;
     }
 
     void fillCreateInfoForDebugHandler(VkDebugUtilsMessengerCreateInfoEXT& toBeFilled){
         std::cout<< "create info for debug handler" << std::endl;
         toBeFilled.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-        toBeFilled.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT  | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+        toBeFilled.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
         toBeFilled.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_TOOL_PURPOSE_VALIDATION_BIT_EXT;
         toBeFilled.pfnUserCallback = parseDebugCallbackInstance;
         // This will be passed back to the debug handler when emitting the callback, this way you can access some data you want to emit into the debug callback 
@@ -201,7 +335,7 @@ private:
         if(validationLayerEnabled){
             DestroyDebugMessengerExtension(instance, debugCallbackHandler, nullptr); // Ideally this should be caught by the debug messenger when destroy is not called, and yet it doesn't happen
         }
-
+        vkDestroyDevice(logiDevice, nullptr);
         vkDestroyInstance(instance, nullptr/*Optional callback pointer*/);
         glfwDestroyWindow(window);
         glfwTerminate(); // Once this function is called, glfwInit(L#30) must be called again before using most GLFW functions. This deallocates everything GLFW related.
@@ -211,7 +345,7 @@ private:
 int main() {
     HelloTriangleApplication app;
 
-    try {
+    try { 
         std::cout << "hello" << std::endl;
         app.run();
     } catch (const std::exception& e) {
