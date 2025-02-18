@@ -48,7 +48,7 @@ private:
     VkPhysicalDevice physGraphicDevice = VK_NULL_HANDLE;  
     // The logical device (code interface for the physical device)
     VkDevice logiDevice; 
-    VkQueue queue;
+    VkQueue commandQueue;
 
     void initWindow() {
         glfwInit();
@@ -212,7 +212,7 @@ private:
         if( logiDeviceCreationResult != VK_SUCCESS){
             throw std::runtime_error(strcat("Failed to create logical device: " , VkResultToString(logiDeviceCreationResult)));
         }
-        vkGetDeviceQueue(logiDevice, qfi.graphicsFamilyIndex.value(), 0, &queue);
+        vkGetDeviceQueue(logiDevice, qfi.graphicsFamilyIndex.value(), 0, &commandQueue);
 
     }
 
