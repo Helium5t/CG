@@ -8,7 +8,7 @@
 #include <map>
 #include "heliumutils.h"
 #include "heliumdebug.h"
-
+#include <optional>
 
 class HelloTriangleApplication {
 public:
@@ -198,6 +198,48 @@ private:
         }
     }
 
+    // Contains the index of the queue family we need. The index refers to the position in the array returned by vkGetPhysicalDeviceQueueFamilyProperties.
+    struct QueueFamilyIndex{
+        std::optional<uint32_t> graphicsFamilyIndex; // 0 is a valid family index (each index represents a queue family that supports certain commands) so we need a way to discern between null and 0.
+
+        bool has_values(){
+            return graphicsFamilyIndex.has_value();
+        }
+    };
+
+    QueueFamilyIndex findRequiredQueueFamily(VkPhysicalDevice vkpd){
+        QueueFamilyIndex qfi;
+        uint32_t familyCount;
+        vkGetPhysicalDeviceQueueFamilyProperties(vkpd, &familyCount, nullptr);
+        if (familyCount == 0){
+            throw std::runtime_error("No queue families available.");
+        }
+        std::vector<VkQueueFamilyProperties> families(familyCount);
+        vkGetPhysicalDeviceQueueFamilyProperties(vkpd, &familyCount, families.data());
+        int familyIndex = 0;
+        for (const auto& family : families){
+            /*
+            Available bits for the queue. https://registry.khronos.org/vulkan/specs/latest/man/html/VkQueueFlagBits.html
+            GRAPHICS_BIT            : Graphics operations
+            COMPUTE_BIT             : Compute Operations
+            TRANSFER_BIT            : Memory Transfer Operations
+            SPARSE_BINDING_BIT      : Sparse Memory Operations (https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#sparsememory)
+            PROTECTED_BIT           : Allows Memory protection (https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#memory-protected-memory)
+            VIDEO_DECODE_BIT_KHR    : Video Decoding Ops
+            VIDEO_ENCODE_BIT_KHR    : Video Encoding Ops
+            OPTICAL_FLOW_BIT_NV     : Optical flow operations (Operations for Computer Vision, flow as in the "flow" between two frames of a video of a moving object.)
+             */
+            if (family.queueFlags & VK_QUEUE_GRAPHICS_BIT){ // Find first family to support graphic command queueing.
+                qfi.graphicsFamilyIndex = familyIndex;
+                if(qfi.has_values()){
+                    break;
+                }
+            }
+            familyIndex++;
+        }
+        return qfi;
+    }
+
     bool rateDevice(VkPhysicalDevice vkpd){
         /*
         int score = 0;
@@ -208,7 +250,12 @@ private:
         std::cout << "rating GPU " << properties.deviceName << " is of type:"<< VkDeviceTypeToString(properties.deviceType) << std::endl;
         std::cout << "\tgeometry shader support: "<< std::boolalpha <<  static_cast<bool>(features.geometryShader) << std::endl;
         */
-        return true;
+
+        QueueFamilyIndex familyIndex = findRequiredQueueFamily(vkpd);
+        if (familyIndex.has_values()){
+            return true;
+        }
+        return false;
     }
 
     void fillCreateInfoForDebugHandler(VkDebugUtilsMessengerCreateInfoEXT& toBeFilled){
