@@ -45,7 +45,10 @@ private:
     VkInstance instance;
     VkDebugUtilsMessengerEXT debugCallbackHandler;
     // Automatically destroyed by vulkan so no need to destroy it in cleanup
-    VkPhysicalDevice graphicDevice = VK_NULL_HANDLE;  
+    VkPhysicalDevice physGraphicDevice = VK_NULL_HANDLE;  
+    // The logical device (code interface for the physical device)
+    VkDevice logiDevice; 
+    VkQueue queue;
 
     void initWindow() {
         glfwInit();
@@ -171,6 +174,46 @@ private:
         createInstance();
         setupDebugMessenger();
         setPhysicalDevice();
+        createLogicalDevice();
+    }
+
+    void createLogicalDevice(){
+        QueueFamilyIndex qfi = findRequiredQueueFamily(physGraphicDevice);
+        if(!qfi.has_values()){
+            throw std::runtime_error("Selected physical device should have required queues but some are missing.");
+        }
+        VkDeviceQueueCreateInfo queueCreationInfo{};
+        queueCreationInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queueCreationInfo.queueFamilyIndex = qfi.graphicsFamilyIndex.value();
+        queueCreationInfo.queueCount = 1;
+        float priority = 1.0; // always required, needed to give priority weight to each queue during scheduling. (e.g. We want graphics commands to always have priority over compute commands)
+        queueCreationInfo.pQueuePriorities = &priority;
+
+        // What features of the physical device are being actually used.
+        VkPhysicalDeviceFeatures usedPhysicalDeviceFeatures{}; // Empty for now cause we're doing nothing
+
+        VkDeviceCreateInfo logicalDeviceCreationInfo{};
+        logicalDeviceCreationInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        logicalDeviceCreationInfo.queueCreateInfoCount = 1; // Only one set of creation instructions
+        logicalDeviceCreationInfo.pQueueCreateInfos = &queueCreationInfo;
+        logicalDeviceCreationInfo.pEnabledFeatures = &usedPhysicalDeviceFeatures;
+
+        logicalDeviceCreationInfo.enabledExtensionCount = 0; // No extensions needed atm.
+
+        // Actually this is ignored by most recent vulkan (https://docs.vulkan.org/spec/latest/chapters/extensions.html#extendingvulkan-layers-devicelayerdeprecation)
+        // This is being filled in just for retrocompatibility.
+        if(validationLayerEnabled){
+            logicalDeviceCreationInfo.enabledLayerCount = static_cast<uint32_t>(validationLayerNames.size());
+            logicalDeviceCreationInfo.ppEnabledLayerNames = validationLayerNames.data();
+        }else{
+            logicalDeviceCreationInfo.enabledLayerCount = 0;
+        }
+        VkResult logiDeviceCreationResult = vkCreateDevice(physGraphicDevice, &logicalDeviceCreationInfo, nullptr, &logiDevice);
+        if( logiDeviceCreationResult != VK_SUCCESS){
+            throw std::runtime_error(strcat("Failed to create logical device: " , VkResultToString(logiDeviceCreationResult)));
+        }
+        vkGetDeviceQueue(logiDevice, qfi.graphicsFamilyIndex.value(), 0, &queue);
+
     }
 
     // Builds the vulkan representation of the used GPU
@@ -186,13 +229,13 @@ private:
         for( const auto& device : devices){
             int supportScore = rateDevice(device);
             if(supportScore > 0 ){
-                graphicDevice = device;
+                physGraphicDevice = device;
                 possibleDevices.insert(std::make_pair(supportScore, device));
             }
         }
         if (possibleDevices.rbegin() -> first > 0 ){
-            graphicDevice = possibleDevices.rbegin() -> second;
-            std::cout << "Selecting " << graphicDevice << " with support score: " << possibleDevices.cbegin()->first << std::endl;
+            physGraphicDevice = possibleDevices.rbegin() -> second;
+            std::cout << "Selecting " << physGraphicDevice << " with support score: " << possibleDevices.cbegin()->first << std::endl;
         } else {
             throw std::runtime_error("No device meets requirements");
         }
@@ -242,6 +285,8 @@ private:
 
     bool rateDevice(VkPhysicalDevice vkpd){
         /*
+        Keeping this here for reference on how to retrieve properties and features (and diff between the two).
+
         int score = 0;
         VkPhysicalDeviceProperties properties; // Name, type etc..
         vkGetPhysicalDeviceProperties(vkpd, &properties);
@@ -290,7 +335,7 @@ private:
         if(validationLayerEnabled){
             DestroyDebugMessengerExtension(instance, debugCallbackHandler, nullptr); // Ideally this should be caught by the debug messenger when destroy is not called, and yet it doesn't happen
         }
-
+        vkDestroyDevice(logiDevice, nullptr);
         vkDestroyInstance(instance, nullptr/*Optional callback pointer*/);
         glfwDestroyWindow(window);
         glfwTerminate(); // Once this function is called, glfwInit(L#30) must be called again before using most GLFW functions. This deallocates everything GLFW related.
