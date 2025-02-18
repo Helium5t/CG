@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <cstdlib> // Used for the two success statuses EXIT_SUCCESS and EXIT_FAILURE 
 #include <map>
+#include <set>
 #include "heliumutils.h"
 #include "heliumdebug.h"
 #include <optional>
@@ -44,11 +45,15 @@ private:
     GLFWwindow* window;
     VkInstance instance;
     VkDebugUtilsMessengerEXT debugCallbackHandler;
+    VkSurfaceKHR renderSurface; // Where each render will be presented
+
+    
     // Automatically destroyed by vulkan so no need to destroy it in cleanup
     VkPhysicalDevice physGraphicDevice = VK_NULL_HANDLE;  
     // The logical device (code interface for the physical device)
     VkDevice logiDevice; 
-    VkQueue commandQueue;
+    VkQueue graphicsCommandQueue;
+    VkQueue presentCommandQueue;
 
     void initWindow() {
         glfwInit();
@@ -173,29 +178,47 @@ private:
     void initVulkan() {
         createInstance();
         setupDebugMessenger();
+        setupRenderSurface();
         setPhysicalDevice();
         createLogicalDevice();
     }
 
+    void setupRenderSurface(){
+        VkResult createRenderSurfaceResult = glfwCreateWindowSurface(instance, window, nullptr, &renderSurface);
+        if (createRenderSurfaceResult != VK_SUCCESS){
+            throw std::runtime_error(strcat("Failed to create render surface: ", VkResultToString(createRenderSurfaceResult)));
+        }
+    }
+
     void createLogicalDevice(){
-        QueueFamilyIndex qfi = findRequiredQueueFamily(physGraphicDevice);
+        QueueFamilyIndices qfi = findRequiredQueueFamily(physGraphicDevice);
         if(!qfi.has_values()){
             throw std::runtime_error("Selected physical device should have required queues but some are missing.");
         }
-        VkDeviceQueueCreateInfo queueCreationInfo{};
-        queueCreationInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queueCreationInfo.queueFamilyIndex = qfi.graphicsFamilyIndex.value();
-        queueCreationInfo.queueCount = 1;
+        std::vector<VkDeviceQueueCreateInfo> queueCreationInfos{};
+        std::set<uint32_t> familySet {
+            qfi.graphicsFamilyIndex.value(),
+            qfi.presentationFamilyIndex.value()
+        }; // Allows to set creation info (and thus create a queue) only once per index in the family indices.
+        // e.g. is the same family can support both graphics and presentation commands, no need to create two queues, just create one that will receive both.
+
         float priority = 1.0; // always required, needed to give priority weight to each queue during scheduling. (e.g. We want graphics commands to always have priority over compute commands)
-        queueCreationInfo.pQueuePriorities = &priority;
+        for (uint32_t queueFamilyIndex : familySet){
+            VkDeviceQueueCreateInfo qci{};
+            qci.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+            qci.queueFamilyIndex = queueFamilyIndex;
+            qci.queueCount = 1;
+            qci.pQueuePriorities = &priority;
+            queueCreationInfos.push_back(qci);
+        }
 
         // What features of the physical device are being actually used.
         VkPhysicalDeviceFeatures usedPhysicalDeviceFeatures{}; // Empty for now cause we're doing nothing
 
         VkDeviceCreateInfo logicalDeviceCreationInfo{};
         logicalDeviceCreationInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-        logicalDeviceCreationInfo.queueCreateInfoCount = 1; // Only one set of creation instructions
-        logicalDeviceCreationInfo.pQueueCreateInfos = &queueCreationInfo;
+        logicalDeviceCreationInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreationInfos.size()); 
+        logicalDeviceCreationInfo.pQueueCreateInfos = queueCreationInfos.data();
         logicalDeviceCreationInfo.pEnabledFeatures = &usedPhysicalDeviceFeatures;
 
         logicalDeviceCreationInfo.enabledExtensionCount = 0; // No extensions needed atm.
@@ -212,7 +235,13 @@ private:
         if( logiDeviceCreationResult != VK_SUCCESS){
             throw std::runtime_error(strcat("Failed to create logical device: " , VkResultToString(logiDeviceCreationResult)));
         }
-        vkGetDeviceQueue(logiDevice, qfi.graphicsFamilyIndex.value(), 0, &commandQueue);
+        // These two calls may set the command queues to the same queue.
+        vkGetDeviceQueue(
+            logiDevice, 
+            qfi.graphicsFamilyIndex.value(), 
+            0, // Each queue family contains multiple queues in it, all those that support the features needed. This index referes to the position in the family of the queue to retrieve.
+            &graphicsCommandQueue);
+        vkGetDeviceQueue(logiDevice, qfi.presentationFamilyIndex.value(), 0, &presentCommandQueue);
 
     }
 
@@ -242,16 +271,19 @@ private:
     }
 
     // Contains the index of the queue family we need. The index refers to the position in the array returned by vkGetPhysicalDeviceQueueFamilyProperties.
-    struct QueueFamilyIndex{
+    struct QueueFamilyIndices{
+        // Queue family for graphics commands
         std::optional<uint32_t> graphicsFamilyIndex; // 0 is a valid family index (each index represents a queue family that supports certain commands) so we need a way to discern between null and 0.
+        // Queue family for presentation to surface
+        std::optional<uint32_t> presentationFamilyIndex; 
 
         bool has_values(){
-            return graphicsFamilyIndex.has_value();
+            return graphicsFamilyIndex.has_value() && presentationFamilyIndex.has_value();
         }
     };
 
-    QueueFamilyIndex findRequiredQueueFamily(VkPhysicalDevice vkpd){
-        QueueFamilyIndex qfi;
+    QueueFamilyIndices findRequiredQueueFamily(VkPhysicalDevice vkpd){
+        QueueFamilyIndices qfi;
         uint32_t familyCount;
         vkGetPhysicalDeviceQueueFamilyProperties(vkpd, &familyCount, nullptr);
         if (familyCount == 0){
@@ -274,9 +306,14 @@ private:
              */
             if (family.queueFlags & VK_QUEUE_GRAPHICS_BIT){ // Find first family to support graphic command queueing.
                 qfi.graphicsFamilyIndex = familyIndex;
-                if(qfi.has_values()){
-                    break;
-                }
+            }
+            uint32_t surfacePresentationSupport = 0;
+            vkGetPhysicalDeviceSurfaceSupportKHR(vkpd, familyIndex, renderSurface, &surfacePresentationSupport);
+            if (surfacePresentationSupport){ // same as xxx != 0
+                qfi.presentationFamilyIndex = familyIndex;
+            }
+            if(qfi.has_values()){
+                break;
             }
             familyIndex++;
         }
@@ -296,7 +333,7 @@ private:
         std::cout << "\tgeometry shader support: "<< std::boolalpha <<  static_cast<bool>(features.geometryShader) << std::endl;
         */
 
-        QueueFamilyIndex familyIndex = findRequiredQueueFamily(vkpd);
+        QueueFamilyIndices familyIndex = findRequiredQueueFamily(vkpd);
         if (familyIndex.has_values()){
             return true;
         }
@@ -335,7 +372,9 @@ private:
         if(validationLayerEnabled){
             DestroyDebugMessengerExtension(instance, debugCallbackHandler, nullptr); // Ideally this should be caught by the debug messenger when destroy is not called, and yet it doesn't happen
         }
+        // In order : Device generating renders -> render surface -> instance -> window -> glfw.
         vkDestroyDevice(logiDevice, nullptr);
+        vkDestroySurfaceKHR(instance, renderSurface, nullptr);
         vkDestroyInstance(instance, nullptr/*Optional callback pointer*/);
         glfwDestroyWindow(window);
         glfwTerminate(); // Once this function is called, glfwInit(L#30) must be called again before using most GLFW functions. This deallocates everything GLFW related.
