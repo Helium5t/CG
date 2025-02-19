@@ -50,6 +50,8 @@ void HelloTriangleApplication::initVulkan() {
     setPhysicalDevice();
     createLogicalDevice();
     createSwapChain();
+    createImageView();
+    createPipeline();
 }
 
 
@@ -60,13 +62,16 @@ void HelloTriangleApplication::mainLoop() {
 }
 
 void HelloTriangleApplication::cleanup() {
-    if(validationLayerEnabled){
-        DestroyDebugMessengerExtension(instance, debugCallbackHandler, nullptr); // Ideally this should be caught by the debug messenger when destroy is not called, and yet it doesn't happen
+    for(const auto& i: swapChainImageViews){
+        vkDestroyImageView(logiDevice, i, nullptr);
     }
     vkDestroySwapchainKHR(logiDevice, swapChain, nullptr);
     // In order : Device generating renders -> render surface -> instance -> window -> glfw.
     vkDestroyDevice(logiDevice, nullptr);
     vkDestroySurfaceKHR(instance, renderSurface, nullptr);
+    if(validationLayerEnabled){
+        DestroyDebugMessengerExtension(instance, debugCallbackHandler, nullptr); // Ideally this should be caught by the debug messenger when destroy is not called, and yet it doesn't happen
+    }
     vkDestroyInstance(instance, nullptr/*Optional callback pointer*/);
     glfwDestroyWindow(window);
     glfwTerminate(); // Once this function is called, glfwInit(L#30) must be called again before using most GLFW functions. This deallocates everything GLFW related.

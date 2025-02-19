@@ -1,165 +1,6 @@
 #include "main.h"
 
 
-void HelloTriangleApplication::createSwapChain(){
-    SwapChainSpecifications swapChainSpecs = checkSwapChainSpecifications(physGraphicDevice);
-
-    VkSurfaceFormatKHR imageFormat = chooseImageFormat(swapChainSpecs.imageFormats);
-    VkPresentModeKHR presentMode = choosePresentMode(swapChainSpecs.presentModes);
-    VkExtent2D windowExtent = chooseWindowSize(swapChainSpecs.surfaceCapabilities);
-
-    uint32_t frameCount = swapChainSpecs.surfaceCapabilities.minImageCount + 1; // +1 ensures we don't have to wait on the graphics driver.
-    if (swapChainSpecs.surfaceCapabilities.maxImageCount > 0 && frameCount > swapChainSpecs.surfaceCapabilities.maxImageCount){
-        frameCount = swapChainSpecs.surfaceCapabilities.maxImageCount;
-    }
-    VkSwapchainCreateInfoKHR swapchainCreateInfo{};
-    swapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    swapchainCreateInfo.surface = renderSurface;
-    swapchainCreateInfo.minImageCount = frameCount;
-    swapchainCreateInfo.imageExtent = windowExtent;
-    swapchainCreateInfo.imageFormat = imageFormat.format;
-    swapchainCreateInfo.imageColorSpace = imageFormat.colorSpace;
-    swapchainCreateInfo.imageArrayLayers = 1; // Used for VR, always 1 unless we need stereoscopic swap chain.
-    /*
-    Too many values : https://registry.khronos.org/vulkan/specs/latest/man/html/VkImageUsageFlagBits.html
-    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT means the swapchain generates images that can be used for a VkImageView or a Color buffer (vs Depth buffer) in a VkFrameBuffer.
-    */
-    swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-    QueueFamilyIndices qfi = findRequiredQueueFamily(physGraphicDevice);
-    uint32_t familyIndices[] = {qfi.graphicsFamilyIndex.value(), qfi.presentationFamilyIndex.value()};
-    if(qfi.graphicsFamilyIndex != qfi.presentationFamilyIndex){ // We have two different queues for graphics and presentation and thus the chain will be shared among the two.
-        swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        swapchainCreateInfo.queueFamilyIndexCount = 2;
-        swapchainCreateInfo.pQueueFamilyIndices = familyIndices;
-    }else{ // Graphics and Presentation queue is the same queue, so no sharing needed.
-        swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        swapchainCreateInfo.queueFamilyIndexCount = 0; // Optional when exclusive
-        swapchainCreateInfo.pQueueFamilyIndices = nullptr; // Optional when exclusive
-    }
-    swapchainCreateInfo.preTransform = swapChainSpecs.surfaceCapabilities.currentTransform;
-    swapchainCreateInfo.compositeAlpha =  VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    swapchainCreateInfo.clipped = VK_TRUE;
-    swapchainCreateInfo.presentMode = presentMode;
-    swapchainCreateInfo.oldSwapchain = VK_NULL_HANDLE; // Used when recreating the swapchain for a new surface (e.g. change in window size)
-
-    VkResult swapChainCreationResult = vkCreateSwapchainKHR(logiDevice, &swapchainCreateInfo, nullptr, &swapChain);
-    if (swapChainCreationResult != VK_SUCCESS){
-        throw std::runtime_error("could not create swapchain");
-    }
-    selectedSwapChainFormat = imageFormat.format;
-    selectedSwapChainWindowSize = windowExtent;
-    vkGetSwapchainImagesKHR(logiDevice, swapChain, &frameCount, nullptr);
-    swapChainImages.resize(frameCount);
-    vkGetSwapchainImagesKHR(logiDevice, swapChain, &frameCount, swapChainImages.data());
-}
-
-void HelloTriangleApplication::setupRenderSurface(){
-    VkResult createRenderSurfaceResult = glfwCreateWindowSurface(instance, window, nullptr, &renderSurface);
-    if (createRenderSurfaceResult != VK_SUCCESS){
-        throw std::runtime_error(strcat("Failed to create render surface: ", VkResultToString(createRenderSurfaceResult)));
-    }
-}
-
-
-void HelloTriangleApplication::createLogicalDevice(){
-    QueueFamilyIndices qfi = findRequiredQueueFamily(physGraphicDevice);
-    if(!qfi.has_values()){
-        throw std::runtime_error("Selected physical device should have required queues but some are missing.");
-    }
-    std::vector<VkDeviceQueueCreateInfo> queueCreationInfos{};
-    std::set<uint32_t> familySet {
-        qfi.graphicsFamilyIndex.value(),
-        qfi.presentationFamilyIndex.value()
-    }; // Allows to set creation info (and thus create a queue) only once per index in the family indices.
-    // e.g. is the same family can support both graphics and presentation commands, no need to create two queues, just create one that will receive both.
-
-    float priority = 1.0; // always required, needed to give priority weight to each queue during scheduling. (e.g. We want graphics commands to always have priority over compute commands)
-    for (uint32_t queueFamilyIndex : familySet){
-        VkDeviceQueueCreateInfo qci{};
-        qci.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        qci.queueFamilyIndex = queueFamilyIndex;
-        qci.queueCount = 1;
-        qci.pQueuePriorities = &priority;
-        queueCreationInfos.push_back(qci);
-    }
-
-    // What features of the physical device are being actually used.
-    VkPhysicalDeviceFeatures usedPhysicalDeviceFeatures{}; // Empty for now cause we're doing nothing
-
-    VkDeviceCreateInfo logicalDeviceCreationInfo{};
-    logicalDeviceCreationInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    logicalDeviceCreationInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreationInfos.size()); 
-    logicalDeviceCreationInfo.pQueueCreateInfos = queueCreationInfos.data();
-    logicalDeviceCreationInfo.pEnabledFeatures = &usedPhysicalDeviceFeatures;
-
-    logicalDeviceCreationInfo.enabledExtensionCount =static_cast<uint32_t>(requiredDeviceExtensionNames.size()); // No extensions needed atm.
-    logicalDeviceCreationInfo.ppEnabledExtensionNames = requiredDeviceExtensionNames.data();
-
-    // Actually this is ignored by most recent vulkan (https://docs.vulkan.org/spec/latest/chapters/extensions.html#extendingvulkan-layers-devicelayerdeprecation)
-    // This is being filled in just for retrocompatibility.
-    if(validationLayerEnabled){
-        logicalDeviceCreationInfo.enabledLayerCount = static_cast<uint32_t>(validationLayerNames.size());
-        logicalDeviceCreationInfo.ppEnabledLayerNames = validationLayerNames.data();
-    }else{
-        logicalDeviceCreationInfo.enabledLayerCount = 0;
-    }
-    VkResult logiDeviceCreationResult = vkCreateDevice(physGraphicDevice, &logicalDeviceCreationInfo, nullptr, &logiDevice);
-    if( logiDeviceCreationResult != VK_SUCCESS){
-        throw std::runtime_error(strcat("Failed to create logical device: " , VkResultToString(logiDeviceCreationResult)));
-    }
-    // These two calls may set the command queues to the same queue.
-    vkGetDeviceQueue(
-        logiDevice, 
-        qfi.graphicsFamilyIndex.value(), 
-        0, // Each queue family contains multiple queues in it, all those that support the features needed. This index referes to the position in the family of the queue to retrieve.
-        &graphicsCommandQueue);
-    vkGetDeviceQueue(logiDevice, qfi.presentationFamilyIndex.value(), 0, &presentCommandQueue);
-
-}
-
-// Builds the vulkan representation of the used GPU
-void HelloTriangleApplication::setPhysicalDevice(){
-    uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
-    if (deviceCount == 0) {
-        throw std::runtime_error("No Vulkan Supported GPUs found");
-    }
-    std::vector<VkPhysicalDevice> devices(deviceCount);
-    vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
-    std::multimap<int, VkPhysicalDevice> possibleDevices;
-    for( const auto& device : devices){
-        int supportScore = rateDeviceSupport(device);
-        if(supportScore > 0 ){
-            physGraphicDevice = device;
-            possibleDevices.insert(std::make_pair(supportScore, device));
-        }
-    }
-    if (possibleDevices.rbegin() -> first > 0 ){
-        physGraphicDevice = possibleDevices.rbegin() -> second;
-        std::cout << "Selecting " << physGraphicDevice << " with support score: " << possibleDevices.cbegin()->first << std::endl;
-    } else {
-        throw std::runtime_error("No device meets requirements");
-    }
-}
-
-
-std::vector<const char*> HelloTriangleApplication::getRequiredExtensions(){
-    uint32_t glfwRequiredExtCount = 0;
-    const char** glfwRequiredExtNames;
-    glfwRequiredExtNames = glfwGetRequiredInstanceExtensions(&glfwRequiredExtCount); 
-    std::vector<const char*> requiredExtNames;
-    for(int i =0; i<glfwRequiredExtCount; i++){
-        requiredExtNames.emplace_back(glfwRequiredExtNames[i]);
-    }
-
-    if (validationLayerEnabled){
-        requiredExtNames.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-    }
-    return requiredExtNames;
-}
-
-
 void HelloTriangleApplication::createInstance(){
     #ifdef NDEBUG
         std::cout<< "Non Debug mode" << std::endl; 
@@ -237,4 +78,241 @@ void HelloTriangleApplication::setupDebugMessenger(){
     if (CreateDebugMessengerExtension(instance /* <- Debug messengers are specific to instances and layers, so we need this */, &mcInfo, nullptr, &debugCallbackHandler) != VK_SUCCESS) {
         throw std::runtime_error("failed to set up debug messenger");
     }
+}
+
+
+std::vector<const char*> HelloTriangleApplication::getRequiredExtensions(){
+    uint32_t glfwRequiredExtCount = 0;
+    const char** glfwRequiredExtNames;
+    glfwRequiredExtNames = glfwGetRequiredInstanceExtensions(&glfwRequiredExtCount); 
+    std::vector<const char*> requiredExtNames;
+    for(int i =0; i<glfwRequiredExtCount; i++){
+        requiredExtNames.emplace_back(glfwRequiredExtNames[i]);
+    }
+
+    if (validationLayerEnabled){
+        requiredExtNames.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    }
+    return requiredExtNames;
+}
+
+
+// Builds the vulkan representation of the used GPU
+void HelloTriangleApplication::setPhysicalDevice(){
+    uint32_t deviceCount = 0;
+    vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+    if (deviceCount == 0) {
+        throw std::runtime_error("No Vulkan Supported GPUs found");
+    }
+    std::vector<VkPhysicalDevice> devices(deviceCount);
+    vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+    std::multimap<int, VkPhysicalDevice> possibleDevices;
+    for( const auto& device : devices){
+        int supportScore = rateDeviceSupport(device);
+        if(supportScore > 0 ){
+            physGraphicDevice = device;
+            possibleDevices.insert(std::make_pair(supportScore, device));
+        }
+    }
+    if (possibleDevices.rbegin() -> first > 0 ){
+        physGraphicDevice = possibleDevices.rbegin() -> second;
+        std::cout << "Selecting " << physGraphicDevice << " with support score: " << possibleDevices.cbegin()->first << std::endl;
+    } else {
+        throw std::runtime_error("No device meets requirements");
+    }
+}
+
+void HelloTriangleApplication::createLogicalDevice(){
+    QueueFamilyIndices qfi = findRequiredQueueFamily(physGraphicDevice);
+    if(!qfi.has_values()){
+        throw std::runtime_error("Selected physical device should have required queues but some are missing.");
+    }
+    std::vector<VkDeviceQueueCreateInfo> queueCreationInfos{};
+    std::set<uint32_t> familySet {
+        qfi.graphicsFamilyIndex.value(),
+        qfi.presentationFamilyIndex.value()
+    }; // Allows to set creation info (and thus create a queue) only once per index in the family indices.
+    // e.g. is the same family can support both graphics and presentation commands, no need to create two queues, just create one that will receive both.
+
+    float priority = 1.0; // always required, needed to give priority weight to each queue during scheduling. (e.g. We want graphics commands to always have priority over compute commands)
+    for (uint32_t queueFamilyIndex : familySet){
+        VkDeviceQueueCreateInfo qci{};
+        qci.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        qci.queueFamilyIndex = queueFamilyIndex;
+        qci.queueCount = 1;
+        qci.pQueuePriorities = &priority;
+        queueCreationInfos.push_back(qci);
+    }
+
+    // What features of the physical device are being actually used.
+    VkPhysicalDeviceFeatures usedPhysicalDeviceFeatures{}; // Empty for now cause we're doing nothing
+
+    VkDeviceCreateInfo logicalDeviceCreationInfo{};
+    logicalDeviceCreationInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    logicalDeviceCreationInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreationInfos.size()); 
+    logicalDeviceCreationInfo.pQueueCreateInfos = queueCreationInfos.data();
+    logicalDeviceCreationInfo.pEnabledFeatures = &usedPhysicalDeviceFeatures;
+
+    logicalDeviceCreationInfo.enabledExtensionCount =static_cast<uint32_t>(requiredDeviceExtensionNames.size()); // No extensions needed atm.
+    logicalDeviceCreationInfo.ppEnabledExtensionNames = requiredDeviceExtensionNames.data();
+
+    // Actually this is ignored by most recent vulkan (https://docs.vulkan.org/spec/latest/chapters/extensions.html#extendingvulkan-layers-devicelayerdeprecation)
+    // This is being filled in just for retrocompatibility.
+    if(validationLayerEnabled){
+        logicalDeviceCreationInfo.enabledLayerCount = static_cast<uint32_t>(validationLayerNames.size());
+        logicalDeviceCreationInfo.ppEnabledLayerNames = validationLayerNames.data();
+    }else{
+        logicalDeviceCreationInfo.enabledLayerCount = 0;
+    }
+    VkResult logiDeviceCreationResult = vkCreateDevice(physGraphicDevice, &logicalDeviceCreationInfo, nullptr, &logiDevice);
+    if( logiDeviceCreationResult != VK_SUCCESS){
+        throw std::runtime_error(strcat("Failed to create logical device: " , VkResultToString(logiDeviceCreationResult)));
+    }
+    // These two calls may set the command queues to the same queue.
+    vkGetDeviceQueue(
+        logiDevice, 
+        qfi.graphicsFamilyIndex.value(), 
+        0, // Each queue family contains multiple queues in it, all those that support the features needed. This index referes to the position in the family of the queue to retrieve.
+        &graphicsCommandQueue);
+    vkGetDeviceQueue(logiDevice, qfi.presentationFamilyIndex.value(), 0, &presentCommandQueue);
+
+}
+
+void HelloTriangleApplication::setupRenderSurface(){
+    VkResult createRenderSurfaceResult = glfwCreateWindowSurface(instance, window, nullptr, &renderSurface);
+    if (createRenderSurfaceResult != VK_SUCCESS){
+        throw std::runtime_error(strcat("Failed to create render surface: ", VkResultToString(createRenderSurfaceResult)));
+    }
+}
+
+void HelloTriangleApplication::createSwapChain(){
+    SwapChainSpecifications swapChainSpecs = checkSwapChainSpecifications(physGraphicDevice);
+
+    VkSurfaceFormatKHR imageFormat = chooseImageFormat(swapChainSpecs.imageFormats);
+    VkPresentModeKHR presentMode = choosePresentMode(swapChainSpecs.presentModes);
+    VkExtent2D windowExtent = chooseWindowSize(swapChainSpecs.surfaceCapabilities);
+
+    uint32_t frameCount = swapChainSpecs.surfaceCapabilities.minImageCount + 1; // +1 ensures we don't have to wait on the graphics driver.
+    if (swapChainSpecs.surfaceCapabilities.maxImageCount > 0 && frameCount > swapChainSpecs.surfaceCapabilities.maxImageCount){
+        frameCount = swapChainSpecs.surfaceCapabilities.maxImageCount;
+    }
+    VkSwapchainCreateInfoKHR swapchainCreateInfo{};
+    swapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    swapchainCreateInfo.surface = renderSurface;
+    swapchainCreateInfo.minImageCount = frameCount;
+    swapchainCreateInfo.imageExtent = windowExtent;
+    swapchainCreateInfo.imageFormat = imageFormat.format;
+    swapchainCreateInfo.imageColorSpace = imageFormat.colorSpace;
+    swapchainCreateInfo.imageArrayLayers = 1; // Used for VR, always 1 unless we need stereoscopic swap chain.
+    /*
+    Too many values : https://registry.khronos.org/vulkan/specs/latest/man/html/VkImageUsageFlagBits.html
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT means the swapchain generates images that can be used for a VkImageView or a Color buffer (vs Depth buffer) in a VkFrameBuffer.
+    */
+    swapchainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    QueueFamilyIndices qfi = findRequiredQueueFamily(physGraphicDevice);
+    uint32_t familyIndices[] = {qfi.graphicsFamilyIndex.value(), qfi.presentationFamilyIndex.value()};
+    if(qfi.graphicsFamilyIndex != qfi.presentationFamilyIndex){ // We have two different queues for graphics and presentation and thus the chain will be shared among the two.
+        swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        swapchainCreateInfo.queueFamilyIndexCount = 2;
+        swapchainCreateInfo.pQueueFamilyIndices = familyIndices;
+    }else{ // Graphics and Presentation queue is the same queue, so no sharing needed.
+        swapchainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        swapchainCreateInfo.queueFamilyIndexCount = 0; // Optional when exclusive
+        swapchainCreateInfo.pQueueFamilyIndices = nullptr; // Optional when exclusive
+    }
+    swapchainCreateInfo.preTransform = swapChainSpecs.surfaceCapabilities.currentTransform;
+    swapchainCreateInfo.compositeAlpha =  VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapchainCreateInfo.clipped = VK_TRUE;
+    swapchainCreateInfo.presentMode = presentMode;
+    swapchainCreateInfo.oldSwapchain = VK_NULL_HANDLE; // Used when recreating the swapchain for a new surface (e.g. change in window size)
+
+    VkResult swapChainCreationResult = vkCreateSwapchainKHR(logiDevice, &swapchainCreateInfo, nullptr, &swapChain);
+    if (swapChainCreationResult != VK_SUCCESS){
+        throw std::runtime_error("could not create swapchain");
+    }
+    selectedSwapChainFormat = imageFormat.format;
+    selectedSwapChainWindowSize = windowExtent;
+    vkGetSwapchainImagesKHR(logiDevice, swapChain, &frameCount, nullptr);
+    swapChainImages.resize(frameCount);
+    vkGetSwapchainImagesKHR(logiDevice, swapChain, &frameCount, swapChainImages.data());
+}
+
+void HelloTriangleApplication::createImageView(){
+    swapChainImageViews.resize(swapChainImages.size());
+    for (int i =0; i< swapChainImages.size(); i++){
+        VkImageViewCreateInfo viewCreationInfo{};
+        viewCreationInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        viewCreationInfo.format = selectedSwapChainFormat;
+        viewCreationInfo.image = swapChainImages[0];
+        viewCreationInfo.viewType = VK_IMAGE_VIEW_TYPE_2D; // We will be passing 2D textures (you can also pass 1D and 3D textures)
+        /*
+        Swizzle allows you to, intuitively, swizzle the source channels around. 
+        IDENTITY    : Channel is the same as the source (e.g. imageView.r = sourceImage.r)
+        ZERO        : Channel is always 0
+        ONE         : Channel is always 1 (e.g. if all image view channel are 1 the image will always be white)  
+        R           : Map channel to red channel    (imageView.x = sourceImage.r)
+        G           : Map channel to green channel  (e.g. imageView.r = sourceImage.g)
+        B           : Map channel to blue channel
+        A           : Map channel to alpha channel
+        */
+        viewCreationInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        viewCreationInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        viewCreationInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        viewCreationInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+        viewCreationInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        // Multiple layers can be useful for steroscopic apps (VR) and have each eye map to a layer
+        viewCreationInfo.subresourceRange.baseArrayLayer = 0; // Only one layer, layer 0
+        viewCreationInfo.subresourceRange.baseMipLevel = 0; // No mipmaps 
+        viewCreationInfo.subresourceRange.layerCount = 1;
+        viewCreationInfo.subresourceRange.levelCount = 1;
+
+        VkResult viewCreationResult = vkCreateImageView(
+            logiDevice,
+            &viewCreationInfo,
+            nullptr,
+            &swapChainImageViews[0]
+        );
+        if (viewCreationResult != VK_SUCCESS){
+            throw std::runtime_error(strcat("Failed to create image view:", VkResultToString(viewCreationResult)));
+        }
+    }
+}
+
+void HelloTriangleApplication::createPipeline(){
+    std::vector<char> vShaderBinary = readFile("shaders/helloTriangle_v.spv");
+    std::vector<char> fShaderBinary = readFile("shaders/helloTriangle_f.spv");
+
+    VkShaderModule vShader = createShaderModule(vShaderBinary);
+    VkShaderModule fShader = createShaderModule(fShaderBinary);
+
+    VkPipelineShaderStageCreateInfo vShaderCreationInfo{};
+    vShaderCreationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    // create vertex shader
+    // Too many values https://registry.khronos.org/vulkan/specs/latest/man/html/VkShaderStageFlagBits.html
+    // Fundamentally there is one for each possible stage, compute included. All general purpose stages are there
+    // included platform specific (huawei) and raytracing stuff.
+    vShaderCreationInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    vShaderCreationInfo.module = vShader;
+    // Name of the entry point name (first function to run in the shader)
+    vShaderCreationInfo.pName = "main";
+    vShaderCreationInfo.pSpecializationInfo = nullptr; // This allows you to pass constants at compile time
+    // e.g. NORMAL_MAPPING_ENABLED so that the spir compiler will delete code paths based on the constants.
+
+    VkPipelineShaderStageCreateInfo fShaderCreationInfo{};
+    fShaderCreationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    fShaderCreationInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    fShaderCreationInfo.module = fShader;
+    fShaderCreationInfo.pName = "main";
+
+    VkPipelineShaderStageCreateInfo shaderStages[] = {
+        vShaderCreationInfo,
+        fShaderCreationInfo
+    };
+
+
+    // graphics pipeline has been compiled, so cleanup shaders etc...
+    vkDestroyShaderModule(logiDevice, vShader, nullptr);
+    vkDestroyShaderModule(logiDevice, fShader, nullptr);
 }
