@@ -54,36 +54,47 @@ private:
     VkQueue presentCommandQueue;
     VkSwapchainKHR swapChain;
 
-    std::vector<VkImage> swapChainImages;
     VkFormat selectedSwapChainFormat;
     VkExtent2D selectedSwapChainWindowSize;
+    std::vector<VkImage> swapChainImages;
+    std::vector<VkImageView> swapChainImageViews;
+    
+
+
+    //-------------------------------main.cpp
 
     void initWindow();
+    void initVulkan() ;
+    void mainLoop() ;
+    void cleanup();
+
+
+    //-------------------------------validation.cpp
 
     bool checkValidationLayerSupport();
 
-    std::vector<const char*> getRequiredExtensions();
+    //-------------------------------setup.cpp
 
     void createInstance();
-
-
-    void initVulkan() ;
-
-    void createSwapChain();
-
-    void setupRenderSurface();
-
+    void setupDebugMessenger();
+    std::vector<const char*> getRequiredExtensions();
+    void setPhysicalDevice();
     void createLogicalDevice();
+    void setupRenderSurface();
+    void createSwapChain();
+    void createImageView();
+    void createPipeline();
+
+    //-------------------------------device_specs.cpp
+
+    bool rateDeviceSupport(VkPhysicalDevice vkpd);
 
     // Builds the vulkan representation of the used GPU
-    void setPhysicalDevice();
-
     struct SwapChainSpecifications {
         VkSurfaceCapabilitiesKHR surfaceCapabilities;
         std::vector<VkSurfaceFormatKHR> imageFormats;
         std::vector<VkPresentModeKHR> presentModes;
     };
-
     SwapChainSpecifications checkSwapChainSpecifications(VkPhysicalDevice vkpd);
 
     // Contains the index of the queue family we need. The index refers to the position in the array returned by vkGetPhysicalDeviceQueueFamilyProperties.
@@ -97,26 +108,16 @@ private:
             return graphicsFamilyIndex.has_value() && presentationFamilyIndex.has_value();
         }
     };
-
     QueueFamilyIndices findRequiredQueueFamily(VkPhysicalDevice vkpd);
 
-    bool rateDeviceSupport(VkPhysicalDevice vkpd);
-
+    bool supportsRequiredDeviceExtensions(VkPhysicalDevice vkpd);
+    VkExtent2D chooseWindowSize(const VkSurfaceCapabilitiesKHR& capabilities);
     VkSurfaceFormatKHR chooseImageFormat(const std::vector<VkSurfaceFormatKHR>& formats);
-
     VkPresentModeKHR choosePresentMode(const std::vector<VkPresentModeKHR>& modes);
 
-    VkExtent2D chooseWindowSize(const VkSurfaceCapabilitiesKHR& capabilities);
-
-    bool supportsRequiredDeviceExtensions(VkPhysicalDevice vkpd);
-
+    //-------------------------------device_specs.cpp
+    
     void fillCreateInfoForDebugHandler(VkDebugUtilsMessengerCreateInfoEXT& toBeFilled);
-
-    void setupDebugMessenger();
-
-    void mainLoop() ;
-
-    void cleanup();
 
 };
 #endif
