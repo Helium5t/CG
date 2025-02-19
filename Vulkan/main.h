@@ -118,5 +118,7 @@ private:
     
     void fillCreateInfoForDebugHandler(VkDebugUtilsMessengerCreateInfoEXT& toBeFilled);
 
+    //-------------------------------shaders.cpp
+    VkShaderModule createShaderModule(const std::vector<char> binary);
 };
 #endif

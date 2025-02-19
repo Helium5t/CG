@@ -2,6 +2,7 @@
 #define HELIUM_UTILS
 
 #include <string>
+#include <fstream>
 #define GLFW_INCLUDE_VULKAN // tells glfw to add vulkan api
 #define VK_KHRONOS_VALIDATION_VALIDATE_BEST_PRACTICES true
 #define VK_VALIDATION_VALIDATE_BEST_PRACTICES true
@@ -69,6 +70,25 @@ inline const char* VkDeviceTypeToString(VkPhysicalDeviceType t){
         
         default: return "UNKNOWN_TYPE";
     }
+}
+
+// Used for reading shader binary files
+static std::vector<char> readFile(const std::string& filename) {
+    // std::ios::ate is same as doing open() and then seek(EOF)
+    // This way we automatically know the size of the file by knowing the file head pos.
+    std::ifstream file(filename, std::ios::ate | std::ios::binary); 
+
+    if (!file.is_open()) {
+        throw std::runtime_error("failed to open file!");
+    }
+
+    size_t fSize = (size_t)file.tellg();
+    std::vector<char> content(fSize);
+    file.seekg(0);
+    file.read(content.data(), fSize);
+
+    file.close();
+    return content;
 }
 
 #endif

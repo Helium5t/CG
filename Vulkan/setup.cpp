@@ -281,5 +281,38 @@ void HelloTriangleApplication::createImageView(){
 }
 
 void HelloTriangleApplication::createPipeline(){
+    std::vector<char> vShaderBinary = readFile("shaders/helloTriangle_v.spv");
+    std::vector<char> fShaderBinary = readFile("shaders/helloTriangle_f.spv");
 
+    VkShaderModule vShader = createShaderModule(vShaderBinary);
+    VkShaderModule fShader = createShaderModule(fShaderBinary);
+
+    VkPipelineShaderStageCreateInfo vShaderCreationInfo{};
+    vShaderCreationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    // create vertex shader
+    // Too many values https://registry.khronos.org/vulkan/specs/latest/man/html/VkShaderStageFlagBits.html
+    // Fundamentally there is one for each possible stage, compute included. All general purpose stages are there
+    // included platform specific (huawei) and raytracing stuff.
+    vShaderCreationInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    vShaderCreationInfo.module = vShader;
+    // Name of the entry point name (first function to run in the shader)
+    vShaderCreationInfo.pName = "main";
+    vShaderCreationInfo.pSpecializationInfo = nullptr; // This allows you to pass constants at compile time
+    // e.g. NORMAL_MAPPING_ENABLED so that the spir compiler will delete code paths based on the constants.
+
+    VkPipelineShaderStageCreateInfo fShaderCreationInfo{};
+    fShaderCreationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    fShaderCreationInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    fShaderCreationInfo.module = fShader;
+    fShaderCreationInfo.pName = "main";
+
+    VkPipelineShaderStageCreateInfo shaderStages[] = {
+        vShaderCreationInfo,
+        fShaderCreationInfo
+    };
+
+
+    // graphics pipeline has been compiled, so cleanup shaders etc...
+    vkDestroyShaderModule(logiDevice, vShader, nullptr);
+    vkDestroyShaderModule(logiDevice, fShader, nullptr);
 }
