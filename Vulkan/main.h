@@ -89,7 +89,6 @@ private:
 
     bool rateDeviceSupport(VkPhysicalDevice vkpd);
 
-    // Builds the vulkan representation of the used GPU
     struct SwapChainSpecifications {
         VkSurfaceCapabilitiesKHR surfaceCapabilities;
         std::vector<VkSurfaceFormatKHR> imageFormats;
