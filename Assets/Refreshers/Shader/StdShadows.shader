@@ -38,7 +38,7 @@ Shader "Refreshers/ShadowsPBStandard"
             #pragma multi_compile_fwdadd_fullshadows // equivalent of the following
             // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
 
-			#include "LightingFuncsUnity.cginc"
+			#include "LightingFuncsV2.cginc"
 
 
             ENDCG
@@ -80,7 +80,7 @@ Shader "Refreshers/ShadowsPBStandard"
             #pragma vertex vert
             #pragma fragment frag
             
-			#include "LightingFuncsUnity.cginc"
+			#include "LightingFuncsV2.cginc"
             ENDCG
             
 
