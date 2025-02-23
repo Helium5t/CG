@@ -42,6 +42,15 @@ float _Roughness, _Metallic;
 int _UseTextures;
 
 struct vInput{
+    /*
+    In order to use some Unity Macros, namely:
+    - UNITY_LIGHT_ATTENUATION
+    - SHADOW_ATTENUATION
+    - TRANSFER_SHADOW
+    - SHADOW_COORDS
+    We would need to rename "pos" to "vertex" as it is the name
+    of the field assuemd by the Unity macros. We will instead keep our own code.
+    */
     float4 pos: POSITION;
     float3 n : NORMAL;
     float2 uv : TEXCOORD0;
@@ -52,6 +61,16 @@ struct vInput{
 };
 
 struct vOutput{
+
+    /*
+    In order to use some Unity Macros, namely:
+    - UNITY_LIGHT_ATTENUATION
+    - SHADOW_ATTENUATION
+    - TRANSFER_SHADOW
+    - SHADOW_COORDS
+    We would need to rename "csPos" to "pos" as it is the name
+    of the field assuemd by the Unity macros. We will instead keep our own code.
+    */
     float4 csPos : SV_Position; // Clip Space
     float3 n :   TEXCOORD0;
     #ifdef HELIUM_NORMAL_MAPPING
@@ -67,6 +86,10 @@ struct vOutput{
     #endif
     float4 wPos : TEXCOORD2; // World Space Position
 
+    /*
+    If we used Unity's naming convention we could call
+    SHADOW_COORDS(5); // from TEXCOORD5
+    */
     #ifdef SHADOWS_SCREEN
     float4 shadowCoords : TEXCOORD5;
     #endif
@@ -138,6 +161,13 @@ vOutput vert(vInput i){
     o.n = UnityObjectToWorldNormal(i.n); 
     o.n = normalize(o.n);
 
+    /*
+    Alternatively to this you can also run
+    TRANSFER_SHADOW(o);
+    which would find the shadowcoordinates and set them properly.
+    It needs the same setup as referenced in the vOutput and vInput structure,
+    so won't be doing it here.
+    */
     #ifdef SHADOWS_SCREEN
     /*
     o.shadowCoords.xy = (float2(o.csPos.x,-o.csPos.y) + o.csPos.w) * 0.5;
@@ -172,11 +202,13 @@ UnityLight CreateLight(vOutput vo){
     #endif
 
     #ifdef SHADOWS_SCREEN
-    // UNITY_LIGHT_ATTENUATION cannot run in the shadow sampling passes
-    // with index 0 because it needs to access the structure with channel for shadow coordinates.
-    // It also needs the POSITION channel to be called "vertex" and 
-    // SV_POSITION channel to be called "pos". 
-    // Will keep things as is for now.
+    /* 
+        UNITY_LIGHT_ATTENUATION cannot run in the shadow sampling passes
+        with index 0 because it needs to access the structure with channel for shadow coordinates.
+        If we degined the structures following Unity's conventionw e could call
+    // UNITY_LIGHT_ATTENUATION(dimming, vo, vo.wPos.xyz);
+        Will keep things as is for now.
+    */
     vo.shadowCoords.xy /= (vo.shadowCoords.w);
     float dimming = tex2D(_ShadowMapTexture,vo.shadowCoords.xy );
     #else
