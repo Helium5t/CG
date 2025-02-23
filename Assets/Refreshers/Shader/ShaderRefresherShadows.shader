@@ -31,7 +31,7 @@ Shader "Refreshers/ShadowsPBShader"
             #pragma multi_compile _ VERTEXLIGHT_ON
 
 			#pragma multi_compile _ SHADOWS_SCREEN
-            
+
             #define HELIUM_NORMAL_MAPPING
             #define HELIUM_BASE_COLOR
         
@@ -72,7 +72,7 @@ Shader "Refreshers/ShadowsPBShader"
             // etc...
             //#pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
             // Equivalent of the one above
-            #pragma multi_compile_fwdadd
+            #pragma multi_compile_fwdadd_fullshadows
             
             #define HELIUM_NORMAL_MAPPING
             #define HELIUM_ADD_PASS
