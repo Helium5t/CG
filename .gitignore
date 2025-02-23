@@ -15,6 +15,9 @@
 .vscode
 *.png
 *.meta
+
+# Ignore compiled shaders, use the script to recompile them
+*.spv 
 ########### END ADDITION ##############
 
 
