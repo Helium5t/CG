@@ -32,6 +32,10 @@ float _NormalStrength,_SecondaryNormalStrength;
 float4 _SecondaryTex_ST;
 
 #endif
+#ifdef HELIUM_BASE_COLOR
+float4 _Color;
+#endif
+
 float4 _Tex_ST;
 
 float _Roughness, _Metallic;
@@ -63,9 +67,14 @@ struct vOutput{
     #endif
     float4 wPos : TEXCOORD2; // World Space Position
 
-    #if defined(VERTEXLIGHT_ON)
-    float3 lColor: TEXCOORD5; // Computed vertex light
+    #ifdef SHADOWS_SCREEN
+    float4 shadowCoords : TEXCOORD5;
     #endif
+
+    #if defined(VERTEXLIGHT_ON)
+    float3 lColor: TEXCOORD6; // Computed vertex light
+    #endif
+
 };
 
 float3 ComputeBinormal(float3 n, float3 t, float sign){
@@ -128,6 +137,14 @@ vOutput vert(vInput i){
 
     o.n = UnityObjectToWorldNormal(i.n); 
     o.n = normalize(o.n);
+
+    #ifdef SHADOWS_SCREEN
+    /*
+    o.shadowCoords.xy = (float2(o.csPos.x,-o.csPos.y) + o.csPos.w) * 0.5;
+    o.shadowCoords.zw = o.csPos.zw;
+    Same as code above */
+    o.shadowCoords = ComputeScreenPos(o.csPos);
+    #endif
     ComputeVertexLight(o);
     return o;
 }
@@ -154,8 +171,18 @@ UnityLight CreateLight(vOutput vo){
         l.dir = _WorldSpaceLightPos0.xyz;
     #endif
 
-    // dimming is not declared because it's done inside the define.
+    #ifdef SHADOWS_SCREEN
+    // UNITY_LIGHT_ATTENUATION cannot run in the shadow sampling passes
+    // with index 0 because it needs to access the structure with channel for shadow coordinates.
+    // It also needs the POSITION channel to be called "vertex" and 
+    // SV_POSITION channel to be called "pos". 
+    // Will keep things as is for now.
+    vo.shadowCoords.xy /= (vo.shadowCoords.w);
+    float dimming = tex2D(_ShadowMapTexture,vo.shadowCoords.xy );
+    #else
+    // dimming is not declared because it's done inside the define of the function
     UNITY_LIGHT_ATTENUATION(dimming, 0, vo.wPos.xyz);
+    #endif
     l.color = _LightColor0  * dimming;
     // angle with surface normal
     l.ndotl =  DotClamped(vo.n, _WorldSpaceLightPos0.xyz);
@@ -223,6 +250,11 @@ void InitFragNormal(inout vOutput vo){
 
 float4 frag(vOutput vo): SV_Target{
     float3 albedo =  tex2D(_Tex, vo.uvM.xy);
+
+
+    #ifdef HELIUM_BASE_COLOR
+    albedo *= _Color.xyz;
+    #endif
 
     #if defined(HELIUM_HEIGHT_MAPPING) || defined(HELIUM_NORMAL_MAPPING)
     InitFragNormal(vo);
