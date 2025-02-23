@@ -50,6 +50,7 @@ struct vInput{
     - SHADOW_COORDS
     We would need to rename "pos" to "vertex" as it is the name
     of the field assuemd by the Unity macros. We will instead keep our own code.
+    This should cause the Spotlight shadows to break, but Unity fallsback to its own model.
     */
     float4 pos: POSITION;
     float3 n : NORMAL;
@@ -87,11 +88,13 @@ struct vOutput{
     float4 wPos : TEXCOORD2; // World Space Position
 
     /*
-    If we used Unity's naming convention we could call
-    SHADOW_COORDS(5); // from TEXCOORD5
-    */
+    Same as 
     #ifdef SHADOWS_SCREEN
-    float4 shadowCoords : TEXCOORD5;
+    float4 _ShadowCoord : TEXCOORD5; //<--- NAME IS IMPORTANT
+    #endif
+    */
+    #if defined(SHADOWS_SCREEN) || defined(SHADOWS_CUBE) || defined(SHADOWS_DEPTH)
+    SHADOW_COORDS(5) // 5 for the index of TEXCOORD
     #endif
 
     #if defined(VERTEXLIGHT_ON)
@@ -163,17 +166,21 @@ vOutput vert(vInput i){
 
     /*
     Alternatively to this you can also run
-    TRANSFER_SHADOW(o);
     which would find the shadowcoordinates and set them properly.
     It needs the same setup as referenced in the vOutput and vInput structure,
     so won't be doing it here.
+    TRANSFER_SHADOW(o);
     */
-    #ifdef SHADOWS_SCREEN
+    #if defined(SHADOWS_SCREEN) 
     /*
-    o.shadowCoords.xy = (float2(o.csPos.x,-o.csPos.y) + o.csPos.w) * 0.5;
-    o.shadowCoords.zw = o.csPos.zw;
+    o._ShadowCoord.xy = (float2(o.csPos.x,-o.csPos.y) + o.csPos.w) * 0.5;
+    o._ShadowCoord.zw = o.csPos.zw;
     Same as code above */
-    o.shadowCoords = ComputeScreenPos(o.csPos);
+    o._ShadowCoord = ComputeScreenPos(o.csPos);
+    #elif defined(SPOT) && defined(SHADOWS_DEPTH) // spotlight
+    o._ShadowCoord = mul(unity_WorldToShadow[0], mul(unity_ObjectToWorld, i.pos));
+    #elif defined(POINT) && defined(SHADOWS_CUBE)
+    o._ShadowCoord = mul(unity_ObjectToWorld, i.pos).xyz - _LightPositionRange.xyz;
     #endif
     ComputeVertexLight(o);
     return o;
@@ -201,7 +208,7 @@ UnityLight CreateLight(vOutput vo){
         l.dir = _WorldSpaceLightPos0.xyz;
     #endif
 
-    #ifdef SHADOWS_SCREEN
+    #if defined(SHADOWS_SCREEN) // Directional
     /* 
         UNITY_LIGHT_ATTENUATION cannot run in the shadow sampling passes
         with index 0 because it needs to access the structure with channel for shadow coordinates.
@@ -209,11 +216,20 @@ UnityLight CreateLight(vOutput vo){
     // UNITY_LIGHT_ATTENUATION(dimming, vo, vo.wPos.xyz);
         Will keep things as is for now.
     */
-    vo.shadowCoords.xy /= (vo.shadowCoords.w);
-    float dimming = tex2D(_ShadowMapTexture,vo.shadowCoords.xy );
-    #else
+    vo._ShadowCoord.xy /= (vo._ShadowCoord.w);
+    float dimming = tex2D(_ShadowMapTexture,vo._ShadowCoord.xy );
+    #elif defined(SHADOWS_DEPTH) && defined(SPOT) // spotlight
+
+    UNITY_LIGHT_ATTENUATION(dimming, vo, vo.wPos.xyz);
+
+    #elif defined(SHADOWS_CUBE) && defined(POINT) // point light
     // dimming is not declared because it's done inside the define of the function
+    // The new definition for UNITY_LIGHT_ATTENUATION does not read from the second parameter except for 
+    // the directional light 
     UNITY_LIGHT_ATTENUATION(dimming, 0, vo.wPos.xyz);
+    // float dimming = 0;
+    #else 
+    float dimming = 0;
     #endif
     l.color = _LightColor0  * dimming;
     // angle with surface normal

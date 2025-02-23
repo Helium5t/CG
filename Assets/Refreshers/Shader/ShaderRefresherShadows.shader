@@ -30,7 +30,7 @@ Shader "Refreshers/ShadowsPBShader"
             // Only point is supported
             #pragma multi_compile _ VERTEXLIGHT_ON
 
-			#pragma multi_compile _ SHADOWS_SCREEN
+			#pragma multi_compile _ SHADOWS_SCREEN 
 
             #define HELIUM_NORMAL_MAPPING
             #define HELIUM_BASE_COLOR
@@ -93,6 +93,8 @@ Shader "Refreshers/ShadowsPBShader"
             #pragma target 3.0
             #pragma vertex shadowVert
             #pragma fragment shadowFrag
+
+            #pragma multi_compile_shadowcaster
             
             #include "ShadowFuncs.cginc"
 
