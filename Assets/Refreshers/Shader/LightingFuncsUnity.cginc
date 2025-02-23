@@ -2,9 +2,10 @@
 Same file as LightingFuncs.cginc but it used Unity naming convention 
 in order to leverage its standard macros. Done in order to simplify code 
 for future commits.
+
+If notes or comments are missing here, they should be present for the same line
+in "LightingFuncs.cginc"
 */
-
-
 #if !defined(HELIUM_LIGHTING_INCLUDED)
 #define HELIUM_LIGHTING_INCLUDED
 
@@ -27,12 +28,6 @@ for future commits.
 
 
 sampler2D _Tex;
-#ifdef HELIUM_HEIGHT_MAPPING
-sampler2D _Height;
-// e.g. resolution is 1000x2000 => texel size is u=1/1000, v  = 1/2000
-// the minimum amount of change for u and v that moves sampling to another pixel
-float4 _Height_TexelSize;
-#endif
 #ifdef HELIUM_NORMAL_MAPPING
 sampler2D _Normal, _SecondaryTex, _SecondaryNormal;
 float _NormalStrength,_SecondaryNormalStrength;
@@ -55,9 +50,8 @@ struct vInput{
     - SHADOW_ATTENUATION
     - TRANSFER_SHADOW
     - SHADOW_COORDS
-    We would need to rename "pos" to "vertex" as it is the name
-    of the field assuemd by the Unity macros. We will instead keep our own code.
-    This should cause the Spotlight shadows to break, but Unity fallsback to its own model.
+    We needed to rename "csPos" to "pos" as it is the name
+    of the field assuemd by the Unity macros.
     */
     float4 vertex: POSITION;
     float3 n : NORMAL;
@@ -210,47 +204,9 @@ UnityLight CreateLight(vOutput vo){
 }
 
 void InitFragNormal(inout vOutput vo){
-    #if defined(HELIUM_HEIGHT_MAPPING)
-    float2 du = float2(_Height_TexelSize.x * 0.5, 0);
-    float u1 = tex2D(_Height, vo.uvM - du);
-    float u2 = tex2D(_Height, vo.uvM + du);
-    float2 dv = float2(0, _Height_TexelSize.y * 0.5);
-    float v1 = tex2D(_Height, vo.uvM - dv);
-    float v2 = tex2D(_Height, vo.uvM + dv);
-
-    // Normal is the inverse of the tangent (rate of change)
-    vo.n = float3(u2-u1, 1 , v2-v1); // Temporary TODO: delete, only applicable to plane
-    vo.n = normalize(vo.n);
-    // Tangent space transformation
-    // float3 tv = float3(0, v2 - v1, 1);
-    // float3 tu = float3(1, u2 - u1, 0);
-    // float3x3 worldToTangent = transpose( float3x3(tu, tv, vo.n));
-    // vo.wPos  = float4(mul(worldToTan, vo.n),1);
-    #endif
     #ifdef HELIUM_NORMAL_MAPPING
-
-    /*
-    vo.n.xy = tex2D(_Normal, vo.uvM).wy *2 -1;
-    vo.n.xy *= _NormalStrength;
-    vo.n.z = sqrt(1 - saturate(dot(vo.n.xy, vo.n.xy)));
-    */
-    // Same as previous 3 lines
     float3 n1 = UnpackScaleNormal(tex2D(_Normal, vo.uvM.xy), -_NormalStrength); 
     float3 n2 = UnpackScaleNormal(tex2D(_SecondaryNormal, vo.uvM.zw), -_SecondaryNormalStrength);
-    // Drawback of this approach is loss of detail for steeper slopers (the bigger the slope the greater the z thus the smaller weight in the addition)
-    // vo.n = float3(  // Break the two normals in their respective x and y derivative components, add those and recompute normal
-    //     vo.n.xy / vo.n.z + 
-    //     n2.xy / n2.z,
-    //     1
-    // ) 
-    // Use z instead as scaling factor
-    // This will behave the opposite of previous approach and normals will be stronger for steeper slopes.
-    // vo.n = float3(  // Break the two normals in their respective x and y derivative components, add those and recompute normal
-    //     vo.n.xy +
-    //     n2.xy,
-    //     vo.n.z * n2.z
-    // );
-    // Same as previous line (whiteout blending)
     float3 tanSpaceNormal = BlendNormals(n1, n2);
 
     // Normal maps store the up direction in the z component 
@@ -276,7 +232,7 @@ float4 frag(vOutput vo): SV_Target{
     albedo *= _Color.xyz;
     #endif
 
-    #if defined(HELIUM_HEIGHT_MAPPING) || defined(HELIUM_NORMAL_MAPPING)
+    #ifdef HELIUM_NORMAL_MAPPING
     InitFragNormal(vo);
     #endif
 
@@ -294,9 +250,7 @@ float4 frag(vOutput vo): SV_Target{
         ); 
         float3 viewdir = normalize(_WorldSpaceCameraPos - vo.wPos);
         
-    #if !defined(HELIUM_HEIGHT_MAPPING)
-        vo.n = normalize(vo.n);
-    #endif
+    vo.n = normalize(vo.n);
     float3 approximatedCol = ShadeSH9(float4(vo.n, 1));
     
     UnityLight l = CreateLight(vo);
@@ -311,7 +265,6 @@ float4 frag(vOutput vo): SV_Target{
     l,
     il
     );
-    // return finalDiffuse * albedo  /*Corrects linear to gamma transformation*/;
 }
 
 
