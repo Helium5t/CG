@@ -312,6 +312,45 @@ void HelloTriangleApplication::createPipeline(){
     };
 
 
+    // Some data can be actually changed at runtime, but it's very limited (e.g. viewport size)
+    std::vector<VkDynamicState> dynStates = {
+        // The scissor is the rectangle where you can render that does not impact the coordinates
+        // Ref: https://learn.microsoft.com/en-us/windows/win32/direct3d9/scissor-test
+        // e.g. If you are rendering the rear view mirror in a car, the scissor will be the size of the mirror
+        VK_DYNAMIC_STATE_SCISSOR,
+        // The rectangle responsible for computing the pixel coordinates of the frame buffer from the device coordinates
+        // The rectangle used for transforming coordinates.
+        VK_DYNAMIC_STATE_VIEWPORT
+    };
+
+    VkPipelineDynamicStateCreateInfo dynStateCreationInfo{};
+    dynStateCreationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynStateCreationInfo.dynamicStateCount = static_cast<uint32_t>(dynStates.size());
+    dynStateCreationInfo.pDynamicStates = dynStates.data();
+
+    // Defines the way vertex data will be input 
+    VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo{};
+    vertexInputCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    // Defines the span of data and the way it is defined.
+    // e.g.:    Each vertex data(normals, tans etc..) is 8 bytes long and
+    //          is defined per-instance/per-vertex.
+    vertexInputCreateInfo.vertexBindingDescriptionCount = 0;
+    vertexInputCreateInfo.pVertexBindingDescriptions = nullptr;
+    // VA are usually normals, tangents etc... here the vertex is already in the shader so no need
+    // to pass anything.
+    vertexInputCreateInfo.vertexAttributeDescriptionCount = 0;
+    vertexInputCreateInfo.pVertexAttributeDescriptions = nullptr;
+
+    VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreationInfo{};
+    inputAssemblyCreationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    inputAssemblyCreationInfo.
+
+
+
+
+
+
+
     // graphics pipeline has been compiled, so cleanup shaders etc...
     vkDestroyShaderModule(logiDevice, vShader, nullptr);
     vkDestroyShaderModule(logiDevice, fShader, nullptr);
