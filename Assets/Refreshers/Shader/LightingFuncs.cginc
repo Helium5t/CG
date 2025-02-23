@@ -32,12 +32,26 @@ float _NormalStrength,_SecondaryNormalStrength;
 float4 _SecondaryTex_ST;
 
 #endif
+#ifdef HELIUM_BASE_COLOR
+float4 _Color;
+#endif
+
 float4 _Tex_ST;
 
 float _Roughness, _Metallic;
 int _UseTextures;
 
 struct vInput{
+    /*
+    In order to use some Unity Macros, namely:
+    - UNITY_LIGHT_ATTENUATION
+    - SHADOW_ATTENUATION
+    - TRANSFER_SHADOW
+    - SHADOW_COORDS
+    We would need to rename "pos" to "vertex" as it is the name
+    of the field assuemd by the Unity macros. We will instead keep our own code.
+    This should cause the Spotlight shadows to break, but Unity fallsback to its own model.
+    */
     float4 pos: POSITION;
     float3 n : NORMAL;
     float2 uv : TEXCOORD0;
@@ -48,6 +62,16 @@ struct vInput{
 };
 
 struct vOutput{
+
+    /*
+    In order to use some Unity Macros, namely:
+    - UNITY_LIGHT_ATTENUATION
+    - SHADOW_ATTENUATION
+    - TRANSFER_SHADOW
+    - SHADOW_COORDS
+    We would need to rename "csPos" to "pos" as it is the name
+    of the field assuemd by the Unity macros. We will instead keep our own code.
+    */
     float4 csPos : SV_Position; // Clip Space
     float3 n :   TEXCOORD0;
     #ifdef HELIUM_NORMAL_MAPPING
@@ -63,9 +87,20 @@ struct vOutput{
     #endif
     float4 wPos : TEXCOORD2; // World Space Position
 
-    #if defined(VERTEXLIGHT_ON)
-    float3 lColor: TEXCOORD5; // Computed vertex light
+    /*
+    Same as 
+    #ifdef SHADOWS_SCREEN
+    float4 _ShadowCoord : TEXCOORD5; //<--- NAME IS IMPORTANT
     #endif
+    */
+    #if defined(SHADOWS_SCREEN) || defined(SHADOWS_CUBE) || defined(SHADOWS_DEPTH)
+    SHADOW_COORDS(5) // 5 for the index of TEXCOORD
+    #endif
+
+    #if defined(VERTEXLIGHT_ON)
+    float3 lColor: TEXCOORD6; // Computed vertex light
+    #endif
+
 };
 
 float3 ComputeBinormal(float3 n, float3 t, float sign){
@@ -128,6 +163,25 @@ vOutput vert(vInput i){
 
     o.n = UnityObjectToWorldNormal(i.n); 
     o.n = normalize(o.n);
+
+    /*
+    Alternatively to this you can also run
+    which would find the shadowcoordinates and set them properly.
+    It needs the same setup as referenced in the vOutput and vInput structure,
+    so won't be doing it here.
+    TRANSFER_SHADOW(o);
+    */
+    #if defined(SHADOWS_SCREEN) 
+    /*
+    o._ShadowCoord.xy = (float2(o.csPos.x,-o.csPos.y) + o.csPos.w) * 0.5;
+    o._ShadowCoord.zw = o.csPos.zw;
+    Same as code above */
+    o._ShadowCoord = ComputeScreenPos(o.csPos);
+    #elif defined(SPOT) && defined(SHADOWS_DEPTH) // spotlight
+    o._ShadowCoord = mul(unity_WorldToShadow[0], mul(unity_ObjectToWorld, i.pos));
+    #elif defined(POINT) && defined(SHADOWS_CUBE)
+    o._ShadowCoord = mul(unity_ObjectToWorld, i.pos).xyz - _LightPositionRange.xyz;
+    #endif
     ComputeVertexLight(o);
     return o;
 }
@@ -154,8 +208,29 @@ UnityLight CreateLight(vOutput vo){
         l.dir = _WorldSpaceLightPos0.xyz;
     #endif
 
-    // dimming is not declared because it's done inside the define.
+    #if defined(SHADOWS_SCREEN) // Directional
+    /* 
+        UNITY_LIGHT_ATTENUATION cannot run in the shadow sampling passes
+        with index 0 because it needs to access the structure with channel for shadow coordinates.
+        If we degined the structures following Unity's conventionw e could call
+    // UNITY_LIGHT_ATTENUATION(dimming, vo, vo.wPos.xyz);
+        Will keep things as is for now.
+    */
+    vo._ShadowCoord.xy /= (vo._ShadowCoord.w);
+    float dimming = tex2D(_ShadowMapTexture,vo._ShadowCoord.xy );
+    #elif defined(SHADOWS_DEPTH) && defined(SPOT) // spotlight
+
+    UNITY_LIGHT_ATTENUATION(dimming, vo, vo.wPos.xyz);
+
+    #elif defined(SHADOWS_CUBE) && defined(POINT) // point light
+    // dimming is not declared because it's done inside the define of the function
+    // The new definition for UNITY_LIGHT_ATTENUATION does not read from the second parameter except for 
+    // the directional light 
     UNITY_LIGHT_ATTENUATION(dimming, 0, vo.wPos.xyz);
+    // float dimming = 0;
+    #else 
+    float dimming = 0;
+    #endif
     l.color = _LightColor0  * dimming;
     // angle with surface normal
     l.ndotl =  DotClamped(vo.n, _WorldSpaceLightPos0.xyz);
@@ -223,6 +298,11 @@ void InitFragNormal(inout vOutput vo){
 
 float4 frag(vOutput vo): SV_Target{
     float3 albedo =  tex2D(_Tex, vo.uvM.xy);
+
+
+    #ifdef HELIUM_BASE_COLOR
+    albedo *= _Color.xyz;
+    #endif
 
     #if defined(HELIUM_HEIGHT_MAPPING) || defined(HELIUM_NORMAL_MAPPING)
     InitFragNormal(vo);
