@@ -174,7 +174,7 @@ vOutput vert(vInput i){
 UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo){
     UnityIndirect il;
     il.diffuse =0;
-    il.specular = 0;
+    il.specular = float4(1.0,0.0,0.0,1.0);
     #if defined(VERTEXLIGHT_ON)
         il.diffuse = vo.lColor;
     #endif
