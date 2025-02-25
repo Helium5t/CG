@@ -60,6 +60,7 @@ private:
     std::vector<VkImageView> swapChainImageViews;
     
     VkPipelineLayout pipelineLayout;
+    VkRenderPass renderPass;
     
 
 
@@ -85,6 +86,7 @@ private:
     void setupRenderSurface();
     void createSwapChain();
     void createImageView();
+    void createRenderPass();
     void createPipeline();
 
     //-------------------------------device_specs.cpp
