@@ -11,6 +11,7 @@
 #define VK_VALIDATION_VALIDATE_BEST_PRACTICES_ARM  true
 #define VK_VALIDATE_BEST_PRACTICES_ARM true
 
+#include <iostream>
 #include <GLFW/glfw3.h>
 
 inline const char* VkResultToString(VkResult r) {
@@ -79,6 +80,7 @@ static std::vector<char> readFile(const std::string& filename) {
     std::ifstream file(filename, std::ios::ate | std::ios::binary); 
 
     if (!file.is_open()) {
+        std::cout<< "could not open:" << filename << std::endl;
         throw std::runtime_error("failed to open file!");
     }
 

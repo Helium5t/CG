@@ -62,6 +62,7 @@ void HelloTriangleApplication::mainLoop() {
 }
 
 void HelloTriangleApplication::cleanup() {
+    vkDestroyPipelineLayout(logiDevice, pipelineLayout, nullptr);
     for(const auto& i: swapChainImageViews){
         vkDestroyImageView(logiDevice, i, nullptr);
     }
