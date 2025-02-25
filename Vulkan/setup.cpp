@@ -280,9 +280,78 @@ void HelloTriangleApplication::createImageView(){
     }
 }
 
+void HelloTriangleApplication::createRenderPass(){
+    VkAttachmentDescription attachmentDescription{}; 
+    attachmentDescription.format = selectedSwapChainFormat; // Image format i.e. bits per channel and linear/gamma etc...
+    attachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT; // Only one sample
+    /*
+    Defines what to do before the render pass
+    LOAD : Preserve what is already there
+    CLEAR : Clear all memory
+    DONT_CARE : No need to preserve previous data or define behaviour, let underlying implementation do whatever it wants.
+    NONE : The image is not accessed at all during the render pass, do nothing.
+    */
+    attachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR; // clears the screen right before writing to frame buffer
+    /*
+    Defines what to do after the render pass, has same values as load except CLEAR*/
+    attachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // stores the rendered frame into the frame buffer.
+    // Previous ops were for color and depth buffers, all stencil buffers follow instead these two ops
+    attachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE; 
+    attachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    // Optimizes the layout of the pixels of the image based on usage
+    /*
+    Too many values, see https://registry.khronos.org/vulkan/specs/latest/man/html/VkImageLayout.html
+    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR means it's going to be used to be presented to screen.
+    Other useful values:
+    - VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL use as color attachment (attachments are descriptors of input and output resources for a render pass)
+        e.g. : descriptor of render-target, of textures etc... 
+            they will then provide the resources needed for the associated pixel in the render pass. 
+            read more: https://stackoverflow.com/questions/46384007/what-is-the-meaning-of-attachment-when-speaking-about-the-vulkan-api
+        fundamentally, they are i/o bindings for the render pass. 
+    - VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL use as destination for a copy operation in memory
+     */
+    attachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // pre-pass
+    attachmentDescription.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; //post-pass
+
+    // Used to set the binding for the render pass
+    VkAttachmentReference attachmentRef{};
+    attachmentRef.attachment = 0; // reference to first attachment (we have only one atm)
+    attachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // Use as color attachment (output)
+
+    VkSubpassDescription subpassDesc{};
+    /*
+    Baisc bindings
+    GRAPHICS : Graphics subpass
+    COMPUTE  : Compute subpass (compute shaders)
+    // Platform specific
+    EXECUTION_GRAPH_AMDX : AMD specific feature,a SIMD format that defines a graph where shaders can run in parallel.
+    // Needs extensions
+    RAY_TRACING_KHR         : Ray tracing pass
+    SUBPASS_SHADING_HUAWEI  : A shading subpass optimization specific tu huawei
+    RAY_TRACING_NV          : Same as _KHR
+*/
+    subpassDesc.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS; 
+    subpassDesc.colorAttachmentCount = 1;
+    subpassDesc.pColorAttachments = &attachmentRef;
+
+    VkRenderPassCreateInfo renderPassCreationInfo{};
+    renderPassCreationInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassCreationInfo.attachmentCount = 1;
+    renderPassCreationInfo.pAttachments = &attachmentDescription;
+    renderPassCreationInfo.subpassCount = 1;
+    renderPassCreationInfo.pSubpasses = &subpassDesc;
+    renderPassCreationInfo.dependencyCount = 0;
+    renderPassCreationInfo.pDependencies = nullptr;
+
+    if(vkCreateRenderPass(logiDevice, &renderPassCreationInfo, nullptr, &renderPass) != VK_SUCCESS){
+        throw std::runtime_error("failed to create render pass");
+    }
+
+}
+
 void HelloTriangleApplication::createPipeline(){
-    std::vector<char> vShaderBinary = readFile("../shaders/helloTriangle_v.spv");
-    std::vector<char> fShaderBinary = readFile("../shaders/helloTriangle_f.spv");
+    std::vector<char> vShaderBinary = readFile("shaders/helloTriangle_v.spv");
+    std::vector<char> fShaderBinary = readFile("shaders/helloTriangle_f.spv");
 
     VkShaderModule vShader = createShaderModule(vShaderBinary);
     VkShaderModule fShader = createShaderModule(fShaderBinary);
@@ -479,6 +548,32 @@ void HelloTriangleApplication::createPipeline(){
     if(vkCreatePipelineLayout(logiDevice, &pipelineLayoutCreationInfo, nullptr, &pipelineLayout) != VK_SUCCESS){
         throw std::runtime_error("error when creating the pipeline layout");
     }
+
+    VkGraphicsPipelineCreateInfo pipelineCreationInfo{};
+    pipelineCreationInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineCreationInfo.stageCount = 2; // number of programmable shader stages: Fragment and Vertex
+    pipelineCreationInfo.pStages = shaderStages;
+    pipelineCreationInfo.pVertexInputState = &vertexInputCreateInfo;
+    pipelineCreationInfo.pInputAssemblyState = &inputAssemblyCreationInfo;
+    pipelineCreationInfo.pViewportState = &viewportStateCreationInfo;
+    pipelineCreationInfo.pRasterizationState = &rasterizationStageCreationInfo;
+    pipelineCreationInfo.pMultisampleState = &multisamplingStageCreationInfo;
+    pipelineCreationInfo.pDepthStencilState = depthStencilStageCreationInfo; // actually null
+    pipelineCreationInfo.pColorBlendState = &colorBlendingStageCreationInfo;
+    pipelineCreationInfo.pDynamicState = &dynStateCreationInfo;
+
+    pipelineCreationInfo.layout = pipelineLayout;
+    pipelineCreationInfo.renderPass = renderPass;
+    pipelineCreationInfo.subpass = 0; // first subpass is the entry point
+    // Pipelines can be child of other pipelines in order to simplify definitions and optimize switching between similar pipelines
+    // https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#pipelines-pipeline-derivatives
+    pipelineCreationInfo.basePipelineHandle = VK_NULL_HANDLE;
+    pipelineCreationInfo.basePipelineIndex = -1;
+
+    if(vkCreateGraphicsPipelines(logiDevice, VK_NULL_HANDLE, 1, &pipelineCreationInfo, nullptr, &gPipeline) != VK_SUCCESS){
+        throw std::runtime_error("failed to create graphics pipeline");
+    }
+
 
     // graphics pipeline has been compiled, so cleanup shaders etc...
     vkDestroyShaderModule(logiDevice, vShader, nullptr);
