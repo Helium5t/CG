@@ -281,8 +281,8 @@ void HelloTriangleApplication::createImageView(){
 }
 
 void HelloTriangleApplication::createPipeline(){
-    std::vector<char> vShaderBinary = readFile("shaders/helloTriangle_v.spv");
-    std::vector<char> fShaderBinary = readFile("shaders/helloTriangle_f.spv");
+    std::vector<char> vShaderBinary = readFile("../shaders/helloTriangle_v.spv");
+    std::vector<char> fShaderBinary = readFile("../shaders/helloTriangle_f.spv");
 
     VkShaderModule vShader = createShaderModule(vShaderBinary);
     VkShaderModule fShader = createShaderModule(fShaderBinary);
@@ -311,6 +311,174 @@ void HelloTriangleApplication::createPipeline(){
         fShaderCreationInfo
     };
 
+
+    // Some data can be actually changed at runtime, but it's very limited (e.g. viewport size)
+    std::vector<VkDynamicState> dynStates = {
+        // The scissor is the rectangle where you can render that does not impact the coordinates
+        // Ref: https://learn.microsoft.com/en-us/windows/win32/direct3d9/scissor-test
+        // e.g. If you are rendering the rear view mirror in a car, the scissor will be the size of the mirror
+        VK_DYNAMIC_STATE_SCISSOR,
+        // The rectangle responsible for computing the pixel coordinates of the frame buffer from the device coordinates
+        // The rectangle used for transforming coordinates.
+        VK_DYNAMIC_STATE_VIEWPORT
+        // Explanatory image https://vulkan-tutorial.com/images/viewports_scissors.png
+    };
+
+    VkPipelineDynamicStateCreateInfo dynStateCreationInfo{};
+    dynStateCreationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynStateCreationInfo.dynamicStateCount = static_cast<uint32_t>(dynStates.size());
+    dynStateCreationInfo.pDynamicStates = dynStates.data();
+
+    // Defines the way vertex data will be input 
+    VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo{};
+    vertexInputCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    // Defines the span of data and the way it is defined.
+    // e.g.:    Each vertex data(normals, tans etc..) is 8 bytes long and
+    //          is defined per-instance/per-vertex.
+    vertexInputCreateInfo.vertexBindingDescriptionCount = 0;
+    vertexInputCreateInfo.pVertexBindingDescriptions = nullptr;
+    // VA are usually normals, tangents etc... here the vertex is already in the shader so no need
+    // to pass anything.
+    vertexInputCreateInfo.vertexAttributeDescriptionCount = 0;
+    vertexInputCreateInfo.pVertexAttributeDescriptions = nullptr;
+
+    VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreationInfo{};
+    inputAssemblyCreationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    /*
+    POINT : Each vertex is standalone and creates a point, no face or edge is created (primitive_size =1 )
+    LINE : Every two vertices create an edge, no faces (primitive_size = 2)
+    TRIANGLE : Every three vertices create a triangle (primitive_size = 3)
+    PATCH : An arbitrary number of vertices can create a face, used for tesselation (https://www.khronos.org/opengl/wiki/Tessellation#Patches)
+    *_LIST (POINT, LINE, TRIANGLE, PATCH) : Each primitive is separate so 
+        vertices_num = primitive_size * num_primitives
+    *_STRIP (LINE, TRIANGLE) : consecutive primitives share vertices (lines one, triangles two), so 
+        minimum vertices_num = 2 + (primitive_size - 1) * num_primitives (can be more if primitives are not all consecutive)
+    *_FAN (TRIANGLE) : All primitives (just triangles) share a vertex, so 
+        vertices_num = 2 + num_triangles
+    *_WITH_ADJACENCY (LINE, TRIANGLE, LIST/STRIP): each primitive/set of primitives is also defined together with adjacent vertices,
+                        vertices that are not part of the primitive that can be accessed in the geometry shader.  
+                        e.g. :  STRIP_WITH_ADJACENCY means there will be x primitives defined (consecutive ones) + primitive_size * num_primitives adjacent vertices 
+                                                            for LINE_STRIP you can only have 2 more adjacent vertices for each strip because lines do not allow "branching"
+                                LIST_WITH_ADJACENCY means each primitive defined (no sharing) will have +primitive_size vertices for the adjacent ones
+    */                  
+    inputAssemblyCreationInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    // If VK_TRUE, strips can be broken up by setting an index to 0xFFFFFFFF 
+    inputAssemblyCreationInfo.primitiveRestartEnable = VK_FALSE;
+
+    VkViewport viewport{};
+    viewport.x = 0;
+    viewport.y = 0;
+    viewport.width = (float) selectedSwapChainWindowSize.width;
+    viewport.height = (float) selectedSwapChainWindowSize.height;
+    viewport.maxDepth = 1.0f;
+    viewport.minDepth = 0.0f;
+
+    VkRect2D scissor{};
+    scissor.extent = selectedSwapChainWindowSize;
+    scissor.offset = {0, 0};
+
+    VkPipelineViewportStateCreateInfo viewportStateCreationInfo{};
+    viewportStateCreationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportStateCreationInfo.viewportCount = 1;
+    // viewportStateCreationInfo.pViewports = &viewport; // Only needed if viewport is static  (not in VkDynamicState)
+    viewportStateCreationInfo.scissorCount = 1; 
+    // viewportStateCreationInfo.pScissors = &scissor; // Only needed if scissor is static  (not in VkDynamicState)
+
+
+    VkPipelineRasterizationStateCreateInfo rasterizationStageCreationInfo{};
+    rasterizationStageCreationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    // depthClamp enabled will clamp z to [0,1] instead of discarding values outside
+    rasterizationStageCreationInfo.depthClampEnable = VK_FALSE; 
+    // disable geometry data going through rasterizer, would basically disable output to the frame buffer.
+    rasterizationStageCreationInfo.rasterizerDiscardEnable = VK_FALSE;
+    /*
+    FILL : Fill in the face with fragments
+    LINE : Fill only edges with fragments (wireframe mode)
+    POINT: Fill only vertices with fragments (point cloud basically)
+    FILL_RECTANGLE_NV : Will generate fragments to fill the bounding rectangle of the vertices in a primitive.
+            e.g. : Given n vertices (works for any polygon), it will find the smallest bounding box (view space) containing them 
+                    and generate a fragments for each pixel inside it.
+    
+    Each mode that isn't fill requires enabling some GPU features
+    */
+    rasterizationStageCreationInfo.polygonMode = VK_POLYGON_MODE_FILL;
+    // Each edge is wide 1 fragment, any value different from 1 requires GPU features enabled.
+    rasterizationStageCreationInfo.lineWidth = 1.0f;
+    rasterizationStageCreationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizationStageCreationInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    // should rasterizer add a constant bias to all z values?
+    rasterizationStageCreationInfo.depthBiasEnable = VK_FALSE;
+    // Values to generate the depth bias, can control based on a constant
+    // or slope of the fragment, shadow mapping uses this to avoid self-shadowing
+    rasterizationStageCreationInfo.depthBiasConstantFactor = 0.0f;
+    rasterizationStageCreationInfo.depthBiasSlopeFactor = 0.0f;
+    rasterizationStageCreationInfo.depthBiasClamp = 0.0f;
+
+    // Multisampling does antialiasing by sampling fragment shaders from polygons that raster to the same fragment (which might be sub-pixel or overlap multiple pixels).
+    // Allows for less expensive anti-aliasing vs Super-sampling (render at higher resolution and then downscale).
+    // Requires GPU features for it enabled.
+    VkPipelineMultisampleStateCreateInfo  multisamplingStageCreationInfo{};
+    multisamplingStageCreationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    // Disabled so 0/min values
+    // Enable running fragment shader once for each sample rather than each pixel => multiple times per pixel based on amount of overlapping geometry
+    multisamplingStageCreationInfo.sampleShadingEnable = VK_FALSE; 
+    multisamplingStageCreationInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT; // num of samples
+    // In range [0,1], how many samples of the total number of samples in a pixel to actually shade.
+    // 0 => only one sample => shade per pixel
+    // 1 => all samples => shade per sample
+    // in-between is a fraction of the sample, so given 10 samples,  0.5 will only actually shade half of them.
+    multisamplingStageCreationInfo.minSampleShading = 1.0f;
+    // A bitmask that says for each fragment if some samples should be ignored. (32 bits)
+    // e.g. : (4 bits for simplicity) a geometry generates a mask with all 0010, if the mask for the entire screen is 1101
+    //          those samples from the geometry will not contribute to the final fragent. This allows selection of specific fragments
+    //          in different places of the frame buffer.
+    multisamplingStageCreationInfo.pSampleMask = nullptr;
+    // during sampling
+    // temporarily set alpha to the coverage of first sample output available
+    multisamplingStageCreationInfo.alphaToCoverageEnable = VK_FALSE;
+    // temporarily set alpha to one 
+    multisamplingStageCreationInfo.alphaToOneEnable = VK_FALSE;
+
+    VkPipelineDepthStencilStateCreateInfo* depthStencilStageCreationInfo = nullptr;// disabled for now, nullptr is passed
+
+    VkPipelineColorBlendAttachmentState colorBlendAttachmentState{}; // Handles color blending per-buffer in the framebuffer
+    // which channels to write
+    colorBlendAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    colorBlendAttachmentState.blendEnable = VK_FALSE; // do not blend (overwrite)
+    // Types of blending, allows setting blending with the source, the destination and with constant values set globally by the pipeline stage 
+    // https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#framebuffer-blendfactors
+    colorBlendAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; 
+    colorBlendAttachmentState.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; 
+    colorBlendAttachmentState.colorBlendOp = VK_BLEND_OP_ADD;  // Additive color blending (actually none because blending is disabled and weight is fully on source)
+    colorBlendAttachmentState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // How much source alpha contributes to final 
+    colorBlendAttachmentState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // How much destination alpha contributes to final (prev value in buffer)
+    colorBlendAttachmentState.alphaBlendOp = VK_BLEND_OP_ADD; // additive alpha blending
+    
+    VkPipelineColorBlendStateCreateInfo colorBlendingStageCreationInfo{}; // global settings for color blending
+    colorBlendingStageCreationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlendingStageCreationInfo.logicOpEnable = VK_FALSE; // enables bitwise blending instead of mixing
+    colorBlendingStageCreationInfo.logicOp = VK_LOGIC_OP_COPY; // Unused, it is used for bitwise operations (so VK_TRUE above)
+    colorBlendingStageCreationInfo.attachmentCount = 1; 
+    colorBlendingStageCreationInfo.pAttachments = &colorBlendAttachmentState;
+    // The following fields are optional, and are used for determining how to compute the blending factor when
+    // VK_BLEND_FACTOR is of type VK_BLEND_FACTOR_*_CONSTANT_*
+    // e.g. if blendConstant[0] is 0.1, then VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR yields 0.1 for the Red channel.
+    colorBlendingStageCreationInfo.blendConstants[0] = 0.0f; // R
+    colorBlendingStageCreationInfo.blendConstants[1] = 0.0f; // G
+    colorBlendingStageCreationInfo.blendConstants[2] = 0.0f; // B
+    colorBlendingStageCreationInfo.blendConstants[3] = 0.0f; // A
+
+    // This pipeline is used to create bindings for uniform variables, accessed by the shaders.
+    VkPipelineLayoutCreateInfo pipelineLayoutCreationInfo{};
+    pipelineLayoutCreationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    // for explicity, these are not needed and are by default 0/null.
+    pipelineLayoutCreationInfo.setLayoutCount = 0;
+    pipelineLayoutCreationInfo.pSetLayouts = nullptr;
+    pipelineLayoutCreationInfo.pushConstantRangeCount = 0; // Number of push constant, an element that can be used to pass dynamic values to the shaders
+    pipelineLayoutCreationInfo.pPushConstantRanges = nullptr;
+    if(vkCreatePipelineLayout(logiDevice, &pipelineLayoutCreationInfo, nullptr, &pipelineLayout) != VK_SUCCESS){
+        throw std::runtime_error("error when creating the pipeline layout");
+    }
 
     // graphics pipeline has been compiled, so cleanup shaders etc...
     vkDestroyShaderModule(logiDevice, vShader, nullptr);
