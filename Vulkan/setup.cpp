@@ -350,8 +350,8 @@ void HelloTriangleApplication::createRenderPass(){
 }
 
 void HelloTriangleApplication::createPipeline(){
-    std::vector<char> vShaderBinary = readFile("../shaders/helloTriangle_v.spv");
-    std::vector<char> fShaderBinary = readFile("../shaders/helloTriangle_f.spv");
+    std::vector<char> vShaderBinary = readFile("shaders/helloTriangle_v.spv");
+    std::vector<char> fShaderBinary = readFile("shaders/helloTriangle_f.spv");
 
     VkShaderModule vShader = createShaderModule(vShaderBinary);
     VkShaderModule fShader = createShaderModule(fShaderBinary);
@@ -548,6 +548,32 @@ void HelloTriangleApplication::createPipeline(){
     if(vkCreatePipelineLayout(logiDevice, &pipelineLayoutCreationInfo, nullptr, &pipelineLayout) != VK_SUCCESS){
         throw std::runtime_error("error when creating the pipeline layout");
     }
+
+    VkGraphicsPipelineCreateInfo pipelineCreationInfo{};
+    pipelineCreationInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineCreationInfo.stageCount = 2; // number of programmable shader stages: Fragment and Vertex
+    pipelineCreationInfo.pStages = shaderStages;
+    pipelineCreationInfo.pVertexInputState = &vertexInputCreateInfo;
+    pipelineCreationInfo.pInputAssemblyState = &inputAssemblyCreationInfo;
+    pipelineCreationInfo.pViewportState = &viewportStateCreationInfo;
+    pipelineCreationInfo.pRasterizationState = &rasterizationStageCreationInfo;
+    pipelineCreationInfo.pMultisampleState = &multisamplingStageCreationInfo;
+    pipelineCreationInfo.pDepthStencilState = depthStencilStageCreationInfo; // actually null
+    pipelineCreationInfo.pColorBlendState = &colorBlendingStageCreationInfo;
+    pipelineCreationInfo.pDynamicState = &dynStateCreationInfo;
+
+    pipelineCreationInfo.layout = pipelineLayout;
+    pipelineCreationInfo.renderPass = renderPass;
+    pipelineCreationInfo.subpass = 0; // first subpass is the entry point
+    // Pipelines can be child of other pipelines in order to simplify definitions and optimize switching between similar pipelines
+    // https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#pipelines-pipeline-derivatives
+    pipelineCreationInfo.basePipelineHandle = VK_NULL_HANDLE;
+    pipelineCreationInfo.basePipelineIndex = -1;
+
+    if(vkCreateGraphicsPipelines(logiDevice, VK_NULL_HANDLE, 1, &pipelineCreationInfo, nullptr, &gPipeline) != VK_SUCCESS){
+        throw std::runtime_error("failed to create graphics pipeline");
+    }
+
 
     // graphics pipeline has been compiled, so cleanup shaders etc...
     vkDestroyShaderModule(logiDevice, vShader, nullptr);

@@ -61,7 +61,7 @@ private:
     
     VkPipelineLayout pipelineLayout;
     VkRenderPass renderPass;
-    
+    VkPipeline gPipeline; 
 
 
     //-------------------------------main.cpp
