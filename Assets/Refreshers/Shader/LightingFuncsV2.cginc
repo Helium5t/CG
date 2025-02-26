@@ -9,6 +9,7 @@ in "LightingFuncs.cginc"
 #if !defined(HELIUM_LIGHTING_INCLUDED)
 #define HELIUM_LIGHTING_INCLUDED
 
+#define HELIUM_MAX_LOD 6
 
 // cginc because it is an include file
 // #include "UnityCG.cginc" // Already included by UnityStandardBRDF
@@ -171,15 +172,90 @@ vOutput vert(vInput i){
     return o;
 }
 
-UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo){
+// Leverage simple box rebounding to compute the actual point in the cubemap to sample.
+float3 BoxProjectionIfActive(
+    // if unprocessed, this direction would sample somewhere completely different
+    float3 refelctionDir,
+    // This is the point being rendered, aka the point from where the sampling should happen
+    float3 fragmentPos,
+    // Position of where the cubemap is baked
+    float4 cubemapPos, 
+    // bounds
+    float3 boxMin, 
+    float3 boxMax
+){
+    // Forces branch in the compiled shader, otherwise some implementations
+    // might use double computation and step based on the condition to choose the final value.
+    UNITY_BRANCH 
+    if(cubemapPos.w > 0 ){// Box projection is enabled
+        // This is the same math behind the interior mapping technique
+        // Bounds relative to the point reflecting light
+        boxMin -= fragmentPos;
+        boxMax -= fragmentPos;
+        // In an axis aligned cube the intersection is easily computed by finding 
+        // the closest plane to the source of a ray. 
+        float3 intersection;
+        intersection.x = (refelctionDir.x > 0? boxMax.x : boxMin.x) / refelctionDir.x;
+        intersection.y = (refelctionDir.y > 0? boxMax.y : boxMin.y) / refelctionDir.y;
+        intersection.z = (refelctionDir.z > 0? boxMax.z : boxMin.z) / refelctionDir.z;
+        // Find the multiplier to go from reflection direction to the vector going from 
+        // reflection point (fragment) to the point in the cube being reflected (sampled).
+        float multiplier = min(intersection.x, min(intersection.y, intersection.z));
+        // Compute the reflected point in the space relative to the cubemap position
+        // Equal to the vector going from cubemap to fragment + the vector from fragment to reflected point.
+        refelctionDir =  refelctionDir*multiplier + (fragmentPos - cubemapPos);
+    }
+    return refelctionDir;
+}
+
+
+#define HELIUM_COMPUTE_REFLECTION(pn, a, b,c, destName) \
+float3 rsv##pn = reflect(-a, b.n);\
+rsv##pn = BoxProjectionIfActive(rsv##pn, b.wPos, unity_SpecCube##pn##_ProbePosition, unity_SpecCube##pn##_BoxMin, unity_SpecCube##pn##_BoxMax); \
+/* Since they are all cubemaps of the same resolution etc..., 
+    all specular probe cubemaps use the sampler from unity_SpecCube0 */ \
+float4 specHDR##pn = UNITY_SAMPLE_TEXCUBE_SAMPLER_LOD(unity_SpecCube##pn , unity_SpecCube0, rsv##pn, c * _Roughness * HELIUM_MAX_LOD); \
+float3 destName = DecodeHDR(specHDR##pn, unity_SpecCube##pn##_HDR); 
+
+UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo, float3 viewDir){
     UnityIndirect il;
     il.diffuse =0;
     il.specular = 0;
     #if defined(VERTEXLIGHT_ON)
-        il.diffuse = vo.lColor;
+    il.diffuse = vo.lColor;
     #endif
     #if !defined(HELIUM_ADD_PASS)
-        il.diffuse += max(0, ShadeSH9(float4(vo.n, 1)));
+    il.diffuse += max(0, ShadeSH9(float4(vo.n, 1)));
+    
+    float roughnessToMipMap = 1.7 - 0.7*_Roughness;
+    // float3 reflectionSampleVec = reflect(-viewDir, vo.n);
+    // reflectionSampleVec = BoxProjectionIfActive(reflectionSampleVec, vo.wPos, 
+    //      unity_SpecCube0_ProbePosition, unity_SpecCube0_BoxMin, unity_SpecCube0_BoxMax);
+    
+    // // Approximates this https://s3.amazonaws.com/docs.knaldtech.com/knald/1.0.0/lys_power_drops.html
+    // // fundamentally roughness should not be treated linearly because visibly it does not do it.
+    // float4 specularHDR = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflectionSampleVec, roughnessToMipMap *  _Roughness * HELIUM_MAX_LOD);
+    // float3 specular0 = DecodeHDR(specularHDR, unity_SpecCube0_HDR);//contains HDR decoding instructions
+    // These two macros summarize the previous lines
+    HELIUM_COMPUTE_REFLECTION(0, viewDir, vo,roughnessToMipMap, specular0)
+    il.specular = specular0;
+    #if UNITY_SPECCUBE_BLENDING
+    UNITY_BRANCH
+    if(unity_SpecCube0_BoxMin.w < 0.99){
+        HELIUM_COMPUTE_REFLECTION(1, viewDir, vo,roughnessToMipMap, specular1)
+        il.specular = lerp(specular1,il.specular, unity_SpecCube0_BoxMin.w);
+    }
+    #endif
+    
+    // Unity does the same thing via the Unity_GlossyEnvironmentData helper struct
+    // Unity_GlossyEnvironmentData reflData;
+    // reflData.roughness = _Roughness;
+    // reflData.reflUVW = reflectionSampleVec;
+    // il.specular = Unity_GlossyEnvironment(
+    //     UNITY_PASS_TEXCUBE_SAMPLER(unity_SpecCubeX, unity_SpecCube0), unity_SpecCubeX_HDR, reflData
+    // );
+
+
     #endif
     return il;
 }
@@ -254,7 +330,7 @@ float4 frag(vOutput vo): SV_Target{
     float3 approximatedCol = ShadeSH9(float4(vo.n, 1));
     
     UnityLight l = CreateLight(vo);
-    UnityIndirect il = CreateIndirectLightAndDeriveFromVertex(vo);
+    UnityIndirect il = CreateIndirectLightAndDeriveFromVertex(vo,viewdir);
     return UNITY_BRDF_PBS(
     albedo,
     specularColor,

@@ -1,5 +1,5 @@
 // Same as ShadowsPBShader but uses Unity naming convention
-Shader "Refreshers/ShadowsPBStandard"
+Shader "Refreshers/StdReflections"
 {
     Properties{
         _Color("Color", Color) = (1,1,1,1)
