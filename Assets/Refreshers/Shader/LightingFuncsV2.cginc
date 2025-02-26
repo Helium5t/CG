@@ -208,6 +208,15 @@ float3 BoxProjectionIfActive(
     return refelctionDir;
 }
 
+
+#define HELIUM_COMPUTE_REFLECTION(pn, a, b,c, destName) \
+float3 rsv##pn = reflect(-a, b.n);\
+rsv##pn = BoxProjectionIfActive(rsv##pn, b.wPos, unity_SpecCube##pn##_ProbePosition, unity_SpecCube##pn##_BoxMin, unity_SpecCube##pn##_BoxMax); \
+/* Since they are all cubemaps of the same resolution etc..., 
+    all specular probe cubemaps use the sampler from unity_SpecCube0 */ \
+float4 specHDR##pn = UNITY_SAMPLE_TEXCUBE_SAMPLER_LOD(unity_SpecCube##pn , unity_SpecCube0, rsv##pn, c * _Roughness * HELIUM_MAX_LOD); \
+float3 destName = DecodeHDR(specHDR##pn, unity_SpecCube##pn##_HDR); 
+
 UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo, float3 viewDir){
     UnityIndirect il;
     il.diffuse =0;
@@ -217,26 +226,36 @@ UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo, float3 viewDir)
     #endif
     #if !defined(HELIUM_ADD_PASS)
     il.diffuse += max(0, ShadeSH9(float4(vo.n, 1)));
-
-    float3 reflectionSampleVec = reflect(-viewDir, vo.n);
-    reflectionSampleVec = BoxProjectionIfActive(reflectionSampleVec, vo.wPos, 
-        unity_SpecCube0_ProbePosition, unity_SpecCube0_BoxMin, unity_SpecCube0_BoxMax);
+    
+    float roughnessToMipMap = 1.7 - 0.7*_Roughness;
+    // float3 reflectionSampleVec = reflect(-viewDir, vo.n);
+    // reflectionSampleVec = BoxProjectionIfActive(reflectionSampleVec, vo.wPos, 
+    //      unity_SpecCube0_ProbePosition, unity_SpecCube0_BoxMin, unity_SpecCube0_BoxMax);
+    
+    // // Approximates this https://s3.amazonaws.com/docs.knaldtech.com/knald/1.0.0/lys_power_drops.html
+    // // fundamentally roughness should not be treated linearly because visibly it does not do it.
+    // float4 specularHDR = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflectionSampleVec, roughnessToMipMap *  _Roughness * HELIUM_MAX_LOD);
+    // float3 specular0 = DecodeHDR(specularHDR, unity_SpecCube0_HDR);//contains HDR decoding instructions
+    // These two macros summarize the previous lines
+    HELIUM_COMPUTE_REFLECTION(0, viewDir, vo,roughnessToMipMap, specular0)
+    il.specular = specular0;
+    #if UNITY_SPECCUBE_BLENDING
+    UNITY_BRANCH
+    if(unity_SpecCube0_BoxMin.w < 0.99){
+        HELIUM_COMPUTE_REFLECTION(1, viewDir, vo,roughnessToMipMap, specular1)
+        il.specular = lerp(specular1,il.specular, unity_SpecCube0_BoxMin.w);
+    }
+    #endif
+    
+    // Unity does the same thing via the Unity_GlossyEnvironmentData helper struct
     // Unity_GlossyEnvironmentData reflData;
     // reflData.roughness = _Roughness;
     // reflData.reflUVW = reflectionSampleVec;
     // il.specular = Unity_GlossyEnvironment(
-        //     UNITY_PASS_TEXCUBE(unity_SpecCube0), unity_SpecCube0_HDR, reflData
-        // );
-    // Unity helper basically does what is written right below
+    //     UNITY_PASS_TEXCUBE_SAMPLER(unity_SpecCubeX, unity_SpecCube0), unity_SpecCubeX_HDR, reflData
+    // );
 
-    // Approximates this https://s3.amazonaws.com/docs.knaldtech.com/knald/1.0.0/lys_power_drops.html
-    // fundamentally roughness should not be treated linearly because visibly it does not do it.
-    float roughnessToMipMap = 1.7 - 0.7*_Roughness;
-    float4 specularHDR = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflectionSampleVec, roughnessToMipMap *  _Roughness * HELIUM_MAX_LOD);
-    il.specular = DecodeHDR(specularHDR, unity_SpecCube0_HDR);//contains HDR decoding instructions
-    
 
-    
     #endif
     return il;
 }
