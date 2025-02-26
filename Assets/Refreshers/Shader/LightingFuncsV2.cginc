@@ -9,6 +9,7 @@ in "LightingFuncs.cginc"
 #if !defined(HELIUM_LIGHTING_INCLUDED)
 #define HELIUM_LIGHTING_INCLUDED
 
+#define HELIUM_MAX_LOD 6
 
 // cginc because it is an include file
 // #include "UnityCG.cginc" // Already included by UnityStandardBRDF
@@ -171,15 +172,71 @@ vOutput vert(vInput i){
     return o;
 }
 
-UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo){
+// Leverage simple box rebounding to compute the actual point in the cubemap to sample.
+float3 BoxProjectionIfActive(
+    // if unprocessed, this direction would sample somewhere completely different
+    float3 refelctionDir,
+    // This is the point being rendered, aka the point from where the sampling should happen
+    float3 fragmentPos,
+    // Position of where the cubemap is baked
+    float4 cubemapPos, 
+    // bounds
+    float3 boxMin, 
+    float3 boxMax
+){
+    // Forces branch in the compiled shader, otherwise some implementations
+    // might use double computation and step based on the condition to choose the final value.
+    UNITY_BRANCH 
+    if(cubemapPos.w > 0 ){// Box projection is enabled
+        // This is the same math behind the interior mapping technique
+        // Bounds relative to the point reflecting light
+        boxMin -= fragmentPos;
+        boxMax -= fragmentPos;
+        // In an axis aligned cube the intersection is easily computed by finding 
+        // the closest plane to the source of a ray. 
+        float3 intersection;
+        intersection.x = (refelctionDir.x > 0? boxMax.x : boxMin.x) / refelctionDir.x;
+        intersection.y = (refelctionDir.y > 0? boxMax.y : boxMin.y) / refelctionDir.y;
+        intersection.z = (refelctionDir.z > 0? boxMax.z : boxMin.z) / refelctionDir.z;
+        // Find the multiplier to go from reflection direction to the vector going from 
+        // reflection point (fragment) to the point in the cube being reflected (sampled).
+        float multiplier = min(intersection.x, min(intersection.y, intersection.z));
+        // Compute the reflected point in the space relative to the cubemap position
+        // Equal to the vector going from cubemap to fragment + the vector from fragment to reflected point.
+        refelctionDir =  refelctionDir*multiplier + (fragmentPos - cubemapPos);
+    }
+    return refelctionDir;
+}
+
+UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo, float3 viewDir){
     UnityIndirect il;
     il.diffuse =0;
-    il.specular = float4(1.0,0.0,0.0,1.0);
+    il.specular = 0;
     #if defined(VERTEXLIGHT_ON)
-        il.diffuse = vo.lColor;
+    il.diffuse = vo.lColor;
     #endif
     #if !defined(HELIUM_ADD_PASS)
-        il.diffuse += max(0, ShadeSH9(float4(vo.n, 1)));
+    il.diffuse += max(0, ShadeSH9(float4(vo.n, 1)));
+
+    float3 reflectionSampleVec = reflect(-viewDir, vo.n);
+    reflectionSampleVec = BoxProjectionIfActive(reflectionSampleVec, vo.wPos, 
+        unity_SpecCube0_ProbePosition, unity_SpecCube0_BoxMin, unity_SpecCube0_BoxMax);
+    // Unity_GlossyEnvironmentData reflData;
+    // reflData.roughness = _Roughness;
+    // reflData.reflUVW = reflectionSampleVec;
+    // il.specular = Unity_GlossyEnvironment(
+        //     UNITY_PASS_TEXCUBE(unity_SpecCube0), unity_SpecCube0_HDR, reflData
+        // );
+    // Unity helper basically does what is written right below
+
+    // Approximates this https://s3.amazonaws.com/docs.knaldtech.com/knald/1.0.0/lys_power_drops.html
+    // fundamentally roughness should not be treated linearly because visibly it does not do it.
+    float roughnessToMipMap = 1.7 - 0.7*_Roughness;
+    float4 specularHDR = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflectionSampleVec, roughnessToMipMap *  _Roughness * HELIUM_MAX_LOD);
+    il.specular = DecodeHDR(specularHDR, unity_SpecCube0_HDR);//contains HDR decoding instructions
+    
+
+    
     #endif
     return il;
 }
@@ -254,7 +311,7 @@ float4 frag(vOutput vo): SV_Target{
     float3 approximatedCol = ShadeSH9(float4(vo.n, 1));
     
     UnityLight l = CreateLight(vo);
-    UnityIndirect il = CreateIndirectLightAndDeriveFromVertex(vo);
+    UnityIndirect il = CreateIndirectLightAndDeriveFromVertex(vo,viewdir);
     return UNITY_BRDF_PBS(
     albedo,
     specularColor,
