@@ -1,6 +1,6 @@
 // Same as ShadowsPBShader but uses Unity naming convention
 Shader "Refreshers/StdReflections"
-{
+{   
     Properties{
         _Color("Color", Color) = (1,1,1,1)
         _Tex ("Texture", 2D) = "white" {}
@@ -9,8 +9,11 @@ Shader "Refreshers/StdReflections"
         _SecondaryTex("Secondary Texture", 2D) = "gray"{}
         [NoScaleOffset] _SecondaryNormal("Secondary Normal map", 2D) = "bump" {}
         _SecondaryNormalStrength("Secondary Normal Strength", Float) = 1
-        _Roughness("Roughness", Range(0,1)) = 0.5
-        _Metallic("Metallic", Range(0,1)) = 0.1
+        _UniformRoughness("Roughness", Range(0,1)) = 0.5
+        _Roughness("Roughness",2D) = "white"{}
+        [NoScaleOffset] _Metallic("Metallic", 2D) = "white" {}
+        _UniformMetallic("Metallic", Range(0,1)) = 0.5
+        _PackedMR("Metallic Roughness", 2D) = "grey" {}
     }
     CGINCLUDE
     #define HELIUM_FRAGMENT_BINORMAL
@@ -31,6 +34,10 @@ Shader "Refreshers/StdReflections"
             #pragma multi_compile _ VERTEXLIGHT_ON
 
 			#pragma multi_compile _ SHADOWS_SCREEN 
+
+            #pragma shader_feature HELIUM_2D_METALLIC
+            #pragma shader_feature HELIUM_2D_ROUGHNESS
+            #pragma shader_feature HELIUM_PACKED_MR
 
             #define HELIUM_NORMAL_MAPPING
             #define HELIUM_BASE_COLOR
@@ -76,6 +83,9 @@ Shader "Refreshers/StdReflections"
             
             #define HELIUM_NORMAL_MAPPING
             #define HELIUM_ADD_PASS
+            #pragma shader_feature HELIUM_2D_METALLIC
+            #pragma shader_feature HELIUM_2D_ROUGHNESS
+            #pragma shader_feature HELIUM_PACKED_MR
             
             #pragma vertex vert
             #pragma fragment frag
@@ -102,4 +112,5 @@ Shader "Refreshers/StdReflections"
         }
     }
     Fallback "Diffuse"
+    CustomEditor "HeliumShaderUI"
 }
