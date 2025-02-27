@@ -41,7 +41,38 @@ float4 _Color;
 
 float4 _Tex_ST;
 
-float _Roughness, _Metallic;
+float _UniformRoughness,_UniformMetallic;;
+sampler2D _Metallic, _Roughness, _PackedMR;
+
+#ifdef HELIUM_2D_METALLIC
+    #ifdef HELIUM_PACKED_MR
+        #define METALLIC(uv) tex2D(_PackedMR, uv.xy).r
+    #else
+        #define METALLIC(uv) tex2D(_Metallic, uv.xy).r
+    #endif
+#else
+    #define METALLIC(x) _UniformMetallic
+#endif 
+
+#ifdef HELIUM_2D_ROUGHNESS
+    /* Unity uses roughness in the alpha channel and metallic in the r. Although 
+        state of the art usually packs a texture like the following for single-value 
+        material properties:
+            - R = Metallic
+            - G = Ambient Occlusion
+            - B = Smoothness
+        I think the assignment is also done on purpose because the green channel has more dedicated
+        bits in some formats and thus AO can have more detail. Not sure about this last part though.
+    */
+    #ifdef HELIUM_PACKED_MR
+        #define ROUGHNESS(uv) 1.0 - tex2D(_PackedMR, uv.xy).a 
+    #else
+        #define ROUGHNESS(uv) 1.0 - tex2D(_Roughness, uv.xy).r
+    #endif
+#else
+    #define ROUGHNESS(x) _UniformRoughness
+#endif 
+
 int _UseTextures;
 
 struct vInput{
@@ -214,7 +245,7 @@ float3 rsv##pn = reflect(-a, b.n);\
 rsv##pn = BoxProjectionIfActive(rsv##pn, b.wPos, unity_SpecCube##pn##_ProbePosition, unity_SpecCube##pn##_BoxMin, unity_SpecCube##pn##_BoxMax); \
 /* Since they are all cubemaps of the same resolution etc..., 
     all specular probe cubemaps use the sampler from unity_SpecCube0 */ \
-float4 specHDR##pn = UNITY_SAMPLE_TEXCUBE_SAMPLER_LOD(unity_SpecCube##pn , unity_SpecCube0, rsv##pn, c * _Roughness * HELIUM_MAX_LOD); \
+float4 specHDR##pn = UNITY_SAMPLE_TEXCUBE_SAMPLER_LOD(unity_SpecCube##pn , unity_SpecCube0, rsv##pn, c * ROUGHNESS(b.uvM.xy) * HELIUM_MAX_LOD); \
 float3 destName = DecodeHDR(specHDR##pn, unity_SpecCube##pn##_HDR); 
 
 UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo, float3 viewDir){
@@ -227,7 +258,7 @@ UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo, float3 viewDir)
     #if !defined(HELIUM_ADD_PASS)
     il.diffuse += max(0, ShadeSH9(float4(vo.n, 1)));
     
-    float roughnessToMipMap = 1.7 - 0.7*_Roughness;
+    float roughnessToMipMap = 1.7 - 0.7* ROUGHNESS(vo.uvM);
     // float3 reflectionSampleVec = reflect(-viewDir, vo.n);
     // reflectionSampleVec = BoxProjectionIfActive(reflectionSampleVec, vo.wPos, 
     //      unity_SpecCube0_ProbePosition, unity_SpecCube0_BoxMin, unity_SpecCube0_BoxMax);
@@ -300,6 +331,7 @@ void InitFragNormal(inout vOutput vo){
     #endif
 }
 
+
 float4 frag(vOutput vo): SV_Target{
     float3 albedo =  tex2D(_Tex, vo.uvM.xy);
 
@@ -320,9 +352,10 @@ float4 frag(vOutput vo): SV_Target{
     
     float invertedReflectivity;
     float3 specularColor;
+    float m = METALLIC(vo.uvM.xy);
     // specularColor and invertedReflectivity are out parameters
     albedo = DiffuseAndSpecularFromMetallic(
-        albedo, _Metallic, specularColor, invertedReflectivity
+        albedo, m, specularColor, invertedReflectivity
         ); 
         float3 viewdir = normalize(_WorldSpaceCameraPos - vo.wPos);
         
@@ -335,7 +368,7 @@ float4 frag(vOutput vo): SV_Target{
     albedo,
     specularColor,
     invertedReflectivity,
-    1.0-_Roughness,
+    1.0 - ROUGHNESS(vo.uvM),
     vo.n,
     viewdir,
     l,
