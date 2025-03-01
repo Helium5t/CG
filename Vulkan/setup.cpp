@@ -1,6 +1,5 @@
 #include "main.h"
 
-
 void HelloTriangleApplication::createInstance(){
     #ifdef NDEBUG
         std::cout<< "Non Debug mode" << std::endl; 
@@ -578,4 +577,27 @@ void HelloTriangleApplication::createPipeline(){
     // graphics pipeline has been compiled, so cleanup shaders etc...
     vkDestroyShaderModule(logiDevice, vShader, nullptr);
     vkDestroyShaderModule(logiDevice, fShader, nullptr);
+}
+
+void HelloTriangleApplication::createFramebuffers(){
+    swapchainFramebuffers.resize(swapChainImageViews.size());
+
+    for (size_t i =0 ; i < swapChainImageViews.size(); i++){
+        VkImageView iv[] = {
+            swapChainImageViews[i]
+        };
+
+        VkFramebufferCreateInfo framebufferCreationInfo{};
+        framebufferCreationInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferCreationInfo.renderPass = renderPass;
+        framebufferCreationInfo.layers = 1;
+        framebufferCreationInfo.attachmentCount = 1;
+        framebufferCreationInfo.pAttachments = iv;
+        framebufferCreationInfo.height = selectedSwapChainWindowSize.height;
+        framebufferCreationInfo.width = selectedSwapChainWindowSize.width;
+        VkResult res = vkCreateFramebuffer(logiDevice, &framebufferCreationInfo, nullptr, &swapchainFramebuffers[i]);
+        if(res != VK_SUCCESS){
+            throw std::runtime_error("failed to create framebuffer");
+        }
+    }
 }
