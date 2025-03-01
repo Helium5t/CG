@@ -601,3 +601,28 @@ void HelloTriangleApplication::createFramebuffers(){
         }
     }
 }
+
+void HelloTriangleApplication::createCommandPool(){
+    QueueFamilyIndices qfi = findRequiredQueueFamily(physGraphicDevice);
+
+    VkCommandPoolCreateInfo poolCreationInfo{};
+    poolCreationInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    /*
+    Define basically the lifetime of the command buffers in this pool. Which in turn defines how the memory is allocated for them.
+    CREATE_TRANSIENT_BIT             : The command buffers allocated from this pool will be short-lived
+    CREATE_RESET_COMMAND_BUFFER_BIT  : Allows manual reset of each command buffer from this pool. Needs to be set in order to call vkResetCommandBuffer. 
+    CREATE_PROTECTED_BIT             : Cannot be reset. Basically static command buffers that are immutable.
+
+    Optimization is in theory, because if RESET_COMMAND_BUFFER_BIT you can then dispatch commands at each frame (thus the reset)
+    and so the calls to fill the buffer might be grossly unoptimized.
+    */
+    poolCreationInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    // All command buffers allocated from this pool have to be submitted to the following queue.
+    // So this basically means this pool will always dispatch graphcis related commands. 
+    // All commands in cbuffers have to be submitted to a device queue.
+    // Also, given the creation info 1 pool<=>1 device queue
+    poolCreationInfo.queueFamilyIndex = qfi.graphicsFamilyIndex.value();
+    if(vkCreateCommandPool(logiDevice, &poolCreationInfo, nullptr, &commandPool) != VK_SUCCESS){
+        throw std::runtime_error("failed to create graphics command pool");
+    }
+}

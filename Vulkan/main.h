@@ -74,6 +74,13 @@ private:
     // Each image in the swap chain should have a framebuffer associated to it.
     std::vector<VkFramebuffer> swapchainFramebuffers;
 
+    // All commands (drawing, memory transfer etc..) 
+    // are first submitted to a command pool
+    // this way vulkan can better schedule them and dispatch them in groups.
+    // This relieves duty of optimization of draw calls etc.. a bit and 
+    // allows for dispatching commands from multiple threads.
+    VkCommandPool commandPool;
+
 
     //-------------------------------main.cpp
 
@@ -100,6 +107,7 @@ private:
     void createRenderPass();
     void createPipeline();
     void createFramebuffers();
+    void createCommandPool();
 
     //-------------------------------device_specs.cpp
 
