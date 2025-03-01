@@ -3,7 +3,6 @@
 
 #include <string>
 #include <fstream>
-#define GLFW_INCLUDE_VULKAN // tells glfw to add vulkan api
 #define VK_KHRONOS_VALIDATION_VALIDATE_BEST_PRACTICES true
 #define VK_VALIDATION_VALIDATE_BEST_PRACTICES true
 #define VK_VALIDATE_BEST_PRACTICES true
@@ -12,6 +11,9 @@
 #define VK_VALIDATE_BEST_PRACTICES_ARM true
 
 #include <iostream>
+#ifndef GLFW_INCLUDE_VULKAN
+#define GLFW_INCLUDE_VULKAN // tells glfw to add vulkan api
+#endif
 #include <GLFW/glfw3.h>
 
 inline const char* VkResultToString(VkResult r) {

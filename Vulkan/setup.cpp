@@ -1,6 +1,5 @@
 #include "main.h"
 
-
 void HelloTriangleApplication::createInstance(){
     #ifdef NDEBUG
         std::cout<< "Non Debug mode" << std::endl; 
@@ -578,4 +577,72 @@ void HelloTriangleApplication::createPipeline(){
     // graphics pipeline has been compiled, so cleanup shaders etc...
     vkDestroyShaderModule(logiDevice, vShader, nullptr);
     vkDestroyShaderModule(logiDevice, fShader, nullptr);
+}
+
+void HelloTriangleApplication::createFramebuffers(){
+    swapchainFramebuffers.resize(swapChainImageViews.size());
+
+    for (size_t i =0 ; i < swapChainImageViews.size(); i++){
+        VkImageView iv[] = {
+            swapChainImageViews[i]
+        };
+
+        VkFramebufferCreateInfo framebufferCreationInfo{};
+        framebufferCreationInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferCreationInfo.renderPass = renderPass;
+        framebufferCreationInfo.layers = 1;
+        framebufferCreationInfo.attachmentCount = 1;
+        framebufferCreationInfo.pAttachments = iv;
+        framebufferCreationInfo.height = selectedSwapChainWindowSize.height;
+        framebufferCreationInfo.width = selectedSwapChainWindowSize.width;
+        VkResult res = vkCreateFramebuffer(logiDevice, &framebufferCreationInfo, nullptr, &swapchainFramebuffers[i]);
+        if(res != VK_SUCCESS){
+            throw std::runtime_error("failed to create framebuffer");
+        }
+    }
+}
+
+void HelloTriangleApplication::createCommandPool(){
+    QueueFamilyIndices qfi = findRequiredQueueFamily(physGraphicDevice);
+
+    // Why are command pools a thing if command buffers which create commands for the queues exist?
+    // Mostly the following reasons
+    // - Abstracting from the underlying implementation (we don't need to know what queues are there, but the pools)
+    // - Memory optimization (when freeing and allocating new buffers for the same pool Vulkan might use the same memory)
+    // - Lifetime management (when pool dies buffers die, no risk of having stray buffers still attached to the queues)
+    // So essentially you can X buffers going into the same pool for the same queue, when the pool dies all of them get destroyed.
+    // This last line might be wrong, but it makes sense since you allocate a command buffer FROM the pool.
+    VkCommandPoolCreateInfo poolCreationInfo{};
+    poolCreationInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    /*
+    Define basically the lifetime of the command buffers in this pool. Which in turn defines how the memory is allocated for them.
+    CREATE_TRANSIENT_BIT             : The command buffers allocated from this pool will be short-lived
+    CREATE_RESET_COMMAND_BUFFER_BIT  : Allows manual reset of each command buffer from this pool. Needs to be set in order to call vkResetCommandBuffer. 
+    CREATE_PROTECTED_BIT             : Cannot be reset. Basically static command buffers that are immutable.
+
+    Optimization is in theory, because if RESET_COMMAND_BUFFER_BIT you can then dispatch commands at each frame (thus the reset)
+    and so the calls to fill the buffer might be grossly unoptimized.
+    */
+    poolCreationInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    // All command buffers allocated from this pool have to be submitted to the following queue.
+    // So this basically means this pool will always dispatch graphcis related commands. 
+    // All commands in cbuffers have to be submitted to a device queue.
+    // Also, given the creation info 1 pool<=>1 device queue
+    poolCreationInfo.queueFamilyIndex = qfi.graphicsFamilyIndex.value();
+    if(vkCreateCommandPool(logiDevice, &poolCreationInfo, nullptr, &commandPool) != VK_SUCCESS){
+        throw std::runtime_error("failed to create graphics command pool");
+    }
+}
+
+void HelloTriangleApplication::createCommandBuffers(){
+    VkCommandBufferAllocateInfo graphicsCBufferAllocationInfo{};
+    graphicsCBufferAllocationInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    graphicsCBufferAllocationInfo.commandPool = commandPool;
+    graphicsCBufferAllocationInfo.commandBufferCount = 1;
+    /*
+    PRIMARY     : Directly submitted to queues. Can execute secondary command buffers.
+    SECONDARY   : Cannot be directly submitted to queues. (Useful for example for redoing the same operation without having to rebuild it.)
+                    e.g. (replay secondary buffer -> do other stuff -> replay -> replay -> replay etc... without changing the secondary buffer)
+    */
+    graphicsCBufferAllocationInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 }
