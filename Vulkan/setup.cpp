@@ -605,6 +605,13 @@ void HelloTriangleApplication::createFramebuffers(){
 void HelloTriangleApplication::createCommandPool(){
     QueueFamilyIndices qfi = findRequiredQueueFamily(physGraphicDevice);
 
+    // Why are command pools a thing if command buffers which create commands for the queues exist?
+    // Mostly the following reasons
+    // - Abstracting from the underlying implementation (we don't need to know what queues are there, but the pools)
+    // - Memory optimization (when freeing and allocating new buffers for the same pool Vulkan might use the same memory)
+    // - Lifetime management (when pool dies buffers die, no risk of having stray buffers still attached to the queues)
+    // So essentially you can X buffers going into the same pool for the same queue, when the pool dies all of them get destroyed.
+    // This last line might be wrong, but it makes sense since you allocate a command buffer FROM the pool.
     VkCommandPoolCreateInfo poolCreationInfo{};
     poolCreationInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     /*
@@ -625,4 +632,17 @@ void HelloTriangleApplication::createCommandPool(){
     if(vkCreateCommandPool(logiDevice, &poolCreationInfo, nullptr, &commandPool) != VK_SUCCESS){
         throw std::runtime_error("failed to create graphics command pool");
     }
+}
+
+void HelloTriangleApplication::createCommandBuffers(){
+    VkCommandBufferAllocateInfo graphicsCBufferAllocationInfo{};
+    graphicsCBufferAllocationInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    graphicsCBufferAllocationInfo.commandPool = commandPool;
+    graphicsCBufferAllocationInfo.commandBufferCount = 1;
+    /*
+    PRIMARY     : Directly submitted to queues. Can execute secondary command buffers.
+    SECONDARY   : Cannot be directly submitted to queues. (Useful for example for redoing the same operation without having to rebuild it.)
+                    e.g. (replay secondary buffer -> do other stuff -> replay -> replay -> replay etc... without changing the secondary buffer)
+    */
+    graphicsCBufferAllocationInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 }

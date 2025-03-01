@@ -80,6 +80,7 @@ private:
     // This relieves duty of optimization of draw calls etc.. a bit and 
     // allows for dispatching commands from multiple threads.
     VkCommandPool commandPool;
+    VkCommandBuffer graphicsCBuffer;
 
 
     //-------------------------------main.cpp
@@ -108,6 +109,7 @@ private:
     void createPipeline();
     void createFramebuffers();
     void createCommandPool();
+    void createCommandBuffers();
 
     //-------------------------------device_specs.cpp
 
