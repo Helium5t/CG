@@ -645,4 +645,64 @@ void HelloTriangleApplication::createCommandBuffers(){
                     e.g. (replay secondary buffer -> do other stuff -> replay -> replay -> replay etc... without changing the secondary buffer)
     */
     graphicsCBufferAllocationInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+    VkResult allocationResult = vkAllocateCommandBuffers(logiDevice, &graphicsCBufferAllocationInfo, &graphicsCBuffer) ;
+    if (allocationResult!= VK_SUCCESS){
+        throw std::runtime_error("failed to allocate graphics command buffer");
+    }
+
+}
+
+void HelloTriangleApplication::recordCommandBuffer(VkCommandBuffer buffer, uint32_t swapchainImageIndex){
+    VkCommandBufferBeginInfo bufferBeginInfo{};
+    bufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    /*
+     VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT: The command buffer will be rerecorded right after executing it once.
+    VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT: This is a secondary command buffer that will be entirely within a single render pass.
+    VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT: The command buffer can be resubmitted while it is also already pending execution
+    */
+    bufferBeginInfo.flags = 0;
+    bufferBeginInfo.pInheritanceInfo = nullptr; // Do not inherit from any other begin info.
+    // vkBeginCommandBuffer resets the command buffer everytime it is called.
+    if (vkBeginCommandBuffer(buffer, &bufferBeginInfo) != VK_SUCCESS){
+        throw std::runtime_error("failed to begin recording the command buffer");
+    }
+
+    /*-------------------------Render Pass Setup-----------------------------*/
+    VkRenderPassBeginInfo renderPassBeginInfo{};
+    renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassBeginInfo.renderPass = renderPass;
+    renderPassBeginInfo.framebuffer = swapchainFramebuffers[swapchainImageIndex];
+    renderPassBeginInfo.renderArea.offset = {0, 0};
+    renderPassBeginInfo.renderArea.extent = selectedSwapChainWindowSize;
+    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f }}}; // Clear frame to black
+    renderPassBeginInfo.clearValueCount = 1;
+    renderPassBeginInfo.pClearValues = &clearColor;
+
+    vkCmdBeginRenderPass(buffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    /*-------------------------Graphics Pipeline Binding-----------------------------*/
+    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gPipeline);
+    // Setup of scissor and viewport as they are dynamic
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = static_cast<float>(selectedSwapChainWindowSize.width);
+    viewport.height = static_cast<float>(selectedSwapChainWindowSize.height);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(buffer, 0,1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = {0, 0};
+    scissor.extent = selectedSwapChainWindowSize;
+    vkCmdSetScissor(buffer, 0, 1, &scissor);
+
+    vkCmdDraw(buffer, 3, 1, 0, 0);
+
+    vkCmdEndRenderPass(buffer);
+
+    if (vkEndCommandBuffer(buffer) != VK_SUCCESS){
+        throw std::runtime_error("failed to record the graphics command buffer");
+    }
 }

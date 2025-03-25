@@ -110,6 +110,7 @@ private:
     void createFramebuffers();
     void createCommandPool();
     void createCommandBuffers();
+    void recordCommandBuffer(VkCommandBuffer buffer, uint32_t swapchainImageIndex);
 
     //-------------------------------device_specs.cpp
 
