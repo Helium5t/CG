@@ -333,14 +333,29 @@ void HelloTriangleApplication::createRenderPass(){
     subpassDesc.colorAttachmentCount = 1;
     subpassDesc.pColorAttachments = &attachmentRef;
 
+    // Add dependency to make sure pipeline waits for the image to be writeable
+    VkSubpassDependency dependency{};
+    // Special bit, specified the pre-pipeline implicit pass or the post-pipeline implicit pass
+    // respectively if it's in srcSubpass or dstSubpass.
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL; 
+    dependency.dstSubpass = 0;
+
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+
     VkRenderPassCreateInfo renderPassCreationInfo{};
     renderPassCreationInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     renderPassCreationInfo.attachmentCount = 1;
     renderPassCreationInfo.pAttachments = &attachmentDescription;
     renderPassCreationInfo.subpassCount = 1;
     renderPassCreationInfo.pSubpasses = &subpassDesc;
-    renderPassCreationInfo.dependencyCount = 0;
-    renderPassCreationInfo.pDependencies = nullptr;
+    renderPassCreationInfo.dependencyCount = 1;
+    renderPassCreationInfo.pDependencies = &dependency;
+
 
     if(vkCreateRenderPass(logiDevice, &renderPassCreationInfo, nullptr, &renderPass) != VK_SUCCESS){
         throw std::runtime_error("failed to create render pass");
@@ -349,8 +364,8 @@ void HelloTriangleApplication::createRenderPass(){
 }
 
 void HelloTriangleApplication::createPipeline(){
-    std::vector<char> vShaderBinary = readFile("shaders/helloTriangle_v.spv");
-    std::vector<char> fShaderBinary = readFile("shaders/helloTriangle_f.spv");
+    std::vector<char> vShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/helloTriangle_v.spv");
+    std::vector<char> fShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/helloTriangle_f.spv");
 
     VkShaderModule vShader = createShaderModule(vShaderBinary);
     VkShaderModule fShader = createShaderModule(fShaderBinary);

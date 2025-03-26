@@ -82,14 +82,24 @@ private:
     VkCommandPool commandPool;
     VkCommandBuffer graphicsCBuffer;
 
+    VkSemaphore imageWriteableSemaphore;
+    VkSemaphore renderingFinishedSemaphore;
+    VkFence frameFence;
+
+    uint32_t frameCounter  = 0;
+
+
 
     //-------------------------------main.cpp
 
     void initWindow();
     void initVulkan() ;
     void mainLoop() ;
+    void drawFrame();
     void cleanup();
 
+    //-------------------------------sync.cpp
+    void createSyncObjects();
 
     //-------------------------------validation.cpp
 
@@ -111,6 +121,7 @@ private:
     void createCommandPool();
     void createCommandBuffers();
     void recordCommandBuffer(VkCommandBuffer buffer, uint32_t swapchainImageIndex);
+
 
     //-------------------------------device_specs.cpp
 
