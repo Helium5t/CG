@@ -94,6 +94,12 @@ bool HelloTriangleApplication::supportsRequiredDeviceExtensions(VkPhysicalDevice
     };
     std::vector<VkExtensionProperties> extensionProperties(extensionCount);
     vkEnumerateDeviceExtensionProperties(vkpd, nullptr, &extensionCount, extensionProperties.data());
+    #ifdef HELIUM_PRINT_PHYS_EXT
+    std::cout << "supported physical device extensions" <<std::endl;
+    for(const auto& xt: extensionProperties){
+        std::cout << xt.extensionName << std::endl;
+    }
+    #endif
     std::set<std::string> requiredExtensions(requiredDeviceExtensionNames.begin(), requiredDeviceExtensionNames.end());
     for(const auto& ext: extensionProperties){
         requiredExtensions.erase(ext.extensionName);
