@@ -74,6 +74,7 @@ void HelloTriangleApplication::initVulkan() {
 void HelloTriangleApplication::mainLoop() {
     std::cout<< "main loop" << std::endl;
     while( !glfwWindowShouldClose(window)){
+        vkDeviceWaitIdle(logiDevice);
         glfwPollEvents();
         std::cout << "call drawFrame()" << std::endl;
         drawFrame();
@@ -108,7 +109,6 @@ void HelloTriangleApplication::cleanup() {
 
 void HelloTriangleApplication::drawFrame(){
     std::cout << "FRAME:"<< frameCounter << std::endl;
-    frameCounter++;
     std::cout << "waiting for frame" << std::endl;
     vkWaitForFences(logiDevice, 1, &frameFence, VK_TRUE, UINT64_MAX);
     if (vkResetFences(logiDevice, 1, &frameFence) != VK_SUCCESS){
@@ -167,13 +167,13 @@ void HelloTriangleApplication::drawFrame(){
 
     // Not needed here because 1 swapchain => result = result from vkQueuePresentKHR
     // presentInfo.pResults = nullptr; // Used to pass an array of VkResult for running multiple swapchain presentations.
-
-
+    
     std::cout << "presenting" << std::endl;
     if (vkQueuePresentKHR(presentCommandQueue, &presentInfo) != VK_SUCCESS){
         throw std::runtime_error("failed to present command queue");
     }
     std::cout << "presented" << std::endl;
+    frameCounter++;
 }
 
 
