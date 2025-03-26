@@ -17,6 +17,9 @@
 *.meta
 *.exr
 
+# Vulkan text
+Vulkan/*.txt
+
 # Ignore compiled shaders, use the script to recompile them
 *.spv 
 ########### END ADDITION ##############

@@ -7,6 +7,12 @@ bool HelloTriangleApplication::checkValidationLayerSupport(){
 
     std::vector<VkLayerProperties> layers(count);
     vkEnumerateInstanceLayerProperties(&count, layers.data());
+    #ifdef HELIUM_PRINT_LAYERS
+    std::cout << "available instance layers:" << std::endl;
+    for (const auto& l: layers){
+        std::cout << l.layerName << std::endl;
+    }
+    #endif
     for (const char* l : validationLayerNames){
         bool found = false;
         for (VkLayerProperties lp : layers){
