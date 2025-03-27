@@ -107,7 +107,87 @@ void HelloTriangleApplication::cleanup() {
     glfwTerminate(); // Once this function is called, glfwInit(L#30) must be called again before using most GLFW functions. This deallocates everything GLFW related.
 }
 
-void HelloTriangleApplication::drawFrame(){}
+void emitFenceStatus(VkDevice device, VkFence* fence){
+    VkResult status = vkGetFenceStatus(device, *fence);
+    std::cout<< "Fence status: " << VkResultToString(status) << std::endl;
+}
+
+void HelloTriangleApplication::drawFrame(){
+    std::cout << "FRAME:"<< frameCounter << std::endl;
+    std::cout << "waiting for frame" << std::endl;
+    emitFenceStatus(logiDevice, &frameFence);
+    VkResult waitFencesResult =  vkWaitForFences(logiDevice, 1, &frameFence, VK_TRUE, UINT64_MAX);
+    std::cout << "Wait fences result:------" << VkResultToString(waitFencesResult) << std::endl;
+    std::cout << "fence signaled" << std::endl;
+    emitFenceStatus(logiDevice, &frameFence);
+    std::cout << "resetting fence" << std::endl;
+    if (vkResetFences(logiDevice, 1, &frameFence) != VK_SUCCESS){
+        throw std::runtime_error("can't reset fence?");
+    };
+    std::cout << "fence reset" << std::endl;
+    emitFenceStatus(logiDevice, &frameFence);
+
+    uint32_t imageSwapchainIndex;
+    VkResult acquireImageResult = vkAcquireNextImageKHR(logiDevice, swapChain, UINT64_MAX, imageWriteableSemaphore, VK_NULL_HANDLE, &imageSwapchainIndex);
+    std::cout<< "Acquire image result:------" << VkResultToString(acquireImageResult) << std::endl;
+    
+    std::cout << "acquired image" << std::endl;
+    VkResult resetResult = vkResetCommandBuffer(graphicsCBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+    std::cout << "buffer reset result is:------"<<VkResultToString(resetResult)<< std::endl;
+
+    std::cout << "reset command buffer" << std::endl;
+    recordCommandBuffer(graphicsCBuffer, imageSwapchainIndex);
+
+    std::cout << "recorded command buffer" << std::endl;
+    VkSubmitInfo commandSubmitInfo{};
+    commandSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkSemaphore waitedSemaphores[] = {imageWriteableSemaphore};
+    // In what stage to wait for the specified semaphores
+    VkPipelineStageFlags stagesToWaitOn[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    commandSubmitInfo.waitSemaphoreCount = 1;
+    commandSubmitInfo.pWaitSemaphores = waitedSemaphores;
+    commandSubmitInfo.pWaitDstStageMask = stagesToWaitOn;
+
+    commandSubmitInfo.commandBufferCount = 1;
+    commandSubmitInfo.pCommandBuffers = &graphicsCBuffer;
+
+    VkSemaphore signaledSempahores[] = {renderingFinishedSemaphore};
+    commandSubmitInfo.signalSemaphoreCount = 1;
+    commandSubmitInfo.pSignalSemaphores = signaledSempahores;
+
+    std::cout << "submitting to queue" << std::endl;
+    emitFenceStatus(logiDevice, &frameFence);
+    if( vkQueueSubmit(graphicsCommandQueue, 1, &commandSubmitInfo, frameFence) != VK_SUCCESS){
+        throw std::runtime_error("failed to submit commands to queue");
+    }
+    emitFenceStatus(logiDevice, &frameFence);
+    vkQueueWaitIdle(graphicsCommandQueue);
+    emitFenceStatus(logiDevice, &frameFence);
+    std::cout << "submitted to queue" << std::endl;
+
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = signaledSempahores;
+
+    VkSwapchainKHR presentSwapChains[]  = {swapChain};
+    
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = presentSwapChains;
+    presentInfo.pImageIndices = &imageSwapchainIndex;
+
+    // Not needed here because 1 swapchain => result = result from vkQueuePresentKHR
+    // presentInfo.pResults = nullptr; // Used to pass an array of VkResult for running multiple swapchain presentations.
+    
+    std::cout << "presenting" << std::endl;
+    if (vkQueuePresentKHR(presentCommandQueue, &presentInfo) != VK_SUCCESS){
+        throw std::runtime_error("failed to present command queue");
+    }
+    std::cout << "presented" << std::endl;
+    frameCounter++;
+}
 
 
 int main() {
