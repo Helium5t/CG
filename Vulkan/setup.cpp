@@ -48,6 +48,12 @@ void HelloTriangleApplication::createInstance(){
     std::vector<VkExtensionProperties> supportedExtensions(supportedExtensionCount);
     // Get the full list
     vkEnumerateInstanceExtensionProperties(nullptr, &supportedExtensionCount, supportedExtensions.data());
+    #ifdef HELIUM_PRINT_EXTENSIONS
+    std::cout << "supported extensions" << std::endl;
+    for (const auto& xt: supportedExtensions){
+        std::cout << xt.extensionName << std::endl;
+    }
+    #endif
 
     VkDebugUtilsMessengerCreateInfoEXT createInstanceDebuggerCI{};
     if(validationLayerEnabled){
@@ -91,6 +97,8 @@ std::vector<const char*> HelloTriangleApplication::getRequiredExtensions(){
 
     if (validationLayerEnabled){
         requiredExtNames.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        // Trying to fix the damn bug
+        requiredExtNames.push_back("VK_EXT_metal_surface");
     }
     return requiredExtNames;
 }
