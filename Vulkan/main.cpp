@@ -76,7 +76,6 @@ void HelloTriangleApplication::mainLoop() {
     while( !glfwWindowShouldClose(window)){
         vkDeviceWaitIdle(logiDevice);
         glfwPollEvents();
-        std::cout << "call drawFrame()" << std::endl;
         drawFrame();
     }
 }
@@ -107,38 +106,56 @@ void HelloTriangleApplication::cleanup() {
     glfwTerminate(); // Once this function is called, glfwInit(L#30) must be called again before using most GLFW functions. This deallocates everything GLFW related.
 }
 
+struct FrameLogger{
+    template<typename T> FrameLogger& operator<<(const T& value){
+        #ifdef HELIUM_DEBUG_LOG_FRAMES
+        std::cout << value;
+        #endif
+        return *this;
+    }
+    
+    FrameLogger& operator<<(std::ostream& (*manipulator)(std::ostream&)){
+        #ifdef HELIUM_DEBUG_LOG_FRAMES
+        std::cout << manipulator;
+        #endif
+        return *this;
+    }
+};
+
 void emitFenceStatus(VkDevice device, VkFence* fence){
+    FrameLogger flout;
     VkResult status = vkGetFenceStatus(device, *fence);
-    std::cout<< "Fence status: " << VkResultToString(status) << std::endl;
+    flout << "Fence status: " << VkResultToString(status) << std::endl;
 }
 
 void HelloTriangleApplication::drawFrame(){
-    std::cout << "FRAME:"<< frameCounter << std::endl;
-    std::cout << "waiting for frame" << std::endl;
+    FrameLogger flout;
+    flout << "FRAME:"<< frameCounter << std::endl;
+    flout << "waiting for frame" << std::endl;
     emitFenceStatus(logiDevice, &frameFence);
     VkResult waitFencesResult =  vkWaitForFences(logiDevice, 1, &frameFence, VK_TRUE, UINT64_MAX);
-    std::cout << "Wait fences result:------" << VkResultToString(waitFencesResult) << std::endl;
-    std::cout << "fence signaled" << std::endl;
+    flout << "Wait fences result:------" << VkResultToString(waitFencesResult) << std::endl;
+    flout << "fence signaled" << std::endl;
     emitFenceStatus(logiDevice, &frameFence);
-    std::cout << "resetting fence" << std::endl;
+    flout << "resetting fence" << std::endl;
     if (vkResetFences(logiDevice, 1, &frameFence) != VK_SUCCESS){
         throw std::runtime_error("can't reset fence?");
     };
-    std::cout << "fence reset" << std::endl;
+    flout << "fence reset" << std::endl;
     emitFenceStatus(logiDevice, &frameFence);
 
     uint32_t imageSwapchainIndex;
     VkResult acquireImageResult = vkAcquireNextImageKHR(logiDevice, swapChain, UINT64_MAX, imageWriteableSemaphore, VK_NULL_HANDLE, &imageSwapchainIndex);
-    std::cout<< "Acquire image result:------" << VkResultToString(acquireImageResult) << std::endl;
+    flout<< "Acquire image result:------" << VkResultToString(acquireImageResult) << std::endl;
     
-    std::cout << "acquired image" << std::endl;
+    flout << "acquired image" << std::endl;
     VkResult resetResult = vkResetCommandBuffer(graphicsCBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
-    std::cout << "buffer reset result is:------"<<VkResultToString(resetResult)<< std::endl;
+    flout << "buffer reset result is:------"<<VkResultToString(resetResult)<< std::endl;
 
-    std::cout << "reset command buffer" << std::endl;
+    flout << "reset command buffer" << std::endl;
     recordCommandBuffer(graphicsCBuffer, imageSwapchainIndex);
 
-    std::cout << "recorded command buffer" << std::endl;
+    flout << "recorded command buffer" << std::endl;
     VkSubmitInfo commandSubmitInfo{};
     commandSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -156,7 +173,7 @@ void HelloTriangleApplication::drawFrame(){
     commandSubmitInfo.signalSemaphoreCount = 1;
     commandSubmitInfo.pSignalSemaphores = signaledSempahores;
 
-    std::cout << "submitting to queue" << std::endl;
+    flout << "submitting to queue" << std::endl;
     emitFenceStatus(logiDevice, &frameFence);
     if( vkQueueSubmit(graphicsCommandQueue, 1, &commandSubmitInfo, frameFence) != VK_SUCCESS){
         throw std::runtime_error("failed to submit commands to queue");
@@ -164,7 +181,7 @@ void HelloTriangleApplication::drawFrame(){
     emitFenceStatus(logiDevice, &frameFence);
     vkQueueWaitIdle(graphicsCommandQueue);
     emitFenceStatus(logiDevice, &frameFence);
-    std::cout << "submitted to queue" << std::endl;
+    flout << "submitted to queue" << std::endl;
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -181,11 +198,11 @@ void HelloTriangleApplication::drawFrame(){
     // Not needed here because 1 swapchain => result = result from vkQueuePresentKHR
     // presentInfo.pResults = nullptr; // Used to pass an array of VkResult for running multiple swapchain presentations.
     
-    std::cout << "presenting" << std::endl;
+    flout << "presenting" << std::endl;
     if (vkQueuePresentKHR(presentCommandQueue, &presentInfo) != VK_SUCCESS){
         throw std::runtime_error("failed to present command queue");
     }
-    std::cout << "presented" << std::endl;
+    flout << "presented" << std::endl;
     frameCounter++;
 }
 
