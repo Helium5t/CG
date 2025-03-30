@@ -13,6 +13,11 @@
 #include <limits> // Necessary for std::numeric_limits
 #include <algorithm> // Necessary for std::clamp
 
+#ifndef GLFW_INCLUDE_VULKAN
+#define GLFW_INCLUDE_VULKAN // tells glfw to add vulkan api
+#endif
+#include <GLFW/glfw3.h>
+
 
 class HelloTriangleApplication{
 
@@ -26,7 +31,10 @@ private:
 
     
     const std::vector<const char*> validationLayerNames = {
-    "VK_LAYER_KHRONOS_validation" // Standard bundle of validation layers included in LunarG SDK
+        // Here the name has been removed because this validation layer crashes creation of frame buffer.
+        // Somehow I am getting more debugging info compared to before, so no need in fixing this for now.
+        // TODO: figure out wtf is going on. Probably has to do with vulkan .json configs for validation layers.
+    // "VK_LAYER_KHRONOS_validation" // Standard bundle of validation layers included in LunarG SDK
     };
 
     const std::vector<const char*> requiredDeviceExtensionNames = {
@@ -63,14 +71,35 @@ private:
     VkRenderPass renderPass;
     VkPipeline gPipeline; 
 
+    // Each image in the swap chain should have a framebuffer associated to it.
+    std::vector<VkFramebuffer> swapchainFramebuffers;
+
+    // All commands (drawing, memory transfer etc..) 
+    // are first submitted to a command pool
+    // this way vulkan can better schedule them and dispatch them in groups.
+    // This relieves duty of optimization of draw calls etc.. a bit and 
+    // allows for dispatching commands from multiple threads.
+    VkCommandPool commandPool;
+    VkCommandBuffer graphicsCBuffer;
+
+    VkSemaphore imageWriteableSemaphore;
+    VkSemaphore renderingFinishedSemaphore;
+    VkFence frameFence;
+
+    uint32_t frameCounter  = 0;
+
+
 
     //-------------------------------main.cpp
 
     void initWindow();
     void initVulkan() ;
     void mainLoop() ;
+    void drawFrame();
     void cleanup();
 
+    //-------------------------------sync.cpp
+    void createSyncObjects();
 
     //-------------------------------validation.cpp
 
@@ -88,6 +117,11 @@ private:
     void createImageView();
     void createRenderPass();
     void createPipeline();
+    void createFramebuffers();
+    void createCommandPool();
+    void createCommandBuffers();
+    void recordCommandBuffer(VkCommandBuffer buffer, uint32_t swapchainImageIndex);
+
 
     //-------------------------------device_specs.cpp
 
