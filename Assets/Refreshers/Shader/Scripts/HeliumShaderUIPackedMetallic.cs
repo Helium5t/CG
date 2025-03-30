@@ -53,6 +53,7 @@ public class HeliumShaderPackedMetallicUI : ShaderGUI {
         DoNormals();
         DoSecondary();
         DoSecondaryNormals();
+        DoEmission();
         editor.TextureScaleOffsetProperty(mainTex);
 
 	}
@@ -74,7 +75,6 @@ public class HeliumShaderPackedMetallicUI : ShaderGUI {
 		if (EditorGUI.EndChangeCheck()) {
             SetKeyword("HELIUM_2D_METALLIC", useTex);
 		}
-        
 	}
 
     RoughnessSource rs = RoughnessSource.Uniform;
@@ -132,6 +132,22 @@ public class HeliumShaderPackedMetallicUI : ShaderGUI {
 			map.textureValue ? FindProperty("_SecondaryNormalStrength") : null
 		);
 	}
+
+    void DoEmission(){
+        MaterialProperty map = FindProperty("_Emission");
+        bool useTex = map.textureValue;
+		EditorGUI.BeginChangeCheck();
+        MaterialProperty mp = FindProperty("_EmissionColor");
+        if (useTex){
+            mp.colorValue = Color.white;
+        }
+        editor.TexturePropertyWithHDRColor(
+            MakeLabel(map, "Emission"), map, mp, false
+        );
+		if (EditorGUI.EndChangeCheck()) {
+            SetKeyword("HELIUM_EMISSION_FROM_MAP", useTex);
+		}
+    }
 
     MaterialProperty FindProperty (string name) {
 		return FindProperty(name, properties);

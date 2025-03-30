@@ -29,14 +29,20 @@ in "LightingFuncs.cginc"
 
 
 sampler2D _Tex;
+
 #ifdef HELIUM_NORMAL_MAPPING
 sampler2D _Normal, _SecondaryTex, _SecondaryNormal;
 float _NormalStrength,_SecondaryNormalStrength;
 float4 _SecondaryTex_ST;
-
 #endif
+
 #ifdef HELIUM_BASE_COLOR
 float4 _Color;
+#endif
+sampler2D _Emission;
+float3 _EmissionColor;
+#ifdef HELIUM_EMISSION
+
 #endif
 
 float4 _Tex_ST;
@@ -57,6 +63,16 @@ sampler2D _Metallic, _Roughness;
 #else
     #define ROUGHNESS(x) _UniformRoughness
 #endif 
+
+#if !defined(HELIUM_ADD_PASS)
+    #ifdef HELIUM_EMISSION_FROM_MAP
+        #define EMISSION(uv) tex2D(_Emission, uv.xy) * _EmissionColor
+    #else
+        #define EMISSION(uv) _EmissionColor
+    #endif
+#else
+    #define EMISSION(uv) 0
+#endif
 
 int _UseTextures;
 
@@ -349,7 +365,7 @@ float4 frag(vOutput vo): SV_Target{
     
     UnityLight l = CreateLight(vo);
     UnityIndirect il = CreateIndirectLightAndDeriveFromVertex(vo,viewdir);
-    return UNITY_BRDF_PBS(
+    float4 finalCol = UNITY_BRDF_PBS(
     albedo,
     specularColor,
     invertedReflectivity,
@@ -359,6 +375,10 @@ float4 frag(vOutput vo): SV_Target{
     l,
     il
     );
+    
+    finalCol.rgb += EMISSION(vo.uvM);
+
+    return finalCol;
 }
 
 

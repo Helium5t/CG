@@ -14,6 +14,8 @@ Shader "Refreshers/StdPackedTextures"
         [NoScaleOffset] _Metallic("Metallic", 2D) = "white" {}
         _UniformMetallic("Metallic", Range(0,1)) = 0.5
         _PackedMR("Metallic Roughness", 2D) = "grey" {}
+        [NoScaleOffset] _Emission("Emission", 2D) = "black" {}
+        _EmissionColor ("Emission Color", Color) = (0, 0, 0)
     }
     CGINCLUDE
     #define HELIUM_FRAGMENT_BINORMAL
@@ -36,7 +38,8 @@ Shader "Refreshers/StdPackedTextures"
 			#pragma multi_compile _ SHADOWS_SCREEN 
 
             #pragma shader_feature HELIUM_2D_METALLIC
-            #pragma shader_feature HELIUM_R_FROM_METALLIC HELIUM_R_FROM_ALBEDO
+            #pragma shader_feature _ HELIUM_R_FROM_METALLIC HELIUM_R_FROM_ALBEDO
+            #pragma shader_feature HELIUM_EMISSION_FROM_MAP
 
             #define HELIUM_NORMAL_MAPPING
             #define HELIUM_BASE_COLOR
@@ -83,7 +86,7 @@ Shader "Refreshers/StdPackedTextures"
             #define HELIUM_NORMAL_MAPPING
             #define HELIUM_ADD_PASS
             #pragma shader_feature HELIUM_2D_METALLIC
-            #pragma shader_feature HELIUM_R_FROM_METALLIC HELIUM_R_FROM_ALBEDO
+            #pragma shader_feature _ HELIUM_R_FROM_METALLIC HELIUM_R_FROM_ALBEDO
             
             
             #pragma vertex vert
