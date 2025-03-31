@@ -86,7 +86,7 @@ private:
     std::vector<VkSemaphore> renderingFinishedSemaphores;
     std::vector<VkFence> frameFences;
 
-    
+    bool frameBufferResized = false;
 
     uint32_t currentFrame = 0;
 
@@ -107,6 +107,7 @@ private:
     void createSyncObjects();
     void destroySwapChain();
     void resetSwapChain();
+    static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 
     //-------------------------------validation.cpp
 

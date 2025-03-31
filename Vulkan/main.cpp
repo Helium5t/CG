@@ -39,9 +39,9 @@ void HelloTriangleApplication::initWindow() {
     // The default value for GLFW_CLIENT_API is GLFW_OPENGL_API but we are using vulkan
     // so tell it that no OpenGL API will be used, and thus no OpenGL context will be created.
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    // Disable resizing
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
     window = glfwCreateWindow(WIDTH,HEIGHT, "Helium Vulkan", nullptr, nullptr);
+    glfwSetWindowUserPointer(window, this);
+    glfwSetFramebufferSizeCallback(window, HelloTriangleApplication::framebufferResizeCallback);
 }
 
 
@@ -217,7 +217,8 @@ void HelloTriangleApplication::drawFrame(){
     flout << "presenting" << std::endl;
     
     VkResult presentResult = vkQueuePresentKHR(presentCommandQueue, &presentInfo);
-    if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR){
+    if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR || frameBufferResized){
+        frameBufferResized = false;
         resetSwapChain();
     }
     else if (presentResult != VK_SUCCESS){
