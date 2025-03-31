@@ -28,7 +28,7 @@ private:
     // Const params
     const uint32_t WIDTH = 800;
     const uint32_t HEIGHT = 600;
-
+    const int MAX_FRAMES_IN_FLIGHT = 2;
     
     const std::vector<const char*> validationLayerNames = {
         // Here the name has been removed because this validation layer crashes creation of frame buffer.
@@ -80,12 +80,15 @@ private:
     // This relieves duty of optimization of draw calls etc.. a bit and 
     // allows for dispatching commands from multiple threads.
     VkCommandPool commandPool;
-    VkCommandBuffer graphicsCBuffer;
+    std::vector<VkCommandBuffer> graphicsCBuffers;
 
-    VkSemaphore imageWriteableSemaphore;
-    VkSemaphore renderingFinishedSemaphore;
-    VkFence frameFence;
+    std::vector<VkSemaphore> imageWriteableSemaphores;
+    std::vector<VkSemaphore> renderingFinishedSemaphores;
+    std::vector<VkFence> frameFences;
 
+    uint32_t currentFrame = 0;
+
+    #define HELIUM_DO_NOT_REFRESH
     uint32_t frameCounter  = 0;
 
 

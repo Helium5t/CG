@@ -658,10 +658,11 @@ void HelloTriangleApplication::createCommandPool(){
 }
 
 void HelloTriangleApplication::createCommandBuffers(){
+    graphicsCBuffers.resize(MAX_FRAMES_IN_FLIGHT);
     VkCommandBufferAllocateInfo graphicsCBufferAllocationInfo{};
     graphicsCBufferAllocationInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     graphicsCBufferAllocationInfo.commandPool = commandPool;
-    graphicsCBufferAllocationInfo.commandBufferCount = 1;
+    graphicsCBufferAllocationInfo.commandBufferCount = (uint32_t) graphicsCBuffers.size();
     /*
     PRIMARY     : Directly submitted to queues. Can execute secondary command buffers.
     SECONDARY   : Cannot be directly submitted to queues. (Useful for example for redoing the same operation without having to rebuild it.)
@@ -669,23 +670,23 @@ void HelloTriangleApplication::createCommandBuffers(){
     */
     graphicsCBufferAllocationInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
-    VkResult allocationResult = vkAllocateCommandBuffers(logiDevice, &graphicsCBufferAllocationInfo, &graphicsCBuffer) ;
+    VkResult allocationResult = vkAllocateCommandBuffers(logiDevice, &graphicsCBufferAllocationInfo, graphicsCBuffers.data()) ;
     if (allocationResult!= VK_SUCCESS){
         throw std::runtime_error("failed to allocate graphics command buffer");
     }
-
 }
 
 void HelloTriangleApplication::recordCommandBuffer(VkCommandBuffer buffer, uint32_t swapchainImageIndex){
     VkCommandBufferBeginInfo bufferBeginInfo{};
     bufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     /*
-     VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT: The command buffer will be rerecorded right after executing it once.
-    VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT: This is a secondary command buffer that will be entirely within a single render pass.
-    VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT: The command buffer can be resubmitted while it is also already pending execution
+        VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT: The command buffer will be rerecorded right after executing it once.
+        VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT: This is a secondary command buffer that will be entirely within a single render pass.
+        VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT: The command buffer can be resubmitted while it is also already pending execution
     */
     bufferBeginInfo.flags = 0;
     bufferBeginInfo.pInheritanceInfo = nullptr; // Do not inherit from any other begin info.
+
     // vkBeginCommandBuffer resets the command buffer everytime it is called.
     if (vkBeginCommandBuffer(buffer, &bufferBeginInfo) != VK_SUCCESS){
         throw std::runtime_error("failed to begin recording the command buffer");
