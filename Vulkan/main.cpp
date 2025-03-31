@@ -74,7 +74,6 @@ void HelloTriangleApplication::initVulkan() {
 void HelloTriangleApplication::mainLoop() {
     std::cout<< "main loop" << std::endl;
     while( !glfwWindowShouldClose(window)){
-        // vkDeviceWaitIdle(logiDevice);
         glfwPollEvents();
         drawFrame();
     }
