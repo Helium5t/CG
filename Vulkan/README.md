@@ -1,7 +1,7 @@
 
 # Prerequisites #
 I develop on MacOs and hate XCode, so this readme assumes an Apple Silicon environment and VSCode as IDE.
- - (Vulkan SDK)[https://vulkan.lunarg.com/sdk/home] (Follow (Vulkan Setup)[./#Vulkan%20Setup] for more)
+ - [Vulkan SDK](https://vulkan.lunarg.com/sdk/home) (Follow [Vulkan Setup](#Vulkan%20Setup) for more)
  - VSCode 
  - Clang (comes in built-in with macOS)
  - XCode (`xcode-select --install` otherwise)
@@ -14,7 +14,7 @@ Assuming you have everything setup, all necessary components should be ready to 
 ```cmake --build ./build --config {Debug|Release} --target all -j {number of parallel processes}```
 
 You can then run with the following command:
-```./build/hello`
+```./build/hello```
 
 
 ## Vulkan Setup ##
@@ -32,8 +32,8 @@ export PKG_CONFIG_PATH="$VULKAN_SDK/lib/pkgconfig:$PKG_CONFIG_PATH"
 
 
 ### Useful defines ###
-- HELIUM_PRINT_PHYS_EXT : Prints supported extensions for physical device
-- HELIUM_PRINT_EXTENSIONS : Prints supported instance extensions
-- HELIUM_PRINT_LAYERS : Prints available layers
-- HELIUM_DEBUG_LOG_FRAMES: Printing for each frame can slow down things, so define this when you need debug prints inside the frame rendering process (drawFrame()).
-- HELIUM_DO_NOT_REFRESH : Some platforms crash after the first frame. This is due to some moltenVK incompatibility (same code with no changes works on other platforms, both mac and not )
+- `HELIUM_PRINT_PHYS_EXT` : Prints supported extensions for physical device
+- `HELIUM_PRINT_EXTENSIONS` : Prints supported instance extensions
+- `HELIUM_PRINT_LAYERS` : Prints available layers
+- `HELIUM_DEBUG_LOG_FRAMES`: Printing for each frame can slow down things, so define this when you need debug prints inside the frame rendering process (drawFrame()).
+- `HELIUM_DO_NOT_REFRESH` : Some platforms crash after the first frame. This is due to some moltenVK incompatibility (same code with no changes works on other platforms, both mac and not )
