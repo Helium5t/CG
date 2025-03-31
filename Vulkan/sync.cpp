@@ -24,3 +24,37 @@ void HelloTriangleApplication::createSyncObjects(){
         }
     }
 }
+
+void HelloTriangleApplication::destroySwapChain(){
+    for(size_t i =0 ;  i < swapchainFramebuffers.size(); i++){
+        vkDestroyFramebuffer(logiDevice, swapchainFramebuffers[i], nullptr);
+    }
+    for(size_t i =0; i < swapChainImageViews.size(); i++){
+        vkDestroyImageView(logiDevice, swapChainImageViews[i], nullptr);
+    }
+    
+    vkDestroySwapchainKHR(logiDevice, swapChain, nullptr);
+}
+
+void HelloTriangleApplication::resetSwapChain(){
+    int w = 0, h = 0;
+    glfwGetFramebufferSize(window, &w, &h);
+    while (w == 0 || h == 0 ){
+        glfwGetFramebufferSize(window, &w, &h);
+        glfwWaitEvents();
+    }
+
+    vkDeviceWaitIdle(logiDevice);
+
+    destroySwapChain();
+
+    createSwapChain();
+    createImageView();
+    createFramebuffers();
+}
+
+
+void HelloTriangleApplication::framebufferResizeCallback(GLFWwindow* window, int width, int height){
+    HelloTriangleApplication* app = reinterpret_cast<HelloTriangleApplication*>(glfwGetWindowUserPointer(window));
+    app->frameBufferResized = true;
+}
