@@ -86,6 +86,8 @@ private:
     std::vector<VkSemaphore> renderingFinishedSemaphores;
     std::vector<VkFence> frameFences;
 
+    
+
     uint32_t currentFrame = 0;
 
     #define HELIUM_DO_NOT_REFRESH
@@ -103,6 +105,8 @@ private:
 
     //-------------------------------sync.cpp
     void createSyncObjects();
+    void destroySwapChain();
+    void resetSwapChain();
 
     //-------------------------------validation.cpp
 
@@ -110,9 +114,9 @@ private:
 
     //-------------------------------setup.cpp
 
+    std::vector<const char*> getRequiredExtensions();
     void createInstance();
     void setupDebugMessenger();
-    std::vector<const char*> getRequiredExtensions();
     void setPhysicalDevice();
     void createLogicalDevice();
     void setupRenderSurface();

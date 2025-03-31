@@ -24,3 +24,24 @@ void HelloTriangleApplication::createSyncObjects(){
         }
     }
 }
+
+void HelloTriangleApplication::destroySwapChain(){
+    for(size_t i =0 ;  i < swapchainFramebuffers.size(); i++){
+        vkDestroyFramebuffer(logiDevice, swapchainFramebuffers[i], nullptr);
+    }
+    for(size_t i =0; i < swapChainImageViews.size(); i++){
+        vkDestroyImageView(logiDevice, swapChainImageViews[i], nullptr);
+    }
+    
+    vkDestroySwapchainKHR(logiDevice, swapChain, nullptr);
+}
+
+void HelloTriangleApplication::resetSwapChain(){
+    vkDeviceWaitIdle(logiDevice);
+
+    destroySwapChain();
+
+    createSwapChain();
+    createImageView();
+    createFramebuffers();
+}

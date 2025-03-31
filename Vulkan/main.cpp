@@ -81,28 +81,23 @@ void HelloTriangleApplication::mainLoop() {
 }
 
 void HelloTriangleApplication::cleanup() {
+    destroySwapChain();
+    vkDestroyPipeline(logiDevice, gPipeline, nullptr);
+    vkDestroyPipelineLayout(logiDevice, pipelineLayout, nullptr);
+    
+    vkDestroyRenderPass(logiDevice, renderPass, nullptr);
     for (int i =0 ; i < MAX_FRAMES_IN_FLIGHT; i++){
         vkDestroySemaphore(logiDevice, imageWriteableSemaphores[i], nullptr);
         vkDestroySemaphore(logiDevice, renderingFinishedSemaphores[i], nullptr);
         vkDestroyFence(logiDevice, frameFences[i], nullptr);
     }
     vkDestroyCommandPool(logiDevice, commandPool, nullptr);
-    for(auto fb : swapchainFramebuffers){
-        vkDestroyFramebuffer(logiDevice, fb, nullptr);
-    }
-    vkDestroyPipeline(logiDevice, gPipeline, nullptr);
-    vkDestroyPipelineLayout(logiDevice, pipelineLayout, nullptr);
-    vkDestroyRenderPass(logiDevice, renderPass, nullptr);
-    for(const auto& i: swapChainImageViews){
-        vkDestroyImageView(logiDevice, i, nullptr);
-    }
-    vkDestroySwapchainKHR(logiDevice, swapChain, nullptr);
     // In order : Device generating renders -> render surface -> instance -> window -> glfw.
     vkDestroyDevice(logiDevice, nullptr);
-    vkDestroySurfaceKHR(instance, renderSurface, nullptr);
     if(validationLayerEnabled){
         DestroyDebugMessengerExtension(instance, debugCallbackHandler, nullptr); // Ideally this should be caught by the debug messenger when destroy is not called, and yet it doesn't happen
     }
+    vkDestroySurfaceKHR(instance, renderSurface, nullptr);
     vkDestroyInstance(instance, nullptr/*Optional callback pointer*/);
     glfwDestroyWindow(window);
     glfwTerminate(); // Once this function is called, glfwInit(L#30) must be called again before using most GLFW functions. This deallocates everything GLFW related.
@@ -145,6 +140,20 @@ void HelloTriangleApplication::drawFrame(){
     
     flout << "Wait fences result:------" << VkResultToString(waitFencesResult) << std::endl;
     flout << "fence signaled" << std::endl;
+
+    uint32_t imageSwapchainIndex;
+    VkResult acquireImageResult = vkAcquireNextImageKHR(logiDevice, swapChain, UINT64_MAX, imageWriteableSemaphores[currentFrame], VK_NULL_HANDLE, &imageSwapchainIndex);
+
+    flout<< "Acquire image result:------" << VkResultToString(acquireImageResult) << std::endl;
+    flout << "acquired image" << std::endl;
+
+    if (acquireImageResult == VK_ERROR_OUT_OF_DATE_KHR){
+        resetSwapChain();
+        return;
+    }else if (acquireImageResult != VK_SUBOPTIMAL_KHR && acquireImageResult != VK_SUCCESS){
+        throw std::runtime_error("failed to acquire swap chain image!");
+    }
+
     emitFenceStatus(logiDevice, &frameFences[currentFrame]);
     flout << "resetting fence" << std::endl;
     
@@ -154,12 +163,6 @@ void HelloTriangleApplication::drawFrame(){
     
     flout << "fence reset" << std::endl;
     emitFenceStatus(logiDevice, &frameFences[currentFrame]);
-
-    uint32_t imageSwapchainIndex;
-    VkResult acquireImageResult = vkAcquireNextImageKHR(logiDevice, swapChain, UINT64_MAX, imageWriteableSemaphores[currentFrame], VK_NULL_HANDLE, &imageSwapchainIndex);
-    
-    flout<< "Acquire image result:------" << VkResultToString(acquireImageResult) << std::endl;
-    flout << "acquired image" << std::endl;
     
     VkResult resetResult = vkResetCommandBuffer(graphicsCBuffers[currentFrame], /*VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT*/ 0);
     
@@ -213,7 +216,11 @@ void HelloTriangleApplication::drawFrame(){
     // presentInfo.pResults = nullptr; // Used to pass an array of VkResult for running multiple swapchain presentations.
     flout << "presenting" << std::endl;
     
-    if (vkQueuePresentKHR(presentCommandQueue, &presentInfo) != VK_SUCCESS){
+    VkResult presentResult = vkQueuePresentKHR(presentCommandQueue, &presentInfo);
+    if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR){
+        resetSwapChain();
+    }
+    else if (presentResult != VK_SUCCESS){
         throw std::runtime_error("failed to present command queue");
     }
 
