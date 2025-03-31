@@ -74,16 +74,18 @@ void HelloTriangleApplication::initVulkan() {
 void HelloTriangleApplication::mainLoop() {
     std::cout<< "main loop" << std::endl;
     while( !glfwWindowShouldClose(window)){
-        vkDeviceWaitIdle(logiDevice);
         glfwPollEvents();
         drawFrame();
     }
+    vkDeviceWaitIdle(logiDevice);
 }
 
 void HelloTriangleApplication::cleanup() {
-    vkDestroySemaphore(logiDevice, imageWriteableSemaphore, nullptr);
-    vkDestroySemaphore(logiDevice, renderingFinishedSemaphore, nullptr);
-    vkDestroyFence(logiDevice, frameFence, nullptr);
+    for (int i =0 ; i < MAX_FRAMES_IN_FLIGHT; i++){
+        vkDestroySemaphore(logiDevice, imageWriteableSemaphores[i], nullptr);
+        vkDestroySemaphore(logiDevice, renderingFinishedSemaphores[i], nullptr);
+        vkDestroyFence(logiDevice, frameFences[i], nullptr);
+    }
     vkDestroyCommandPool(logiDevice, commandPool, nullptr);
     for(auto fb : swapchainFramebuffers){
         vkDestroyFramebuffer(logiDevice, fb, nullptr);
@@ -129,37 +131,49 @@ void emitFenceStatus(VkDevice device, VkFence* fence){
 }
 
 void HelloTriangleApplication::drawFrame(){
+    #ifdef HELIUM_DO_NOT_REFRESH
+    if(frameCounter > 0){
+        return;
+    }
+    #endif
     FrameLogger flout;
     flout << "FRAME:"<< frameCounter << std::endl;
     flout << "waiting for frame" << std::endl;
-    emitFenceStatus(logiDevice, &frameFence);
-    VkResult waitFencesResult =  vkWaitForFences(logiDevice, 1, &frameFence, VK_TRUE, UINT64_MAX);
+    emitFenceStatus(logiDevice, &frameFences[currentFrame]);
+
+    VkResult waitFencesResult =  vkWaitForFences(logiDevice, 1, &frameFences[currentFrame], VK_TRUE, UINT64_MAX);
+    
     flout << "Wait fences result:------" << VkResultToString(waitFencesResult) << std::endl;
     flout << "fence signaled" << std::endl;
-    emitFenceStatus(logiDevice, &frameFence);
+    emitFenceStatus(logiDevice, &frameFences[currentFrame]);
     flout << "resetting fence" << std::endl;
-    if (vkResetFences(logiDevice, 1, &frameFence) != VK_SUCCESS){
+    
+    if (vkResetFences(logiDevice, 1, &frameFences[currentFrame]) != VK_SUCCESS){
         throw std::runtime_error("can't reset fence?");
     };
+    
     flout << "fence reset" << std::endl;
-    emitFenceStatus(logiDevice, &frameFence);
+    emitFenceStatus(logiDevice, &frameFences[currentFrame]);
 
     uint32_t imageSwapchainIndex;
-    VkResult acquireImageResult = vkAcquireNextImageKHR(logiDevice, swapChain, UINT64_MAX, imageWriteableSemaphore, VK_NULL_HANDLE, &imageSwapchainIndex);
-    flout<< "Acquire image result:------" << VkResultToString(acquireImageResult) << std::endl;
+    VkResult acquireImageResult = vkAcquireNextImageKHR(logiDevice, swapChain, UINT64_MAX, imageWriteableSemaphores[currentFrame], VK_NULL_HANDLE, &imageSwapchainIndex);
     
+    flout<< "Acquire image result:------" << VkResultToString(acquireImageResult) << std::endl;
     flout << "acquired image" << std::endl;
-    VkResult resetResult = vkResetCommandBuffer(graphicsCBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+    
+    VkResult resetResult = vkResetCommandBuffer(graphicsCBuffers[currentFrame], /*VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT*/ 0);
+    
     flout << "buffer reset result is:------"<<VkResultToString(resetResult)<< std::endl;
-
     flout << "reset command buffer" << std::endl;
-    recordCommandBuffer(graphicsCBuffer, imageSwapchainIndex);
+
+    recordCommandBuffer(graphicsCBuffers[currentFrame], imageSwapchainIndex);
 
     flout << "recorded command buffer" << std::endl;
+    
     VkSubmitInfo commandSubmitInfo{};
     commandSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitedSemaphores[] = {imageWriteableSemaphore};
+    VkSemaphore waitedSemaphores[] = {imageWriteableSemaphores[currentFrame]};
     // In what stage to wait for the specified semaphores
     VkPipelineStageFlags stagesToWaitOn[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     commandSubmitInfo.waitSemaphoreCount = 1;
@@ -167,21 +181,21 @@ void HelloTriangleApplication::drawFrame(){
     commandSubmitInfo.pWaitDstStageMask = stagesToWaitOn;
 
     commandSubmitInfo.commandBufferCount = 1;
-    commandSubmitInfo.pCommandBuffers = &graphicsCBuffer;
+    commandSubmitInfo.pCommandBuffers = &graphicsCBuffers[currentFrame];
 
-    VkSemaphore signaledSempahores[] = {renderingFinishedSemaphore};
+    VkSemaphore signaledSempahores[] = {renderingFinishedSemaphores[currentFrame]};
     commandSubmitInfo.signalSemaphoreCount = 1;
     commandSubmitInfo.pSignalSemaphores = signaledSempahores;
 
     flout << "submitting to queue" << std::endl;
-    emitFenceStatus(logiDevice, &frameFence);
-    if( vkQueueSubmit(graphicsCommandQueue, 1, &commandSubmitInfo, frameFence) != VK_SUCCESS){
+    emitFenceStatus(logiDevice, &frameFences[currentFrame]);
+    
+    if( vkQueueSubmit(graphicsCommandQueue, 1, &commandSubmitInfo, frameFences[currentFrame]) != VK_SUCCESS){
         throw std::runtime_error("failed to submit commands to queue");
     }
-    emitFenceStatus(logiDevice, &frameFence);
-    vkQueueWaitIdle(graphicsCommandQueue);
-    emitFenceStatus(logiDevice, &frameFence);
+    
     flout << "submitted to queue" << std::endl;
+    emitFenceStatus(logiDevice, &frameFences[currentFrame]);
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -197,13 +211,15 @@ void HelloTriangleApplication::drawFrame(){
 
     // Not needed here because 1 swapchain => result = result from vkQueuePresentKHR
     // presentInfo.pResults = nullptr; // Used to pass an array of VkResult for running multiple swapchain presentations.
-    
     flout << "presenting" << std::endl;
+    
     if (vkQueuePresentKHR(presentCommandQueue, &presentInfo) != VK_SUCCESS){
         throw std::runtime_error("failed to present command queue");
     }
+
     flout << "presented" << std::endl;
     frameCounter++;
+    currentFrame = frameCounter%MAX_FRAMES_IN_FLIGHT;
 }
 
 
