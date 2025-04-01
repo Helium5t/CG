@@ -31,18 +31,37 @@ in "LightingFuncs.cginc"
 sampler2D _Tex;
 
 #ifdef HELIUM_NORMAL_MAPPING
-sampler2D _Normal, _SecondaryTex, _SecondaryNormal;
-float _NormalStrength,_SecondaryNormalStrength;
-float4 _SecondaryTex_ST;
+
+    #ifdef HELIUM_DETAIL_ALBEDO
+    sampler2D _SecondaryTex;
+    float4 _SecondaryTex_ST;
+    #endif
+
+    #ifdef HELIUM_DETAIL_NORMAL_MAP
+    sampler2D _SecondaryNormal;
+    float _SecondaryNormalStrength;
+    #endif 
+
+    sampler2D _Normal;
+    float _NormalStrength;
 #endif
 
 #ifdef HELIUM_BASE_COLOR
 float4 _Color;
 #endif
-sampler2D _Emission;
-float3 _EmissionColor;
-#ifdef HELIUM_EMISSION
 
+#ifdef HELIUM_EMISSION
+float3 _EmissionColor;
+sampler2D _Emission;
+#endif
+
+#ifdef HELIUM_AMBIENT_OCCLUSION
+sampler2D _Occlusion;
+float _OcclusionStrength;
+#endif
+
+#ifdef HELIUM_DETAIL_MASK
+sampler2D _DetailMask;
 #endif
 
 float4 _Tex_ST;
@@ -72,6 +91,24 @@ sampler2D _Metallic, _Roughness;
     #endif
 #else
     #define EMISSION(uv) 0
+#endif
+
+#if !defined(HELIUM_ADD_PASS) && defined(HELIUM_AMBIENT_OCCLUSION)
+    #ifdef HELIUM_OCCLUSION_FROM_MAP
+        #define OCCLUSION(uv) lerp(1 ,tex2D(_Occlusion, uv.xy), _OcclusionStrength)
+    #else
+        #define OCCLUSION(uv) 1
+    #endif
+#else
+    #define OCCLUSION(uv) 1
+#endif
+
+#ifdef HELIUM_DETAIL_MASK
+    #define DETAIL_MASK(uv) tex2D(_DetailMask,uv.xy).a
+    #define DETAIL_MASK_N(uv) tex2D(_DetailMask,uv.zw).a
+#else
+    #define DETAIL_MASK(uv) 1
+    #define DETAIL_MASK_N(uv) 1
 #endif
 
 int _UseTextures;
@@ -183,7 +220,9 @@ vOutput vert(vInput i){
     o.uvM = 0;
     o.uvM.xy = HELIUM_TRANSFORM_TEX(i.uv, _Tex);  // QOL command that summarizes texture tiling and offset
     #ifdef HELIUM_NORMAL_MAPPING
-    o.uvM.zw = HELIUM_TRANSFORM_TEX(i.uv, _SecondaryTex);
+        #ifdef HELIUM_DETAIL_ALBEDO
+        o.uvM.zw = HELIUM_TRANSFORM_TEX(i.uv, _SecondaryTex);
+        #endif
     o.tan = float4(UnityObjectToWorldDir(i.tan.xyz), i.tan.w);
     #ifndef HELIUM_FRAGMENT_BINORMAL
     o.bin = ComputeBinormal(i.n, i.tan.xyz, i.tan.w);
@@ -287,6 +326,9 @@ UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo, float3 viewDir)
     //     UNITY_PASS_TEXCUBE_SAMPLER(unity_SpecCubeX, unity_SpecCube0), unity_SpecCubeX_HDR, reflData
     // );
 
+    float ao = OCCLUSION(vo.uvM);
+    il.diffuse *= ao;
+    il.specular *= ao;
 
     #endif
     return il;
@@ -304,19 +346,33 @@ UnityLight CreateLight(vOutput vo){
 
     // Check LightingFuncs.cginc to better see how this works
     UNITY_LIGHT_ATTENUATION(dimming, vo, vo.wPos.xyz);
-
     l.color = _LightColor0  * dimming;
     // angle with surface normal
     l.ndotl =  DotClamped(vo.n, _WorldSpaceLightPos0.xyz);
     return l;
 }
 
+#ifdef HELIUM_NORMAL_MAPPING
+float3 TanSpaceNormal(vOutput vo){
+    float3 n1 = UnpackScaleNormal(tex2D(_Normal, vo.uvM.xy),-_NormalStrength); 
+
+    #ifdef HELIUM_DETAIL_NORMAL_MAP
+        float3 n2 = UnpackScaleNormal(tex2D(_SecondaryNormal, vo.uvM.zw), -_SecondaryNormalStrength);
+
+        #ifdef HELIUM_DETAIL_MASK
+        n2 = lerp(float3(0,0,1), n2, DETAIL_MASK_N(vo.uvM));
+        #endif
+        
+        n1 = BlendNormals(n1, n2);
+    #endif 
+
+    return n1;
+}
+#endif
+
 void InitFragNormal(inout vOutput vo){
     #ifdef HELIUM_NORMAL_MAPPING
-    float3 n1 = UnpackScaleNormal(tex2D(_Normal, vo.uvM.xy), -_NormalStrength); 
-    float3 n2 = UnpackScaleNormal(tex2D(_SecondaryNormal, vo.uvM.zw), -_SecondaryNormalStrength);
-    float3 tanSpaceNormal = BlendNormals(n1, n2);
-
+    float3 tanSpaceNormal = TanSpaceNormal(vo);
     // Normal maps store the up direction in the z component 
     tanSpaceNormal = tanSpaceNormal.xzy;
     #ifdef HELIUM_FRAGMENT_BINORMAL
@@ -332,24 +388,41 @@ void InitFragNormal(inout vOutput vo){
     #endif
 }
 
-
-float4 frag(vOutput vo): SV_Target{
-    float3 albedo =  tex2D(_Tex, vo.uvM.xy);
-
+float3 ComputeAlbedoWithDetail(vOutput vo){
+    float3 a = tex2D(_Tex, vo.uvM.xy);
 
     #ifdef HELIUM_BASE_COLOR
-    albedo *= _Color.xyz;
+    a *= _Color.xyz;
     #endif
+
+    #ifdef HELIUM_NORMAL_MAPPING
+
+    #ifdef HELIUM_DETAIL_ALBEDO
+    float3 d = tex2D(_SecondaryTex, vo.uvM.zw) * unity_ColorSpaceDouble;
+    #else
+    float3 d = 1;
+    #endif
+
+    #ifdef HELIUM_DETAIL_MASK
+    a = lerp(a, a * d, DETAIL_MASK(vo.uvM));
+    #endif
+
+    #endif
+
+    return a;
+}
+
+
+float4 frag(vOutput vo): SV_Target{
+    
+    float3 albedo =  ComputeAlbedoWithDetail(vo);
+
+
 
     #ifdef HELIUM_NORMAL_MAPPING
     InitFragNormal(vo);
     #endif
 
-    #ifdef HELIUM_NORMAL_MAPPING
-
-    albedo *= tex2D(_SecondaryTex, vo.uvM.zw) * unity_ColorSpaceDouble;
-    #endif
-    
     
     float invertedReflectivity;
     float3 specularColor;
@@ -377,7 +450,6 @@ float4 frag(vOutput vo): SV_Target{
     );
     
     finalCol.rgb += EMISSION(vo.uvM);
-
     return finalCol;
 }
 
