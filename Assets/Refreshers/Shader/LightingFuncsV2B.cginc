@@ -30,6 +30,8 @@ in "LightingFuncs.cginc"
 
 sampler2D _Tex;
 
+float _AlphaThreshold;
+
 #ifdef HELIUM_NORMAL_MAPPING
 
     #ifdef HELIUM_DETAIL_ALBEDO
@@ -109,6 +111,12 @@ sampler2D _Metallic, _Roughness;
 #else
     #define DETAIL_MASK(uv) 1
     #define DETAIL_MASK_N(uv) 1
+#endif
+
+#ifndef HELIUM_R_FROM_ALBEDO
+    #define ALPHA(uv) _Color.a * tex2D(_Tex, uv.xy).a
+#else
+    #define ALPHA(uv) _Color.a
 #endif
 
 int _UseTextures;
@@ -414,10 +422,10 @@ float3 ComputeAlbedoWithDetail(vOutput vo){
 
 
 float4 frag(vOutput vo): SV_Target{
-    
+    float alpha = ALPHA(vo.uvM);
+    clip(alpha-_AlphaThreshold);
+
     float3 albedo =  ComputeAlbedoWithDetail(vo);
-
-
 
     #ifdef HELIUM_NORMAL_MAPPING
     InitFragNormal(vo);
@@ -450,6 +458,7 @@ float4 frag(vOutput vo): SV_Target{
     );
     
     finalCol.rgb += EMISSION(vo.uvM);
+
     return finalCol;
 }
 

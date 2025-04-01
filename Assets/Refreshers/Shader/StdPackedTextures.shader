@@ -19,6 +19,7 @@ Shader "Refreshers/StdPackedTextures"
         [NoScaleOffset] _Occlusion ("Occlusion", 2D) = "white" {}
 		_OcclusionStrength("Occlusion Strength", Range(0, 1)) = 1
         [NoScaleOffset] _DetailMask ("Detail Mask", 2D) = "white" {}
+        _AlphaThreshold("Alpha Cutoff", Range(0,1)) = 0.5 
     }
     CGINCLUDE
     #define HELIUM_FRAGMENT_BINORMAL
@@ -96,6 +97,8 @@ Shader "Refreshers/StdPackedTextures"
             
             #define HELIUM_NORMAL_MAPPING
             #define HELIUM_ADD_PASS
+            #define HELIUM_BASE_COLOR
+
             #pragma shader_feature HELIUM_2D_METALLIC
             #pragma shader_feature _ HELIUM_R_FROM_METALLIC HELIUM_R_FROM_ALBEDO
             #pragma shader_feature HELIUM_DETAIL_MASK

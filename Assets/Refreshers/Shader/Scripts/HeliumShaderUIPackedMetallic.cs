@@ -56,6 +56,7 @@ public class HeliumShaderPackedMetallicUI : ShaderGUI {
         DoEmission();
         DoOcclusion();
         DoDetailMask();
+        DoAlpha();
         editor.TextureScaleOffsetProperty(mainTex);
 
 	}
@@ -192,6 +193,13 @@ public class HeliumShaderPackedMetallicUI : ShaderGUI {
 		if (EditorGUI.EndChangeCheck() && t != mask.textureValue) {
 			SetKeyword("HELIUM_DETAIL_MASK", mask.textureValue);
 		}
+    }
+
+    void DoAlpha(){
+        MaterialProperty slider = FindProperty("_AlphaThreshold");
+        EditorGUI.indentLevel +=2;
+        editor.ShaderProperty(slider, MakeLabel(slider));
+        EditorGUI.indentLevel -=2;
     }
 
     MaterialProperty FindProperty (string name) {
