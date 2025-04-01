@@ -16,6 +16,9 @@ Shader "Refreshers/StdPackedTextures"
         _PackedMR("Metallic Roughness", 2D) = "grey" {}
         [NoScaleOffset] _Emission("Emission", 2D) = "black" {}
         _EmissionColor ("Emission Color", Color) = (0, 0, 0)
+        [NoScaleOffset] _Occlusion ("Occlusion", 2D) = "white" {}
+		_OcclusionStrength("Occlusion Strength", Range(0, 1)) = 1
+        [NoScaleOffset] _DetailMask ("Detail Mask", 2D) = "white" {}
     }
     CGINCLUDE
     #define HELIUM_FRAGMENT_BINORMAL
@@ -40,9 +43,17 @@ Shader "Refreshers/StdPackedTextures"
             #pragma shader_feature HELIUM_2D_METALLIC
             #pragma shader_feature _ HELIUM_R_FROM_METALLIC HELIUM_R_FROM_ALBEDO
             #pragma shader_feature HELIUM_EMISSION_FROM_MAP
+            #pragma shader_feature HELIUM_OCCLUSION_FROM_MAP
+            #pragma shader_feature HELIUM_DETAIL_MASK
 
+            #pragma shader_feature HELIUM_NORMAL_MAP
+            #pragma shader_feature HELIUM_DETAIL_ALBEDO
+            #pragma shader_feature HELIUM_DETAIL_NORMAL_MAP
+            
             #define HELIUM_NORMAL_MAPPING
             #define HELIUM_BASE_COLOR
+            #define HELIUM_EMISSION
+            #define HELIUM_AMBIENT_OCCLUSION
         
             #pragma multi_compile_fwdadd_fullshadows // equivalent of the following
             // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
@@ -87,7 +98,12 @@ Shader "Refreshers/StdPackedTextures"
             #define HELIUM_ADD_PASS
             #pragma shader_feature HELIUM_2D_METALLIC
             #pragma shader_feature _ HELIUM_R_FROM_METALLIC HELIUM_R_FROM_ALBEDO
+            #pragma shader_feature HELIUM_DETAIL_MASK
             
+
+            #pragma shader_feature HELIUM_NORMAL_MAP
+            #pragma shader_feature HELIUM_DETAIL_ALBEDO
+            #pragma shader_feature HELIUM_DETAIL_NORMAL_MAP
             
             #pragma vertex vert
             #pragma fragment frag

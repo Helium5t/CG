@@ -54,25 +54,34 @@ public class HeliumShaderPackedMetallicUI : ShaderGUI {
         DoSecondary();
         DoSecondaryNormals();
         DoEmission();
+        DoOcclusion();
+        DoDetailMask();
         editor.TextureScaleOffsetProperty(mainTex);
 
 	}
+
     void DoNormals () {
 		MaterialProperty map = FindProperty("_Normal");
+        Texture t = map.textureValue;
+        EditorGUI.BeginChangeCheck();
         editor.TexturePropertySingleLine(
 			MakeLabel(map), map, map.textureValue ? FindProperty("_NormalStrength"): null
 		);
+        if(EditorGUI.EndChangeCheck() && t != map.textureValue){
+            SetKeyword("HELIUM_NORMAL_MAP", map.textureValue);
+        }
 	}
 
     void DoMetallic () {
         MaterialProperty map = FindProperty("_Metallic");
         bool useTex = map.textureValue;
+        Texture t = map.textureValue;
 		EditorGUI.BeginChangeCheck();
         editor.TexturePropertySingleLine(
             MakeLabel(map, "Metallic (R)"), map,
             map.textureValue ? null : FindProperty("_UniformMetallic")
         );
-		if (EditorGUI.EndChangeCheck()) {
+		if (EditorGUI.EndChangeCheck() && t != map.textureValue) {
             SetKeyword("HELIUM_2D_METALLIC", useTex);
 		}
 	}
@@ -119,23 +128,34 @@ public class HeliumShaderPackedMetallicUI : ShaderGUI {
 		GUILayout.Label("Secondary Maps", EditorStyles.boldLabel);
 
 		MaterialProperty detailTex = FindProperty("_SecondaryTex");
+        Texture t = detailTex.textureValue;
+        EditorGUI.BeginChangeCheck();
 		editor.TexturePropertySingleLine(
 			MakeLabel(detailTex, "Albedo (RGB) multiplied by 2"), detailTex
 		);
+        if (EditorGUI.EndChangeCheck() && t != detailTex.textureValue){
+            SetKeyword("HELIUM_DETAIL_ALBEDO", detailTex.textureValue);
+        }
 		editor.TextureScaleOffsetProperty(detailTex);
 	}
 
     void DoSecondaryNormals () {
 		MaterialProperty map = FindProperty("_SecondaryNormal");
+        Texture t = map.textureValue;
+        EditorGUI.BeginChangeCheck();
 		editor.TexturePropertySingleLine(
 			MakeLabel(map), map,
 			map.textureValue ? FindProperty("_SecondaryNormalStrength") : null
 		);
+        if(EditorGUI.EndChangeCheck() && t != map.textureValue){
+            SetKeyword("HELIUM_DETAIL_NORMAL_MAP", map.textureValue);
+        }
 	}
 
     void DoEmission(){
         MaterialProperty map = FindProperty("_Emission");
         bool useTex = map.textureValue;
+        Texture t = map.textureValue;
 		EditorGUI.BeginChangeCheck();
         MaterialProperty mp = FindProperty("_EmissionColor");
         if (useTex){
@@ -144,8 +164,33 @@ public class HeliumShaderPackedMetallicUI : ShaderGUI {
         editor.TexturePropertyWithHDRColor(
             MakeLabel(map, "Emission"), map, mp, false
         );
-		if (EditorGUI.EndChangeCheck()) {
+		if (EditorGUI.EndChangeCheck() && t != map.textureValue) {
             SetKeyword("HELIUM_EMISSION_FROM_MAP", useTex);
+		}
+    }
+
+    void DoOcclusion(){
+        MaterialProperty map = FindProperty("_Occlusion");
+        Texture t = map.textureValue;
+		EditorGUI.BeginChangeCheck();
+		editor.TexturePropertySingleLine(
+			MakeLabel(map, "Occlusion (G)"), map,
+			map.textureValue ? FindProperty("_OcclusionStrength") : null
+		);
+		if (EditorGUI.EndChangeCheck() && t != map.textureValue) {
+			SetKeyword("HELIUM_OCCLUSION_FROM_MAP", map.textureValue);
+		}
+    }
+
+    void DoDetailMask(){
+		MaterialProperty mask = FindProperty("_DetailMask");
+        Texture t = mask.textureValue;
+		EditorGUI.BeginChangeCheck();
+		editor.TexturePropertySingleLine(
+			MakeLabel(mask, "Detail Mask (A)"), mask
+		);
+		if (EditorGUI.EndChangeCheck() && t != mask.textureValue) {
+			SetKeyword("HELIUM_DETAIL_MASK", mask.textureValue);
 		}
     }
 
@@ -154,10 +199,14 @@ public class HeliumShaderPackedMetallicUI : ShaderGUI {
 	}
     void SetKeyword (string keyword, bool state) {
         if (state) {
-            target.EnableKeyword(keyword);
+            foreach( Material mt in editor.targets){
+                mt.EnableKeyword(keyword);
+            }
         }
         else {
-            target.DisableKeyword(keyword);
+            foreach(Material mt in editor.targets){
+                mt.DisableKeyword(keyword);
+            }
         }
 	}
 
