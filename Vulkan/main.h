@@ -18,9 +18,10 @@
 #endif
 #include <GLFW/glfw3.h>
 // linear algebra library 
-#define HELIUM_VERTEX_BUFFERS
 #include <glm/glm.hpp>
 
+#define HELIUM_VERTEX_BUFFERS
+#define HELIUM_DEBUG_LOG_FRAMES
 
 class HelloTriangleApplication{
 
@@ -96,7 +97,6 @@ private:
 
     uint32_t currentFrame = 0;
 
-    // #define HELIUM_DO_NOT_REFRESH
     uint32_t frameCounter  = 0;
 
 

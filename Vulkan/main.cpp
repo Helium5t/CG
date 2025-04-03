@@ -152,7 +152,7 @@ void HelloTriangleApplication::drawFrame(){
     VkResult acquireImageResult = vkAcquireNextImageKHR(logiDevice, swapChain, UINT64_MAX, imageWriteableSemaphores[currentFrame], VK_NULL_HANDLE, &imageSwapchainIndex);
 
     flout<< "Acquire image result:------" << VkResultToString(acquireImageResult) << std::endl;
-    flout << "acquired image" << std::endl;
+    flout << "acquired image, index is -- " << imageSwapchainIndex << std::endl;
 
     if (acquireImageResult == VK_ERROR_OUT_OF_DATE_KHR){
         resetSwapChain();

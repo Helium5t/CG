@@ -32,6 +32,9 @@ export PKG_CONFIG_PATH="$VULKAN_SDK/lib/pkgconfig:$PKG_CONFIG_PATH"
 
 ### Troubleshooting ### 
 If you're using MoltenVK, there are some limitations due to the translation layer. For debugging, for example, layers cannot be enabled from inside the application and you should do so by running `vkconfig`.
+**IMPORTANT** 
+Do not use `vkconfig-ui`, for some reason it does not enable the layers correctly. Use instead `vkconfig` which will properly print all the validation layer information. 
+
 There are also Metal specific env variables that can help you debug stuff.
 - `MVK_CONFIG_DEBUG = {0|1}`
 - `MVK_CONFIG_LOG_LEVEL = {0...4}`

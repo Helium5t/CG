@@ -39,10 +39,6 @@ void HelloTriangleApplication::createInstance(){
     std::vector<const char*> requiredExtNames = glfwRequiredExtNames;
     iInfo.enabledExtensionCount ++;
     requiredExtNames.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME); // macOS req
-    iInfo.enabledExtensionCount ++;
-    requiredExtNames.emplace_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-    // iInfo.enabledExtensionCount ++;
-    // requiredExtNames.emplace_back("VK_KHR_portability_subset");
     // end of extra changes
 
     iInfo.ppEnabledExtensionNames = requiredExtNames.data();
@@ -208,6 +204,7 @@ void HelloTriangleApplication::createSwapChain(){
     if (swapChainSpecs.surfaceCapabilities.maxImageCount > 0 && frameCount > swapChainSpecs.surfaceCapabilities.maxImageCount){
         frameCount = swapChainSpecs.surfaceCapabilities.maxImageCount;
     }
+    std::cout << "supported frame count is " << frameCount << std::endl;
     VkSwapchainCreateInfoKHR swapchainCreateInfo{};
     swapchainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchainCreateInfo.surface = renderSurface;
