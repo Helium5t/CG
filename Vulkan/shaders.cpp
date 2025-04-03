@@ -4,7 +4,7 @@ VkShaderModule HelloTriangleApplication::createShaderModule(const std::vector<ch
     VkShaderModule shaderModule;
 
     VkShaderModuleCreateInfo shaderCreationInfo{};
-    shaderCreationInfo.sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO_EXT;
+    shaderCreationInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     // reinterpret_cast simply tells compiler to treat pointer as the target pointer. So not very safe
     shaderCreationInfo.pCode = reinterpret_cast<const uint32_t*>(binary.data()); 
     // shaderCreationInfo.flags is  not set

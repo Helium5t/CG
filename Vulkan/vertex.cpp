@@ -40,9 +40,3 @@ std::array<VkVertexInputAttributeDescription, 2> Vert::getAttributeDescription()
     attributeDescriptions[1].offset = offsetof(Vert, col);
     return attributeDescriptions;
 }
-
-const std::vector<Vert> vertices = {
-    {{0.0f, -0.5f}, {1.0f,0.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f,1.0f, 0.0f}},
-    {{-0.5f, -0.5f}, {0.0f,0.0f, 0.0f}},
-};

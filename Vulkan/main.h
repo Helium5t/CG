@@ -74,6 +74,9 @@ private:
     VkRenderPass renderPass;
     VkPipeline gPipeline; 
 
+    VkBuffer vertexBuffer;
+    VkDeviceMemory vertexBufferMemory;
+
     // Each image in the swap chain should have a framebuffer associated to it.
     std::vector<VkFramebuffer> swapchainFramebuffers;
 
@@ -93,7 +96,7 @@ private:
 
     uint32_t currentFrame = 0;
 
-    #define HELIUM_DO_NOT_REFRESH
+    // #define HELIUM_DO_NOT_REFRESH
     uint32_t frameCounter  = 0;
 
 
@@ -117,7 +120,8 @@ private:
     bool checkValidationLayerSupport();
 
     //-------------------------------setup.cpp
-
+    
+    uint32_t getFirstUsableMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags propertyFlags);
     std::vector<const char*> getRequiredExtensions();
     void createInstance();
     void setupDebugMessenger();
@@ -130,6 +134,7 @@ private:
     void createPipeline();
     void createFramebuffers();
     void createCommandPool();
+    void createDeviceVertexBuffer();
     void createCommandBuffers();
     void recordCommandBuffer(VkCommandBuffer buffer, uint32_t swapchainImageIndex);
 
@@ -179,4 +184,9 @@ struct Vert{
     static VkVertexInputBindingDescription getBindingDescription();
 };
 
+const std::vector<Vert> vertices = {
+    {{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+};
 #endif
