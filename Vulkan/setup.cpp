@@ -1,5 +1,6 @@
 #include "main.h"
 
+#define HELIUM_PRINT_EXTENSIONS
 void HelloTriangleApplication::createInstance(){
     #ifdef NDEBUG
         std::cout<< "Non Debug mode" << std::endl; 
@@ -38,6 +39,10 @@ void HelloTriangleApplication::createInstance(){
     std::vector<const char*> requiredExtNames = glfwRequiredExtNames;
     iInfo.enabledExtensionCount ++;
     requiredExtNames.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME); // macOS req
+    iInfo.enabledExtensionCount ++;
+    requiredExtNames.emplace_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+    // iInfo.enabledExtensionCount ++;
+    // requiredExtNames.emplace_back("VK_KHR_portability_subset");
     // end of extra changes
 
     iInfo.ppEnabledExtensionNames = requiredExtNames.data();
@@ -279,7 +284,7 @@ void HelloTriangleApplication::createImageView(){
             logiDevice,
             &viewCreationInfo,
             nullptr,
-            &swapChainImageViews[0]
+            &swapChainImageViews[i]
         );
         if (viewCreationResult != VK_SUCCESS){
             throw std::runtime_error(strcat("Failed to create image view:", VkResultToString(viewCreationResult)));
@@ -619,6 +624,67 @@ void HelloTriangleApplication::createPipeline(){
     vkDestroyShaderModule(logiDevice, fShader, nullptr);
 }
 
+void HelloTriangleApplication::createDeviceVertexBuffer(){
+    #ifndef HELIUM_VERTEX_BUFFERS
+    return;
+    #else
+    VkBufferCreateInfo bufferCreationInfo{};
+    bufferCreationInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferCreationInfo.size = sizeof(vertices[0]) * vertices.size();
+    bufferCreationInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    /*
+    Sharing mode is for the queue, not for the shaders. Only the graphics queue 
+    will use the buffer so exclusive.
+    */
+   bufferCreationInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+   
+   if (vkCreateBuffer(logiDevice, &bufferCreationInfo, nullptr, &vertexBuffer) != VK_SUCCESS){
+       throw std::runtime_error("failed to create the vertex buffer object on the device");
+    }
+    
+    /*----- Allocate memory -----*/
+    VkMemoryRequirements memReqs;
+    vkGetBufferMemoryRequirements(logiDevice, vertexBuffer, &memReqs);
+    
+    VkMemoryAllocateInfo allocationInfo{};
+    allocationInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocationInfo.allocationSize = memReqs.size;
+    allocationInfo.memoryTypeIndex = getFirstUsableMemoryType(
+        memReqs.memoryTypeBits,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        
+    if(vkAllocateMemory(logiDevice, &allocationInfo, nullptr, &vertexBufferMemory) != VK_SUCCESS){
+        throw std::runtime_error("failed to allocate buffer device memory for vertex buffer object");
+    }
+    
+    /*----- Bind allocated memory to vertex buffer object -----*/
+    vkBindBufferMemory(logiDevice, vertexBuffer, vertexBufferMemory, 0);
+    
+    
+    /*----- Write to device buffer -----*/
+    void* bufferData;
+    // Get virtual address pointer to the device buffer
+    vkMapMemory(logiDevice, vertexBufferMemory, 0, bufferCreationInfo.size, 0, &bufferData);
+    // Write to the memory via memcpy, copying the vertex buffer content into the device memory
+    memcpy(bufferData, vertices.data(), (size_t) bufferCreationInfo.size);
+    vkUnmapMemory(logiDevice, vertexBufferMemory);
+
+    #endif
+}
+
+uint32_t HelloTriangleApplication::getFirstUsableMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags requiredPropertyFlags){
+    VkPhysicalDeviceMemoryProperties memProps;
+    vkGetPhysicalDeviceMemoryProperties(physGraphicDevice, &memProps);
+
+    for (uint32_t i = 0 ; i < memProps.memoryTypeCount; i++){
+        if (typeFilter & (1 << i) && (memProps.memoryTypes[i].propertyFlags & requiredPropertyFlags) == requiredPropertyFlags){
+            return i;
+        }
+    }
+
+    throw std::runtime_error("cannot adapt memory to underlying hardware");
+}
+
 void HelloTriangleApplication::createFramebuffers(){
     swapchainFramebuffers.resize(swapChainImageViews.size());
 
@@ -635,6 +701,8 @@ void HelloTriangleApplication::createFramebuffers(){
         framebufferCreationInfo.pAttachments = iv;
         framebufferCreationInfo.height = selectedSwapChainWindowSize.height;
         framebufferCreationInfo.width = selectedSwapChainWindowSize.width;
+        bool isHeRight = iv[0] == VK_NULL_HANDLE;
+        std::cout <<  "is he right?" << isHeRight << std::endl;
         VkResult res = vkCreateFramebuffer(logiDevice, &framebufferCreationInfo, nullptr, &swapchainFramebuffers[i]);
         if(res != VK_SUCCESS){
             throw std::runtime_error("failed to create framebuffer");
@@ -739,7 +807,16 @@ void HelloTriangleApplication::recordCommandBuffer(VkCommandBuffer buffer, uint3
     scissor.extent = selectedSwapChainWindowSize;
     vkCmdSetScissor(buffer, 0, 1, &scissor);
 
+    #ifdef HELIUM_VERTEX_BUFFERS
+    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gPipeline);
+    VkBuffer vertBuffers[]= {vertexBuffer};
+    VkDeviceSize memoryOffsets[] = {0};
+    vkCmdBindVertexBuffers(buffer, 0, 1, vertBuffers, memoryOffsets);
+
+    vkCmdDraw(buffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+    #else
     vkCmdDraw(buffer, 3, 1, 0, 0);
+    #endif
 
     vkCmdEndRenderPass(buffer);
 
