@@ -17,6 +17,9 @@
 #define GLFW_INCLUDE_VULKAN // tells glfw to add vulkan api
 #endif
 #include <GLFW/glfw3.h>
+// linear algebra library 
+#define HELIUM_VERTEX_BUFFERS
+#include <glm/glm.hpp>
 
 
 class HelloTriangleApplication{
@@ -167,4 +170,13 @@ private:
     //-------------------------------shaders.cpp
     VkShaderModule createShaderModule(const std::vector<char> binary);
 };
+
+//-------------------------------vertex.cpp
+struct Vert{
+    glm::vec2 pos;
+    glm::vec3 col;
+    static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescription();
+    static VkVertexInputBindingDescription getBindingDescription();
+};
+
 #endif
