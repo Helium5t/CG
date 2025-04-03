@@ -14,7 +14,7 @@ outNameVert="${1%.*}"
 
 outNameFrag="${2%.*}"
 
-echo $VULKAN_SDK
+echo "Compiling shaders using: $VULKAN_SDK/bin/glslc"
 
 $VULKAN_SDK/bin/glslc -fshader-stage=vert "$1" -o "${outNameVert}.spv"
 $VULKAN_SDK/bin/glslc -fshader-stage=frag "$2" -o "${outNameFrag}.spv"

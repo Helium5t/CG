@@ -4,7 +4,17 @@ project(hello VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(hello heliumdebug.cpp  main.cpp appdebug.cpp device_specs.cpp setup.cpp validation.cpp shaders.cpp sync.cpp)
+add_executable(
+    hello heliumdebug.cpp
+    main.cpp 
+    appdebug.cpp 
+    device_specs.cpp 
+    setup.cpp 
+    validation.cpp 
+    shaders.cpp 
+    sync.cpp
+    vertex.cpp
+    )
 
 include(cmake/CPM.cmake)
 

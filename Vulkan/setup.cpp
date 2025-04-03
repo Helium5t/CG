@@ -372,7 +372,16 @@ void HelloTriangleApplication::createRenderPass(){
 }
 
 void HelloTriangleApplication::createPipeline(){
+    #ifndef HELIUM_VERTEX_BUFFERS
     std::vector<char> vShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/helloTriangle_v.spv");
+    #else
+
+    VkVertexInputBindingDescription bindingDescription = Vert::getBindingDescription();
+    std::array<VkVertexInputAttributeDescription, 2> attributeDescription = Vert::getAttributeDescription();
+    
+
+    std::vector<char> vShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/dynamicVertex_v.spv");
+    #endif 
     std::vector<char> fShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/helloTriangle_f.spv");
 
     VkShaderModule vShader = createShaderModule(vShaderBinary);
@@ -423,6 +432,13 @@ void HelloTriangleApplication::createPipeline(){
     // Defines the way vertex data will be input 
     VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo{};
     vertexInputCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    
+    #ifdef HELIUM_VERTEX_BUFFERS
+    vertexInputCreateInfo.vertexBindingDescriptionCount = 1;
+    vertexInputCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescription.size());
+    vertexInputCreateInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputCreateInfo.pVertexAttributeDescriptions = attributeDescription.data();
+    #else
     // Defines the span of data and the way it is defined.
     // e.g.:    Each vertex data(normals, tans etc..) is 8 bytes long and
     //          is defined per-instance/per-vertex.
@@ -432,6 +448,7 @@ void HelloTriangleApplication::createPipeline(){
     // to pass anything.
     vertexInputCreateInfo.vertexAttributeDescriptionCount = 0;
     vertexInputCreateInfo.pVertexAttributeDescriptions = nullptr;
+    #endif
 
     VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreationInfo{};
     inputAssemblyCreationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
