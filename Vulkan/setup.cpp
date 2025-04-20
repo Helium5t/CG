@@ -253,7 +253,7 @@ void HelloTriangleApplication::createImageView(){
         VkImageViewCreateInfo viewCreationInfo{};
         viewCreationInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         viewCreationInfo.format = selectedSwapChainFormat;
-        viewCreationInfo.image = swapChainImages[0];
+        viewCreationInfo.image = swapChainImages[i];
         viewCreationInfo.viewType = VK_IMAGE_VIEW_TYPE_2D; // We will be passing 2D textures (you can also pass 1D and 3D textures)
         /*
         Swizzle allows you to, intuitively, swizzle the source channels around. 
@@ -698,8 +698,6 @@ void HelloTriangleApplication::createFramebuffers(){
         framebufferCreationInfo.pAttachments = iv;
         framebufferCreationInfo.height = selectedSwapChainWindowSize.height;
         framebufferCreationInfo.width = selectedSwapChainWindowSize.width;
-        bool isHeRight = iv[0] == VK_NULL_HANDLE;
-        std::cout <<  "is he right?" << isHeRight << std::endl;
         VkResult res = vkCreateFramebuffer(logiDevice, &framebufferCreationInfo, nullptr, &swapchainFramebuffers[i]);
         if(res != VK_SUCCESS){
             throw std::runtime_error("failed to create framebuffer");
