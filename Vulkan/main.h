@@ -21,7 +21,7 @@
 #include <glm/glm.hpp>
 
 #define HELIUM_VERTEX_BUFFERS
-#define HELIUM_DEBUG_LOG_FRAMES
+// #define HELIUM_DEBUG_LOG_FRAMES
 
 class HelloTriangleApplication{
 
@@ -32,7 +32,7 @@ private:
     // Const params
     const uint32_t WIDTH = 800;
     const uint32_t HEIGHT = 600;
-    const int MAX_FRAMES_IN_FLIGHT = 2;
+    const int MAX_FRAMES_IN_FLIGHT = 3;
     
     const std::vector<const char*> validationLayerNames = {
         // Here the name has been removed because this validation layer crashes creation of frame buffer.
