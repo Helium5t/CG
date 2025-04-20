@@ -133,7 +133,9 @@ private:
     void createRenderPass();
     void createPipeline();
     void createFramebuffers();
+    void bufferCopy(VkBuffer src, VkBuffer dst, VkDeviceSize size);
     void createCommandPool();
+    void createAndBindDeviceBuffer( VkDeviceSize bufferSize, VkBufferUsageFlags bufferUsage, VkMemoryPropertyFlags propertyFlags, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     void createDeviceVertexBuffer();
     void createCommandBuffers();
     void recordCommandBuffer(VkCommandBuffer buffer, uint32_t swapchainImageIndex);

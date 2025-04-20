@@ -621,52 +621,141 @@ void HelloTriangleApplication::createPipeline(){
     vkDestroyShaderModule(logiDevice, fShader, nullptr);
 }
 
-void HelloTriangleApplication::createDeviceVertexBuffer(){
+void HelloTriangleApplication::createAndBindDeviceBuffer(
+    VkDeviceSize bufferSize, 
+    VkBufferUsageFlags bufferUsage,
+    VkMemoryPropertyFlags propertyFlags,
+    VkBuffer& buffer, 
+    VkDeviceMemory& bufferMemory
+){
     #ifndef HELIUM_VERTEX_BUFFERS
     return;
     #else
+
     VkBufferCreateInfo bufferCreationInfo{};
     bufferCreationInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferCreationInfo.size = sizeof(vertices[0]) * vertices.size();
-    bufferCreationInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    bufferCreationInfo.size = bufferSize;
+    bufferCreationInfo.usage = bufferUsage;
     /*
     Sharing mode is for the queue, not for the shaders. Only the graphics queue 
     will use the buffer so exclusive.
     */
    bufferCreationInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
    
-   if (vkCreateBuffer(logiDevice, &bufferCreationInfo, nullptr, &vertexBuffer) != VK_SUCCESS){
+   if (vkCreateBuffer(logiDevice, &bufferCreationInfo, nullptr, &buffer) != VK_SUCCESS){
        throw std::runtime_error("failed to create the vertex buffer object on the device");
     }
     
     /*----- Allocate memory -----*/
     VkMemoryRequirements memReqs;
-    vkGetBufferMemoryRequirements(logiDevice, vertexBuffer, &memReqs);
+    vkGetBufferMemoryRequirements(logiDevice, buffer, &memReqs);
     
     VkMemoryAllocateInfo allocationInfo{};
     allocationInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocationInfo.allocationSize = memReqs.size;
     allocationInfo.memoryTypeIndex = getFirstUsableMemoryType(
-        memReqs.memoryTypeBits,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        memReqs.memoryTypeBits, propertyFlags);
         
-    if(vkAllocateMemory(logiDevice, &allocationInfo, nullptr, &vertexBufferMemory) != VK_SUCCESS){
+    if(vkAllocateMemory(logiDevice, &allocationInfo, nullptr, &bufferMemory) != VK_SUCCESS){
         throw std::runtime_error("failed to allocate buffer device memory for vertex buffer object");
     }
     
     /*----- Bind allocated memory to vertex buffer object -----*/
-    vkBindBufferMemory(logiDevice, vertexBuffer, vertexBufferMemory, 0);
+    vkBindBufferMemory(logiDevice, buffer, bufferMemory, 0);
+    #endif
+}
+
+void HelloTriangleApplication::createDeviceVertexBuffer(){
+    #ifndef HELIUM_VERTEX_BUFFERS
+    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    sizeof(vertices[0]) * vertices.size();
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+    return;
+    #else
+    VkDeviceSize vertexBufferSize = 
+        sizeof(vertices[0]) * vertices.size();
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+
+    VkMemoryPropertyFlags stagingBufferMemProperties = 
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+    createAndBindDeviceBuffer(
+        vertexBufferSize,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        stagingBufferMemProperties,
+        stagingBuffer,
+        stagingBufferMemory
+    );
     
-    
+
     /*----- Write to device buffer -----*/
     void* bufferData;
     // Get virtual address pointer to the device buffer
-    vkMapMemory(logiDevice, vertexBufferMemory, 0, bufferCreationInfo.size, 0, &bufferData);
+    vkMapMemory(logiDevice, stagingBufferMemory, 0, vertexBufferSize, 0, &bufferData);
     // Write to the memory via memcpy, copying the vertex buffer content into the device memory
-    memcpy(bufferData, vertices.data(), (size_t) bufferCreationInfo.size);
-    vkUnmapMemory(logiDevice, vertexBufferMemory);
+    memcpy(bufferData, vertices.data(), (size_t) vertexBufferSize);
+    vkUnmapMemory(logiDevice, stagingBufferMemory);
+
+
+    VkMemoryPropertyFlags vertexBufferMemProperties = 
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    createAndBindDeviceBuffer(
+        vertexBufferSize,
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 
+        vertexBufferMemProperties,
+        vertexBuffer, 
+        vertexBufferMemory
+    );
+
+    bufferCopy(stagingBuffer, vertexBuffer, vertexBufferSize);
+
+    vkDestroyBuffer(logiDevice, stagingBuffer, nullptr);
+    vkFreeMemory(logiDevice, stagingBufferMemory, nullptr);
 
     #endif
+}
+
+// Copies from src to dst a {size} amount of bytes. It uses the graphics command queue and waits for it to be idle.
+// Not the best perf. wise.
+void HelloTriangleApplication::bufferCopy(VkBuffer src, VkBuffer dst, VkDeviceSize size){
+    VkCommandBufferAllocateInfo tempBufferCreationInfo{};
+    tempBufferCreationInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    tempBufferCreationInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    tempBufferCreationInfo.commandPool = commandPool;
+    tempBufferCreationInfo.commandBufferCount = 1;
+
+    VkCommandBuffer tempBuffer;
+    vkAllocateCommandBuffers(logiDevice, &tempBufferCreationInfo, &tempBuffer);
+
+    /*----- Record the buffer -----*/
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    vkBeginCommandBuffer(tempBuffer, &beginInfo);
+
+    /* Describes the region to copy by it's start index on both buffers and the amount of bytes */
+    VkBufferCopy copyOpDesc{};
+    copyOpDesc.srcOffset = 0;
+    copyOpDesc.dstOffset = 0;
+    copyOpDesc.size = size;
+
+    vkCmdCopyBuffer(tempBuffer, src, dst, 1, &copyOpDesc);
+
+    vkEndCommandBuffer(tempBuffer);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &tempBuffer;
+
+    vkQueueSubmit(graphicsCommandQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    // Wait for queue to be empty before continuing. Makes sure the full buffer is copied.
+    vkQueueWaitIdle(graphicsCommandQueue);
+
+    vkFreeCommandBuffers(logiDevice, commandPool, 1, &tempBuffer);
 }
 
 uint32_t HelloTriangleApplication::getFirstUsableMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags requiredPropertyFlags){
