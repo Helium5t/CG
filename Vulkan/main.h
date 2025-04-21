@@ -78,6 +78,9 @@ private:
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
 
+    VkBuffer indexBuffer;
+    VkDeviceMemory indexBufferMemory;
+
     // Each image in the swap chain should have a framebuffer associated to it.
     std::vector<VkFramebuffer> swapchainFramebuffers;
 
@@ -136,9 +139,12 @@ private:
     void bufferCopy(VkBuffer src, VkBuffer dst, VkDeviceSize size);
     void createCommandPool();
     void createAndBindDeviceBuffer( VkDeviceSize bufferSize, VkBufferUsageFlags bufferUsage, VkMemoryPropertyFlags propertyFlags, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-    void createDeviceVertexBuffer();
     void createCommandBuffers();
     void recordCommandBuffer(VkCommandBuffer buffer, uint32_t swapchainImageIndex);
+    #ifdef HELIUM_VERTEX_BUFFERS
+    void createDeviceVertexBuffer();
+    void createDeviceIndexBuffer();
+    #endif
 
 
     //-------------------------------device_specs.cpp
@@ -187,8 +193,15 @@ struct Vert{
 };
 
 const std::vector<Vert> vertices = {
-    {{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
-    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
 };
+
+const std::vector<uint16_t> indices = {
+    0, 1, 2,
+    2, 3, 0
+};
+
 #endif
