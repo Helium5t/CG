@@ -18,7 +18,11 @@
 #endif
 #include <GLFW/glfw3.h>
 // linear algebra library 
+#define GLM_FORCE_RADIANS // Make sure glm is using radians as the argument unit in the library definition
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
+#include <chrono>
 
 #define HELIUM_VERTEX_BUFFERS
 // #define HELIUM_DEBUG_LOG_FRAMES
@@ -75,11 +79,22 @@ private:
     VkRenderPass renderPass;
     VkPipeline gPipeline; 
 
+    VkDescriptorSetLayout mvpMatDescriptorHandle;
+
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
 
     VkBuffer indexBuffer;
     VkDeviceMemory indexBufferMemory;
+
+    /*-
+        We need multiple buffers as the mvp mat is updated each frame and we might have multiple frames in flight
+        having only one would cause us to have a delay/run condition and a whole slew of issues.
+    -*/
+    std::vector<VkBuffer> mvpMatUniformBuffers;
+    std::vector<VkDeviceMemory> mvpMatUniformBuffersMemory;
+    std::vector<void*> mvpMatUniformBuffersMapHandles;
+
 
     // Each image in the swap chain should have a framebuffer associated to it.
     std::vector<VkFramebuffer> swapchainFramebuffers;
@@ -113,15 +128,16 @@ private:
     void cleanup();
 
     //-------------------------------sync.cpp
-    void createSyncObjects();
     void destroySwapChain();
-    void resetSwapChain();
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
-
+    void resetSwapChain();
+    void recordCommandBuffer(VkCommandBuffer buffer, uint32_t swapchainImageIndex);
+    void updateModelViewProj(uint32_t currentImage);
+    
     //-------------------------------validation.cpp
-
+    
     bool checkValidationLayerSupport();
-
+    
     //-------------------------------setup.cpp
     
     uint32_t getFirstUsableMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags propertyFlags);
@@ -140,11 +156,15 @@ private:
     void createCommandPool();
     void createAndBindDeviceBuffer( VkDeviceSize bufferSize, VkBufferUsageFlags bufferUsage, VkMemoryPropertyFlags propertyFlags, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     void createCommandBuffers();
-    void recordCommandBuffer(VkCommandBuffer buffer, uint32_t swapchainImageIndex);
+    void createSyncObjects();
     #ifdef HELIUM_VERTEX_BUFFERS
     void createDeviceVertexBuffer();
+    void createDescriptorSetLayout();
     void createDeviceIndexBuffer();
+    void createCoherentUniformBuffers();
     #endif
+
+
 
 
     //-------------------------------device_specs.cpp
@@ -202,6 +222,14 @@ const std::vector<Vert> vertices = {
 const std::vector<uint16_t> indices = {
     0, 1, 2,
     2, 3, 0
+};
+
+//-------------------------------PROJECTION RELATED STRUCTS
+// Struct used as UBO (Uniform Buffer Object) binding in the vertex shader to apply projection
+struct ModelViewProjection{
+    glm::mat4 model;
+    glm::mat4 view;
+    glm::mat4 projection;
 };
 
 #endif

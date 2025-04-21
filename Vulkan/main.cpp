@@ -58,6 +58,8 @@ void HelloTriangleApplication::initVulkan() {
     std::cout<< "created image view" << std::endl;
     createRenderPass();
     std::cout<< "created render pass" << std::endl;
+    createDescriptorSetLayout();
+    std::cout<< "created uniform buffer object bindings" << std::endl;
     createPipeline();
     std::cout<< "created pipeline" << std::endl;
     createFramebuffers();
@@ -89,6 +91,11 @@ void HelloTriangleApplication::mainLoop() {
 void HelloTriangleApplication::cleanup() {
     destroySwapChain();
 
+    for (size_t i =0 ; i < mvpMatUniformBuffers.size(); i++){
+        vkDestroyBuffer(logiDevice, mvpMatUniformBuffers[i], nullptr);
+        vkFreeMemory(logiDevice, mvpMatUniformBuffersMemory[i], nullptr);
+    }
+    vkDestroyDescriptorSetLayout(logiDevice, mvpMatDescriptorHandle, nullptr);
     vkDestroyBuffer(logiDevice, vertexBuffer, nullptr);
     vkFreeMemory(logiDevice, vertexBufferMemory, nullptr);
     vkDestroyBuffer(logiDevice, indexBuffer, nullptr);
@@ -147,11 +154,13 @@ void HelloTriangleApplication::drawFrame(){
     flout << "FRAME:"<< frameCounter << std::endl;
     flout << "waiting for frame" << std::endl;
     emitFenceStatus(logiDevice, &frameFences[currentFrame]);
-
+    
     VkResult waitFencesResult =  vkWaitForFences(logiDevice, 1, &frameFences[currentFrame], VK_TRUE, UINT64_MAX);
     
     flout << "Wait fences result:------" << VkResultToString(waitFencesResult) << std::endl;
     flout << "fence signaled" << std::endl;
+    
+    updateModelViewProj(currentFrame);
 
     uint32_t imageSwapchainIndex;
     VkResult acquireImageResult = vkAcquireNextImageKHR(logiDevice, swapChain, UINT64_MAX, imageWriteableSemaphores[currentFrame], VK_NULL_HANDLE, &imageSwapchainIndex);
