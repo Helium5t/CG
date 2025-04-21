@@ -665,13 +665,48 @@ void HelloTriangleApplication::createAndBindDeviceBuffer(
     #endif
 }
 
+#ifdef HELIUM_VERTEX_BUFFERS
+
+void HelloTriangleApplication::createDeviceIndexBuffer(){
+    VkDeviceSize indexBufferSize = 
+        sizeof(indices[0]) * indices.size();
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+
+    VkMemoryPropertyFlags stagingBufferMemProperties = 
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+    createAndBindDeviceBuffer(
+        indexBufferSize,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        stagingBufferMemProperties,
+        stagingBuffer,
+        stagingBufferMemory
+    );
+
+    void* bufferData;
+
+    vkMapMemory(logiDevice, stagingBufferMemory, 0, indexBufferSize, 0, &bufferData);
+    memcpy(bufferData, indices.data(), (size_t) indexBufferSize);
+    vkUnmapMemory(logiDevice, stagingBufferMemory);
+
+    createAndBindDeviceBuffer(indexBufferSize,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        indexBuffer,
+        indexBufferMemory
+    );
+
+    bufferCopy(stagingBuffer, indexBuffer, indexBufferSize);
+
+    vkDestroyBuffer(logiDevice, stagingBuffer, nullptr);
+    vkFreeMemory(logiDevice, stagingBufferMemory, nullptr);
+
+
+}
+
 void HelloTriangleApplication::createDeviceVertexBuffer(){
-    #ifndef HELIUM_VERTEX_BUFFERS
-    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    sizeof(vertices[0]) * vertices.size();
-    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-    return;
-    #else
     VkDeviceSize vertexBufferSize = 
         sizeof(vertices[0]) * vertices.size();
 
@@ -713,9 +748,10 @@ void HelloTriangleApplication::createDeviceVertexBuffer(){
 
     vkDestroyBuffer(logiDevice, stagingBuffer, nullptr);
     vkFreeMemory(logiDevice, stagingBufferMemory, nullptr);
-
-    #endif
 }
+
+#endif 
+
 
 // Copies from src to dst a {size} amount of bytes. It uses the graphics command queue and waits for it to be idle.
 // Not the best perf. wise.
@@ -896,8 +932,9 @@ void HelloTriangleApplication::recordCommandBuffer(VkCommandBuffer buffer, uint3
     VkBuffer vertBuffers[]= {vertexBuffer};
     VkDeviceSize memoryOffsets[] = {0};
     vkCmdBindVertexBuffers(buffer, 0, 1, vertBuffers, memoryOffsets);
+    vkCmdBindIndexBuffer(buffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
 
-    vkCmdDraw(buffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+    vkCmdDrawIndexed(buffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
     #else
     vkCmdDraw(buffer, 3, 1, 0, 0);
     #endif
