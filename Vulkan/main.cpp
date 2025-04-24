@@ -71,6 +71,12 @@ void HelloTriangleApplication::initVulkan() {
     std::cout << "creates and bound vertex buffers" << std::endl;
     createDeviceIndexBuffer();
     std::cout << "created and bound index buffers" << std::endl;
+    createCoherentUniformBuffers();
+    std::cout << "created and bound uniform buffers" << std::endl;
+    createDescriptorPool();
+    std::cout << "created descriptor pool" << std::endl;
+    createDescriptorSets();
+    std::cout << "created descriptor sets" << std::endl;
     #endif
     createCommandBuffers();
     std::cout<< "created command buffers" << std::endl;
@@ -95,7 +101,8 @@ void HelloTriangleApplication::cleanup() {
         vkDestroyBuffer(logiDevice, mvpMatUniformBuffers[i], nullptr);
         vkFreeMemory(logiDevice, mvpMatUniformBuffersMemory[i], nullptr);
     }
-    vkDestroyDescriptorSetLayout(logiDevice, mvpMatDescriptorHandle, nullptr);
+    vkDestroyDescriptorPool(logiDevice, descriptorPool, nullptr);
+    vkDestroyDescriptorSetLayout(logiDevice, mvpMatDescriptorMemLayout, nullptr);
     vkDestroyBuffer(logiDevice, vertexBuffer, nullptr);
     vkFreeMemory(logiDevice, vertexBufferMemory, nullptr);
     vkDestroyBuffer(logiDevice, indexBuffer, nullptr);

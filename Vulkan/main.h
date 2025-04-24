@@ -79,7 +79,7 @@ private:
     VkRenderPass renderPass;
     VkPipeline gPipeline; 
 
-    VkDescriptorSetLayout mvpMatDescriptorHandle;
+    VkDescriptorSetLayout mvpMatDescriptorMemLayout;
 
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
@@ -94,6 +94,9 @@ private:
     std::vector<VkBuffer> mvpMatUniformBuffers;
     std::vector<VkDeviceMemory> mvpMatUniformBuffersMemory;
     std::vector<void*> mvpMatUniformBuffersMapHandles;
+
+    VkDescriptorPool descriptorPool;
+    std::vector<VkDescriptorSet> descriptorSets;
 
 
     // Each image in the swap chain should have a framebuffer associated to it.
@@ -162,6 +165,8 @@ private:
     void createDescriptorSetLayout();
     void createDeviceIndexBuffer();
     void createCoherentUniformBuffers();
+    void createDescriptorPool();
+    void createDescriptorSets();
     #endif
 
 

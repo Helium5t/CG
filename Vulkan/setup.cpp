@@ -515,7 +515,12 @@ void HelloTriangleApplication::createPipeline(){
     // Each edge is wide 1 fragment, any value different from 1 requires GPU features enabled.
     rasterizationStageCreationInfo.lineWidth = 1.0f;
     rasterizationStageCreationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+    #ifndef HELIUM_VERTEX_BUFFERS
     rasterizationStageCreationInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    #else
+    rasterizationStageCreationInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    #endif
+
     // should rasterizer add a constant bias to all z values?
     rasterizationStageCreationInfo.depthBiasEnable = VK_FALSE;
     // Values to generate the depth bias, can control based on a constant
@@ -583,7 +588,7 @@ void HelloTriangleApplication::createPipeline(){
     pipelineLayoutCreationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     // for explicity, these are not needed and are by default 0/null.
     pipelineLayoutCreationInfo.setLayoutCount = 1;
-    pipelineLayoutCreationInfo.pSetLayouts = &mvpMatDescriptorHandle;
+    pipelineLayoutCreationInfo.pSetLayouts = &mvpMatDescriptorMemLayout;
     pipelineLayoutCreationInfo.pushConstantRangeCount = 0; // Number of push constant, an element that can be used to pass dynamic values to the shaders
     pipelineLayoutCreationInfo.pPushConstantRanges = nullptr;
     if(vkCreatePipelineLayout(logiDevice, &pipelineLayoutCreationInfo, nullptr, &pipelineLayout) != VK_SUCCESS){
@@ -771,7 +776,7 @@ void HelloTriangleApplication::createDescriptorSetLayout(){
     descriptorSetMemLayoutCreationInfo.bindingCount = 1;
     descriptorSetMemLayoutCreationInfo.pBindings = &mvpMatDescriptorBinding;
 
-    if(vkCreateDescriptorSetLayout(logiDevice, &descriptorSetMemLayoutCreationInfo, nullptr, &mvpMatDescriptorHandle) != VK_SUCCESS){
+    if(vkCreateDescriptorSetLayout(logiDevice, &descriptorSetMemLayoutCreationInfo, nullptr, &mvpMatDescriptorMemLayout) != VK_SUCCESS){
         throw std::runtime_error("failed to create binding for MVP uniform buffer");
     }
 }
@@ -793,6 +798,61 @@ void HelloTriangleApplication::createCoherentUniformBuffers(){
         );
 
         vkMapMemory(logiDevice, mvpMatUniformBuffersMemory[i], 0, mvpMatSize, 0, &mvpMatUniformBuffersMapHandles[i]);
+    }
+}
+
+void HelloTriangleApplication::createDescriptorPool(){
+    VkDescriptorPoolSize poolSize{};
+    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    
+    VkDescriptorPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.poolSizeCount = 1;
+    poolInfo.pPoolSizes = &poolSize;
+    /* Maximum allocations expected by the program. Allows for optimization */
+    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
+    if(vkCreateDescriptorPool(logiDevice, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS){
+        throw std::runtime_error("failed to create descriptor pool");
+    }
+}
+
+void HelloTriangleApplication::createDescriptorSets(){
+    std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, mvpMatDescriptorMemLayout);
+    VkDescriptorSetAllocateInfo descriptorSetAllocationInfo{};
+    
+    descriptorSetAllocationInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    descriptorSetAllocationInfo.descriptorPool = descriptorPool;
+    descriptorSetAllocationInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    descriptorSetAllocationInfo.pSetLayouts = layouts.data();
+
+    descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
+
+    if(vkAllocateDescriptorSets(logiDevice, &descriptorSetAllocationInfo, descriptorSets.data()) != VK_SUCCESS ){
+        throw std::runtime_error("failed to allocate descriptor sets");
+    }
+
+    for(size_t i = 0; i < descriptorSets.size(); i++){
+        VkDescriptorBufferInfo bufferInfo;
+        bufferInfo.buffer = mvpMatUniformBuffers[i];
+        bufferInfo.offset = 0;
+        bufferInfo.range = sizeof(ModelViewProjection);
+        
+        VkWriteDescriptorSet writeDescriptorSetOp{};
+        writeDescriptorSetOp.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writeDescriptorSetOp.dstSet = descriptorSets[i];
+        writeDescriptorSetOp.dstBinding = 0;
+        writeDescriptorSetOp.dstArrayElement = 0;
+        writeDescriptorSetOp.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        writeDescriptorSetOp.descriptorCount = 1;
+
+        writeDescriptorSetOp.pBufferInfo = &bufferInfo;
+        /*-- These next two are only used for other type of descriptors (e.g. texture samplers) --*/
+        writeDescriptorSetOp.pImageInfo = nullptr;
+        writeDescriptorSetOp.pTexelBufferView = nullptr;
+
+        vkUpdateDescriptorSets(logiDevice, 1, &writeDescriptorSetOp, 0, nullptr);
     }
 }
 
