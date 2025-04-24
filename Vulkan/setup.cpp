@@ -382,7 +382,7 @@ void HelloTriangleApplication::createPipeline(){
     std::array<VkVertexInputAttributeDescription, 2> attributeDescription = Vert::getAttributeDescription();
     
 
-    std::vector<char> vShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/dynamicVertex_v.spv");
+    std::vector<char> vShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/mvpVertex_v.spv");
     #endif 
     std::vector<char> fShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/helloTriangle_f.spv");
 
@@ -515,7 +515,12 @@ void HelloTriangleApplication::createPipeline(){
     // Each edge is wide 1 fragment, any value different from 1 requires GPU features enabled.
     rasterizationStageCreationInfo.lineWidth = 1.0f;
     rasterizationStageCreationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+    #ifndef HELIUM_VERTEX_BUFFERS
     rasterizationStageCreationInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    #else
+    rasterizationStageCreationInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    #endif
+
     // should rasterizer add a constant bias to all z values?
     rasterizationStageCreationInfo.depthBiasEnable = VK_FALSE;
     // Values to generate the depth bias, can control based on a constant
@@ -582,8 +587,8 @@ void HelloTriangleApplication::createPipeline(){
     VkPipelineLayoutCreateInfo pipelineLayoutCreationInfo{};
     pipelineLayoutCreationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     // for explicity, these are not needed and are by default 0/null.
-    pipelineLayoutCreationInfo.setLayoutCount = 0;
-    pipelineLayoutCreationInfo.pSetLayouts = nullptr;
+    pipelineLayoutCreationInfo.setLayoutCount = 1;
+    pipelineLayoutCreationInfo.pSetLayouts = &mvpMatDescriptorMemLayout;
     pipelineLayoutCreationInfo.pushConstantRangeCount = 0; // Number of push constant, an element that can be used to pass dynamic values to the shaders
     pipelineLayoutCreationInfo.pPushConstantRanges = nullptr;
     if(vkCreatePipelineLayout(logiDevice, &pipelineLayoutCreationInfo, nullptr, &pipelineLayout) != VK_SUCCESS){
@@ -750,6 +755,107 @@ void HelloTriangleApplication::createDeviceVertexBuffer(){
     vkFreeMemory(logiDevice, stagingBufferMemory, nullptr);
 }
 
+void HelloTriangleApplication::createDescriptorSetLayout(){
+
+    VkDescriptorSetLayoutBinding mvpMatDescriptorBinding{};
+    mvpMatDescriptorBinding.binding = 0; // index in the shader
+    /*
+    Too many values, check https://registry.khronos.org/vulkan/specs/latest/man/html/VkDescriptorType.html
+    Describes the type of binding to have to the gpu. Notable values:
+    - UNIFORM_BUFFER
+    - INPUT_ATTACHMENT : associated to an image resource with its own view that can be used for local load operations from a framebuffer (it's a G buffer)
+    - SAMPLED_IMAGE : associated to an image resource, with its own view where you can perform sampling operation. (A Texture sampler binding)
+    */
+    mvpMatDescriptorBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    mvpMatDescriptorBinding.descriptorCount = 1;
+    mvpMatDescriptorBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    mvpMatDescriptorBinding.pImmutableSamplers = nullptr;
+    
+    VkDescriptorSetLayoutCreateInfo descriptorSetMemLayoutCreationInfo{};
+    descriptorSetMemLayoutCreationInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descriptorSetMemLayoutCreationInfo.bindingCount = 1;
+    descriptorSetMemLayoutCreationInfo.pBindings = &mvpMatDescriptorBinding;
+
+    if(vkCreateDescriptorSetLayout(logiDevice, &descriptorSetMemLayoutCreationInfo, nullptr, &mvpMatDescriptorMemLayout) != VK_SUCCESS){
+        throw std::runtime_error("failed to create binding for MVP uniform buffer");
+    }
+}
+
+void HelloTriangleApplication::createCoherentUniformBuffers(){
+    VkDeviceSize mvpMatSize = sizeof(ModelViewProjection);
+
+    mvpMatUniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+    mvpMatUniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
+    mvpMatUniformBuffersMapHandles.resize(MAX_FRAMES_IN_FLIGHT);
+
+    for(size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++){
+        createAndBindDeviceBuffer(
+            mvpMatSize,
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+            mvpMatUniformBuffers[i],
+            mvpMatUniformBuffersMemory[i]
+        );
+
+        vkMapMemory(logiDevice, mvpMatUniformBuffersMemory[i], 0, mvpMatSize, 0, &mvpMatUniformBuffersMapHandles[i]);
+    }
+}
+
+void HelloTriangleApplication::createDescriptorPool(){
+    VkDescriptorPoolSize poolSize{};
+    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    
+    VkDescriptorPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.poolSizeCount = 1;
+    poolInfo.pPoolSizes = &poolSize;
+    /* Maximum allocations expected by the program. Allows for optimization */
+    poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
+    if(vkCreateDescriptorPool(logiDevice, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS){
+        throw std::runtime_error("failed to create descriptor pool");
+    }
+}
+
+void HelloTriangleApplication::createDescriptorSets(){
+    std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, mvpMatDescriptorMemLayout);
+    VkDescriptorSetAllocateInfo descriptorSetAllocationInfo{};
+    
+    descriptorSetAllocationInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    descriptorSetAllocationInfo.descriptorPool = descriptorPool;
+    descriptorSetAllocationInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    descriptorSetAllocationInfo.pSetLayouts = layouts.data();
+
+    descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
+
+    if(vkAllocateDescriptorSets(logiDevice, &descriptorSetAllocationInfo, descriptorSets.data()) != VK_SUCCESS ){
+        throw std::runtime_error("failed to allocate descriptor sets");
+    }
+
+    for(size_t i = 0; i < descriptorSets.size(); i++){
+        VkDescriptorBufferInfo bufferInfo;
+        bufferInfo.buffer = mvpMatUniformBuffers[i];
+        bufferInfo.offset = 0;
+        bufferInfo.range = sizeof(ModelViewProjection);
+        
+        VkWriteDescriptorSet writeDescriptorSetOp{};
+        writeDescriptorSetOp.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writeDescriptorSetOp.dstSet = descriptorSets[i];
+        writeDescriptorSetOp.dstBinding = 0;
+        writeDescriptorSetOp.dstArrayElement = 0;
+        writeDescriptorSetOp.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        writeDescriptorSetOp.descriptorCount = 1;
+
+        writeDescriptorSetOp.pBufferInfo = &bufferInfo;
+        /*-- These next two are only used for other type of descriptors (e.g. texture samplers) --*/
+        writeDescriptorSetOp.pImageInfo = nullptr;
+        writeDescriptorSetOp.pTexelBufferView = nullptr;
+
+        vkUpdateDescriptorSets(logiDevice, 1, &writeDescriptorSetOp, 0, nullptr);
+    }
+}
+
 #endif 
 
 
@@ -862,6 +968,31 @@ void HelloTriangleApplication::createCommandPool(){
     }
 }
 
+void HelloTriangleApplication::createSyncObjects(){
+    imageWriteableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    renderingFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    frameFences.resize(MAX_FRAMES_IN_FLIGHT);
+
+    VkSemaphoreCreateInfo semaphoreCreateInfo{};
+    semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkFenceCreateInfo fenceCreateInfo{};
+    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    for (int i = 0 ; i < MAX_FRAMES_IN_FLIGHT; i++){
+        if(vkCreateSemaphore(logiDevice, &semaphoreCreateInfo, nullptr, &imageWriteableSemaphores[i]) != VK_SUCCESS){
+            throw std::runtime_error("failed to create semaphore for signaling image is writeable");
+        }
+        if(vkCreateSemaphore(logiDevice, &semaphoreCreateInfo, nullptr, &renderingFinishedSemaphores[i]) != VK_SUCCESS){
+            throw std::runtime_error("failed to create semaphore for signaling rendering has finished");
+        }
+        if(vkCreateFence(logiDevice, &fenceCreateInfo, nullptr, &frameFences[i]) != VK_SUCCESS){
+            throw std::runtime_error("failed to create fence for signaling the frame is in flight");
+        }
+    }
+}
+
 void HelloTriangleApplication::createCommandBuffers(){
     graphicsCBuffers.resize(MAX_FRAMES_IN_FLIGHT);
     VkCommandBufferAllocateInfo graphicsCBufferAllocationInfo{};
@@ -878,70 +1009,5 @@ void HelloTriangleApplication::createCommandBuffers(){
     VkResult allocationResult = vkAllocateCommandBuffers(logiDevice, &graphicsCBufferAllocationInfo, graphicsCBuffers.data()) ;
     if (allocationResult!= VK_SUCCESS){
         throw std::runtime_error("failed to allocate graphics command buffer");
-    }
-}
-
-void HelloTriangleApplication::recordCommandBuffer(VkCommandBuffer buffer, uint32_t swapchainImageIndex){
-    VkCommandBufferBeginInfo bufferBeginInfo{};
-    bufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    /*
-        VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT: The command buffer will be rerecorded right after executing it once.
-        VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT: This is a secondary command buffer that will be entirely within a single render pass.
-        VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT: The command buffer can be resubmitted while it is also already pending execution
-    */
-    bufferBeginInfo.flags = 0;
-    bufferBeginInfo.pInheritanceInfo = nullptr; // Do not inherit from any other begin info.
-
-    // vkBeginCommandBuffer resets the command buffer everytime it is called.
-    if (vkBeginCommandBuffer(buffer, &bufferBeginInfo) != VK_SUCCESS){
-        throw std::runtime_error("failed to begin recording the command buffer");
-    }
-
-    /*-------------------------Render Pass Setup-----------------------------*/
-    VkRenderPassBeginInfo renderPassBeginInfo{};
-    renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassBeginInfo.renderPass = renderPass;
-    renderPassBeginInfo.framebuffer = swapchainFramebuffers[swapchainImageIndex];
-    renderPassBeginInfo.renderArea.offset = {0, 0};
-    renderPassBeginInfo.renderArea.extent = selectedSwapChainWindowSize;
-    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f }}}; // Clear frame to black
-    renderPassBeginInfo.clearValueCount = 1;
-    renderPassBeginInfo.pClearValues = &clearColor;
-
-    vkCmdBeginRenderPass(buffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-    /*-------------------------Graphics Pipeline Binding-----------------------------*/
-    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gPipeline);
-    // Setup of scissor and viewport as they are dynamic
-    VkViewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = static_cast<float>(selectedSwapChainWindowSize.width);
-    viewport.height = static_cast<float>(selectedSwapChainWindowSize.height);
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(buffer, 0,1, &viewport);
-
-    VkRect2D scissor{};
-    scissor.offset = {0, 0};
-    scissor.extent = selectedSwapChainWindowSize;
-    vkCmdSetScissor(buffer, 0, 1, &scissor);
-
-    #ifdef HELIUM_VERTEX_BUFFERS
-    vkCmdBindPipeline(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gPipeline);
-    VkBuffer vertBuffers[]= {vertexBuffer};
-    VkDeviceSize memoryOffsets[] = {0};
-    vkCmdBindVertexBuffers(buffer, 0, 1, vertBuffers, memoryOffsets);
-    vkCmdBindIndexBuffer(buffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
-
-    vkCmdDrawIndexed(buffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
-    #else
-    vkCmdDraw(buffer, 3, 1, 0, 0);
-    #endif
-
-    vkCmdEndRenderPass(buffer);
-
-    if (vkEndCommandBuffer(buffer) != VK_SUCCESS){
-        throw std::runtime_error("failed to record the graphics command buffer");
     }
 }

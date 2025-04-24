@@ -58,6 +58,8 @@ void HelloTriangleApplication::initVulkan() {
     std::cout<< "created image view" << std::endl;
     createRenderPass();
     std::cout<< "created render pass" << std::endl;
+    createDescriptorSetLayout();
+    std::cout<< "created uniform buffer object bindings" << std::endl;
     createPipeline();
     std::cout<< "created pipeline" << std::endl;
     createFramebuffers();
@@ -69,6 +71,12 @@ void HelloTriangleApplication::initVulkan() {
     std::cout << "creates and bound vertex buffers" << std::endl;
     createDeviceIndexBuffer();
     std::cout << "created and bound index buffers" << std::endl;
+    createCoherentUniformBuffers();
+    std::cout << "created and bound uniform buffers" << std::endl;
+    createDescriptorPool();
+    std::cout << "created descriptor pool" << std::endl;
+    createDescriptorSets();
+    std::cout << "created descriptor sets" << std::endl;
     #endif
     createCommandBuffers();
     std::cout<< "created command buffers" << std::endl;
@@ -89,6 +97,12 @@ void HelloTriangleApplication::mainLoop() {
 void HelloTriangleApplication::cleanup() {
     destroySwapChain();
 
+    for (size_t i =0 ; i < mvpMatUniformBuffers.size(); i++){
+        vkDestroyBuffer(logiDevice, mvpMatUniformBuffers[i], nullptr);
+        vkFreeMemory(logiDevice, mvpMatUniformBuffersMemory[i], nullptr);
+    }
+    vkDestroyDescriptorPool(logiDevice, descriptorPool, nullptr);
+    vkDestroyDescriptorSetLayout(logiDevice, mvpMatDescriptorMemLayout, nullptr);
     vkDestroyBuffer(logiDevice, vertexBuffer, nullptr);
     vkFreeMemory(logiDevice, vertexBufferMemory, nullptr);
     vkDestroyBuffer(logiDevice, indexBuffer, nullptr);
@@ -147,11 +161,13 @@ void HelloTriangleApplication::drawFrame(){
     flout << "FRAME:"<< frameCounter << std::endl;
     flout << "waiting for frame" << std::endl;
     emitFenceStatus(logiDevice, &frameFences[currentFrame]);
-
+    
     VkResult waitFencesResult =  vkWaitForFences(logiDevice, 1, &frameFences[currentFrame], VK_TRUE, UINT64_MAX);
     
     flout << "Wait fences result:------" << VkResultToString(waitFencesResult) << std::endl;
     flout << "fence signaled" << std::endl;
+    
+    updateModelViewProj(currentFrame);
 
     uint32_t imageSwapchainIndex;
     VkResult acquireImageResult = vkAcquireNextImageKHR(logiDevice, swapChain, UINT64_MAX, imageWriteableSemaphores[currentFrame], VK_NULL_HANDLE, &imageSwapchainIndex);
