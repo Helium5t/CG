@@ -19,6 +19,7 @@
 #include <GLFW/glfw3.h>
 // linear algebra library 
 #define GLM_FORCE_RADIANS // Make sure glm is using radians as the argument unit in the library definition
+#define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES // For non-nested structures, makes sure all types are aligned according to Vulkan/SPIR-V specification https://docs.vulkan.org/guide/latest/shader_memory_layout.html
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
