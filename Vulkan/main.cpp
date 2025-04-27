@@ -67,6 +67,8 @@ void HelloTriangleApplication::initVulkan() {
     createCommandPool();
     std::cout<< "created command pool" << std::endl;
     #ifdef HELIUM_VERTEX_BUFFERS
+    createTextureImage();
+    std::cout<< "created texture image" << std::endl;
     createDeviceVertexBuffer();
     std::cout << "creates and bound vertex buffers" << std::endl;
     createDeviceIndexBuffer();

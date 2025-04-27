@@ -856,6 +856,40 @@ void HelloTriangleApplication::createDescriptorSets(){
     }
 }
 
+
+void HelloTriangleApplication::createTextureImage(){
+    int texWidth, texHeight, texChannels;
+    /*
+    stbi_uc* points to the first pixel in an array of pixels of the image. Each pixels occupies 4 bytes.
+    Order is row by row, so if an image is 100 wide and 200 high we will have:
+    [pixels 0...99]
+    [row 2] 
+    [row 199] 
+    */
+    stbi_uc* firstPixelPointer = loadImage("textures/tex.jpg", &texWidth, &texHeight, &texChannels);
+    VkDeviceSize imageSize = texWidth * texHeight * 4;
+    if (!firstPixelPointer) {
+        throw std::runtime_error("failed to load texture");
+    }
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingMemory;
+
+    createAndBindDeviceBuffer(imageSize,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+    stagingBuffer,
+    stagingMemory);
+
+    void *data;
+    vkMapMemory(logiDevice, stagingMemory, 0, imageSize, 0, &data);
+    memcpy(data, firstPixelPointer, static_cast<size_t>(imageSize));
+    vkUnmapMemory(logiDevice, stagingMemory);
+
+    stbi_image_free(firstPixelPointer);
+
+}
+
 #endif 
 
 

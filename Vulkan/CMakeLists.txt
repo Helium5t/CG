@@ -4,6 +4,11 @@ project(hello VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 
+
+# add_definitions(
+#     -DSTB_IMAGE_IMPLEMENTATION
+# )
+
 add_executable(
     hello heliumdebug.cpp
     main.cpp 
@@ -14,7 +19,13 @@ add_executable(
     shaders.cpp 
     sync.cpp
     vertex.cpp
-    )
+    image.cpp
+)
+
+# Adding stb_image which is not CPM friendly
+target_include_directories(hello PRIVATE ${CMAKE_SOURCE_DIR}/deps)
+# target_compile_definitions(hello PRIVATE STB_IMAGE_IMPLEMENTATION)
+# end
 
 include(cmake/CPM.cmake)
 

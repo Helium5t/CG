@@ -1,5 +1,4 @@
-#ifndef HELIUM_MAIN_H
-#define HELIUM_MAIN_H
+#pragma once
 
 #include <iostream>
 #include <stdexcept>
@@ -20,9 +19,11 @@
 // linear algebra library 
 #define GLM_FORCE_RADIANS // Make sure glm is using radians as the argument unit in the library definition
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES // For non-nested structures, makes sure all types are aligned according to Vulkan/SPIR-V specification https://docs.vulkan.org/guide/latest/shader_memory_layout.html
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "stb_image.h"
 #include <chrono>
 
 #define HELIUM_VERTEX_BUFFERS
@@ -167,6 +168,7 @@ private:
     void createDeviceIndexBuffer();
     void createCoherentUniformBuffers();
     void createDescriptorPool();
+    void createTextureImage();
     void createDescriptorSets();
     #endif
 
@@ -206,6 +208,9 @@ private:
     
     void fillCreateInfoForDebugHandler(VkDebugUtilsMessengerCreateInfoEXT& toBeFilled);
 
+    //-------------------------------image.cpp
+    stbi_uc* loadImage(const char* path, int* width, int* height, int* channels);
+
     //-------------------------------shaders.cpp
     VkShaderModule createShaderModule(const std::vector<char> binary);
 };
@@ -237,5 +242,3 @@ struct ModelViewProjection{
     glm::mat4 view;
     glm::mat4 projection;
 };
-
-#endif
