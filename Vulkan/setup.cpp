@@ -672,7 +672,7 @@ void HelloTriangleApplication::createAndBindDeviceBuffer(
 
 #ifdef HELIUM_VERTEX_BUFFERS
 
-void HelloTriangleApplication::createDeviceIndexBuffer(){
+void HelloTriangleApplication::createDeviceIndexBuffer(VkCommandBuffer oneTimeCommandBuffer){
     VkDeviceSize indexBufferSize = 
         sizeof(indices[0]) * indices.size();
 
@@ -703,7 +703,7 @@ void HelloTriangleApplication::createDeviceIndexBuffer(){
         indexBufferMemory
     );
 
-    bufferCopy(stagingBuffer, indexBuffer, indexBufferSize);
+    bufferCopy(stagingBuffer, indexBuffer, indexBufferSize,oneTimeCommandBuffer);
 
     vkDestroyBuffer(logiDevice, stagingBuffer, nullptr);
     vkFreeMemory(logiDevice, stagingBufferMemory, nullptr);
@@ -711,7 +711,7 @@ void HelloTriangleApplication::createDeviceIndexBuffer(){
 
 }
 
-void HelloTriangleApplication::createDeviceVertexBuffer(){
+void HelloTriangleApplication::createDeviceVertexBuffer(VkCommandBuffer oneTimeCommandBuffer){
     VkDeviceSize vertexBufferSize = 
         sizeof(vertices[0]) * vertices.size();
 
@@ -749,7 +749,7 @@ void HelloTriangleApplication::createDeviceVertexBuffer(){
         vertexBufferMemory
     );
 
-    bufferCopy(stagingBuffer, vertexBuffer, vertexBufferSize);
+    bufferCopy(stagingBuffer, vertexBuffer, vertexBufferSize, oneTimeCommandBuffer);
 
     vkDestroyBuffer(logiDevice, stagingBuffer, nullptr);
     vkFreeMemory(logiDevice, stagingBufferMemory, nullptr);
@@ -911,7 +911,7 @@ void HelloTriangleApplication::createAndBindDeviceImage(int width, int height, V
 }
 
 
-void HelloTriangleApplication::createTextureImage(){
+void HelloTriangleApplication::createTextureImage(VkCommandBuffer oneTimeBuffer){
     int texWidth, texHeight, texChannels;
     /*
     stbi_uc* points to the first pixel in an array of pixels of the image. Each pixels occupies 4 bytes.
@@ -920,7 +920,7 @@ void HelloTriangleApplication::createTextureImage(){
     [row 2] 
     [row 199] 
     */
-    stbi_uc* firstPixelPointer = loadImage("textures/tex.jpg", &texWidth, &texHeight, &texChannels);
+    stbi_uc* firstPixelPointer = loadImage("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/textures/tex.jpg", &texWidth, &texHeight, &texChannels);
     VkDeviceSize imageSize = texWidth * texHeight * 4;
     if (!firstPixelPointer) {
         throw std::runtime_error("failed to load texture");
@@ -943,15 +943,72 @@ void HelloTriangleApplication::createTextureImage(){
     stbi_image_free(firstPixelPointer);
 
     createAndBindDeviceImage(texWidth, texHeight, textureImageDescriptor, textureImageDeviceMemory);
-    
+
+    convertImageLayout(textureImageDescriptor, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, oneTimeBuffer);
+    bufferCopyToImage(
+        stagingBuffer,
+        textureImageDescriptor, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight), oneTimeBuffer
+    );
+    convertImageLayout(textureImageDescriptor, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, oneTimeBuffer);
+
+}
+
+void HelloTriangleApplication::convertImageLayout(VkImage srcImage, VkFormat format, VkImageLayout srcLayout, VkImageLayout dstLayout, VkCommandBuffer oneTimeBuffer){
+    /* Memory barriers not only act as synchronizers in the pipeline, but
+        also act as checkpoints for memory ownership transfers (e.g. from graphics queue to presentation queue)
+        as well as layout conversions. */
+    VkImageMemoryBarrier layoutConversionBarrier{};
+    layoutConversionBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    layoutConversionBarrier.oldLayout = srcLayout;
+    layoutConversionBarrier.newLayout = dstLayout;
+    layoutConversionBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    layoutConversionBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+    layoutConversionBarrier.image = srcImage;
+    layoutConversionBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    layoutConversionBarrier.subresourceRange.baseMipLevel = 0;
+    layoutConversionBarrier.subresourceRange.levelCount = 1;
+    layoutConversionBarrier.subresourceRange.baseArrayLayer = 0;
+    layoutConversionBarrier.subresourceRange.layerCount = 1;
+
+    layoutConversionBarrier.srcAccessMask = 0; // Incomplete, we need to set the pre-barrier and post-barrier ops 
+    layoutConversionBarrier.dstAccessMask = 0;
+
+    vkCmdPipelineBarrier(
+        oneTimeBuffer, 0,/* Incomplete depends on the layout change */
+        0, /* Incomplete depends on the layout change */
+        0, 0, nullptr, 0, nullptr, 1 , &layoutConversionBarrier
+    );
+
+
+
 }
 
 #endif 
 
+void HelloTriangleApplication::bufferCopyToImage(VkBuffer srcBuffer, VkImage dstImage, uint32_t w, uint32_t h, VkCommandBuffer oneTimeBuffer){
+    VkBufferImageCopy imageCopyOp{};
+    imageCopyOp.bufferOffset = 0;
+    imageCopyOp.bufferRowLength = 0;
+    imageCopyOp.bufferImageHeight = 0;
+    
+    imageCopyOp.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    imageCopyOp.imageSubresource.mipLevel = 0;
+    imageCopyOp.imageSubresource.baseArrayLayer = 0;
+    imageCopyOp.imageSubresource.layerCount = 0;
+    imageCopyOp.imageOffset = {0,0,0};
+    imageCopyOp.imageExtent= {
+        w,
+        h,
+        1
+    };
 
-// Copies from src to dst a {size} amount of bytes. It uses the graphics command queue and waits for it to be idle.
-// Not the best perf. wise.
-void HelloTriangleApplication::bufferCopy(VkBuffer src, VkBuffer dst, VkDeviceSize size){
+    vkCmdCopyBufferToImage(
+        oneTimeBuffer, srcBuffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageCopyOp
+    );
+}
+
+VkCommandBuffer HelloTriangleApplication::beginOneTimeCommands(){
     VkCommandBufferAllocateInfo tempBufferCreationInfo{};
     tempBufferCreationInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     tempBufferCreationInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -968,26 +1025,37 @@ void HelloTriangleApplication::bufferCopy(VkBuffer src, VkBuffer dst, VkDeviceSi
 
     vkBeginCommandBuffer(tempBuffer, &beginInfo);
 
+    return tempBuffer;
+}
+
+void HelloTriangleApplication::endOneTimeCommands(VkCommandBuffer buffer){
+    vkEndCommandBuffer(buffer);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &buffer;
+
+    vkQueueSubmit(graphicsCommandQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    // Wait for queue to be empty before continuing. Makes sure the full buffer is copied.
+    vkQueueWaitIdle(graphicsCommandQueue);
+
+    vkFreeCommandBuffers(logiDevice, commandPool, 1, &buffer);
+}
+
+
+// Copies from src to dst a {size} amount of bytes. It uses the graphics command queue and waits for it to be idle.
+// Not the best perf. wise.
+void HelloTriangleApplication::bufferCopy(VkBuffer src, VkBuffer dst, VkDeviceSize size, VkCommandBuffer oneTimeBuffer){
+
     /* Describes the region to copy by it's start index on both buffers and the amount of bytes */
     VkBufferCopy copyOpDesc{};
     copyOpDesc.srcOffset = 0;
     copyOpDesc.dstOffset = 0;
     copyOpDesc.size = size;
 
-    vkCmdCopyBuffer(tempBuffer, src, dst, 1, &copyOpDesc);
+    vkCmdCopyBuffer(oneTimeBuffer, src, dst, 1, &copyOpDesc);
 
-    vkEndCommandBuffer(tempBuffer);
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &tempBuffer;
-
-    vkQueueSubmit(graphicsCommandQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    // Wait for queue to be empty before continuing. Makes sure the full buffer is copied.
-    vkQueueWaitIdle(graphicsCommandQueue);
-
-    vkFreeCommandBuffers(logiDevice, commandPool, 1, &tempBuffer);
 }
 
 uint32_t HelloTriangleApplication::getFirstUsableMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags requiredPropertyFlags){

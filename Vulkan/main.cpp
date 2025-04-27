@@ -66,12 +66,14 @@ void HelloTriangleApplication::initVulkan() {
     std::cout<< "created frame buffers" << std::endl;
     createCommandPool();
     std::cout<< "created command pool" << std::endl;
+    VkCommandBuffer oneTimeBuffer = beginOneTimeCommands();
+    std::cout<< "created command buffer for one time commands" << std::endl;
     #ifdef HELIUM_VERTEX_BUFFERS
-    createTextureImage();
+    createTextureImage(oneTimeBuffer);
     std::cout<< "created texture image" << std::endl;
-    createDeviceVertexBuffer();
+    createDeviceVertexBuffer(oneTimeBuffer);
     std::cout << "creates and bound vertex buffers" << std::endl;
-    createDeviceIndexBuffer();
+    createDeviceIndexBuffer(oneTimeBuffer);
     std::cout << "created and bound index buffers" << std::endl;
     createCoherentUniformBuffers();
     std::cout << "created and bound uniform buffers" << std::endl;
@@ -80,6 +82,8 @@ void HelloTriangleApplication::initVulkan() {
     createDescriptorSets();
     std::cout << "created descriptor sets" << std::endl;
     #endif
+    endOneTimeCommands(oneTimeBuffer);
+    std::cout << "completed and submitted one time commands" << std::endl;
     createCommandBuffers();
     std::cout<< "created command buffers" << std::endl;
     createSyncObjects();
