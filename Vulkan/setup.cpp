@@ -648,7 +648,7 @@ void HelloTriangleApplication::createAndBindDeviceBuffer(
    bufferCreationInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
    
    if (vkCreateBuffer(logiDevice, &bufferCreationInfo, nullptr, &buffer) != VK_SUCCESS){
-       throw std::runtime_error("failed to create the vertex buffer object on the device");
+       throw std::runtime_error("failed to create the buffer object on the device");
     }
     
     /*----- Allocate memory -----*/
@@ -662,7 +662,7 @@ void HelloTriangleApplication::createAndBindDeviceBuffer(
         memReqs.memoryTypeBits, propertyFlags);
         
     if(vkAllocateMemory(logiDevice, &allocationInfo, nullptr, &bufferMemory) != VK_SUCCESS){
-        throw std::runtime_error("failed to allocate buffer device memory for vertex buffer object");
+        throw std::runtime_error("failed to allocate buffer device memory for buffer object being created");
     }
     
     /*----- Bind allocated memory to vertex buffer object -----*/
@@ -856,6 +856,60 @@ void HelloTriangleApplication::createDescriptorSets(){
     }
 }
 
+void HelloTriangleApplication::createAndBindDeviceImage(int width, int height, VkImage imageDescriptor, VkDeviceMemory imageMemory){
+
+    VkImageCreateInfo imageCreationInfo{};
+    imageCreationInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    /*
+    VK_IMAGE_TYPE_1D : Basically a buffer of pixels (e.g. gradients)
+    VK_IMAGE_TYPE_2D : Typical texture with x y coordinates 
+    VK_IMAGE_TYPE_3D : Voxel textures / Cubemaps  
+    */
+    imageCreationInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageCreationInfo.extent.width = width;
+    imageCreationInfo.extent.height = height;
+    imageCreationInfo.extent.depth = 1; // For cubemaps
+    imageCreationInfo.mipLevels = 1;
+    imageCreationInfo.arrayLayers = 1;
+    imageCreationInfo.format = VK_FORMAT_R8G8B8A8_SRGB; // 8b * 4 = 32bits = 4 bytes per pixel from before
+    /*
+    VK_IMAGE_TILING_OPTIMAL : Lets the underlying driver decide to improve memory access. 
+    VK_IMAGE_TILING_LINEAR  : texels are ordered as if a matrix, allows for precise texel access.
+
+    NB: This is for the LOW LEVEL MEMORY only, this will not affect UV access as it is done through the sampler.
+    Think of it this way, LINEAR allows access to the raw memory same as a C pointer to an array, so adding to the pointer 
+    the size of the element would give you the next element in the array.
+    OPTIMAL chooses to forfeit this method of access to optimize access times, we almost never need to access texture memory
+    in a linear way anyway but rather "randomly"(from a locality perspective).
+    */
+    imageCreationInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imageCreationInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    imageCreationInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE; /* Only used by graphics queue */
+    imageCreationInfo.samples = VK_SAMPLE_COUNT_1_BIT; /* No multisampling, as that is reserved to color attachments*/
+    imageCreationInfo.flags = 0;
+
+    if(vkCreateImage(logiDevice, &imageCreationInfo, nullptr, &imageDescriptor) != VK_SUCCESS){
+        throw std::runtime_error("failed to create texture on the device");
+    }
+
+    VkMemoryRequirements memReq;
+    vkGetImageMemoryRequirements(logiDevice, imageDescriptor, &memReq);
+
+    VkMemoryAllocateInfo textureAllocationInfo{};
+    textureAllocationInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    textureAllocationInfo.allocationSize = memReq.size;
+    textureAllocationInfo.memoryTypeIndex = getFirstUsableMemoryType(
+        memReq.memoryTypeBits, 
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+    );
+
+    if (vkAllocateMemory(logiDevice, &textureAllocationInfo, nullptr, &imageMemory) != VK_SUCCESS){
+        throw std::runtime_error("could not allocate memory for the texture");
+    }
+
+    vkBindImageMemory(logiDevice, imageDescriptor, imageMemory, 0);
+}
+
 
 void HelloTriangleApplication::createTextureImage(){
     int texWidth, texHeight, texChannels;
@@ -888,6 +942,8 @@ void HelloTriangleApplication::createTextureImage(){
 
     stbi_image_free(firstPixelPointer);
 
+    createAndBindDeviceImage(texWidth, texHeight, textureImageDescriptor, textureImageDeviceMemory);
+    
 }
 
 #endif 

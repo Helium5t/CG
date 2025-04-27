@@ -89,6 +89,9 @@ private:
     VkBuffer indexBuffer;
     VkDeviceMemory indexBufferMemory;
 
+    VkImage textureImageDescriptor;
+    VkDeviceMemory textureImageDeviceMemory;
+
     /*-
         We need multiple buffers as the mvp mat is updated each frame and we might have multiple frames in flight
         having only one would cause us to have a delay/run condition and a whole slew of issues.
@@ -168,6 +171,7 @@ private:
     void createDeviceIndexBuffer();
     void createCoherentUniformBuffers();
     void createDescriptorPool();
+    void createAndBindDeviceImage(int width, int height, VkImage image, VkDeviceMemory mem);
     void createTextureImage();
     void createDescriptorSets();
     #endif
