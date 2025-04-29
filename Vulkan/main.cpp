@@ -66,14 +66,12 @@ void HelloTriangleApplication::initVulkan() {
     std::cout<< "created frame buffers" << std::endl;
     createCommandPool();
     std::cout<< "created command pool" << std::endl;
-    VkCommandBuffer oneTimeBuffer = beginOneTimeCommands();
-    std::cout<< "created command buffer for one time commands" << std::endl;
     #ifdef HELIUM_VERTEX_BUFFERS
-    createTextureImage(oneTimeBuffer);
+    createTextureImage();
     std::cout<< "created texture image" << std::endl;
-    createDeviceVertexBuffer(oneTimeBuffer);
+    createDeviceVertexBuffer();
     std::cout << "creates and bound vertex buffers" << std::endl;
-    createDeviceIndexBuffer(oneTimeBuffer);
+    createDeviceIndexBuffer();
     std::cout << "created and bound index buffers" << std::endl;
     createCoherentUniformBuffers();
     std::cout << "created and bound uniform buffers" << std::endl;
@@ -82,8 +80,6 @@ void HelloTriangleApplication::initVulkan() {
     createDescriptorSets();
     std::cout << "created descriptor sets" << std::endl;
     #endif
-    endOneTimeCommands(oneTimeBuffer);
-    std::cout << "completed and submitted one time commands" << std::endl;
     createCommandBuffers();
     std::cout<< "created command buffers" << std::endl;
     createSyncObjects();
@@ -103,12 +99,16 @@ void HelloTriangleApplication::mainLoop() {
 void HelloTriangleApplication::cleanup() {
     destroySwapChain();
 
+    vkDestroyImage(logiDevice, textureImageDescriptor, nullptr);
+    vkFreeMemory(logiDevice, textureImageDeviceMemory, nullptr);
+
     for (size_t i =0 ; i < mvpMatUniformBuffers.size(); i++){
         vkDestroyBuffer(logiDevice, mvpMatUniformBuffers[i], nullptr);
         vkFreeMemory(logiDevice, mvpMatUniformBuffersMemory[i], nullptr);
     }
     vkDestroyDescriptorPool(logiDevice, descriptorPool, nullptr);
     vkDestroyDescriptorSetLayout(logiDevice, mvpMatDescriptorMemLayout, nullptr);
+    
     vkDestroyBuffer(logiDevice, vertexBuffer, nullptr);
     vkFreeMemory(logiDevice, vertexBufferMemory, nullptr);
     vkDestroyBuffer(logiDevice, indexBuffer, nullptr);

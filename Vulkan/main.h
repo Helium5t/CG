@@ -160,23 +160,23 @@ private:
     void createRenderPass();
     void createPipeline();
     void createFramebuffers();
-    void bufferCopy(VkBuffer src, VkBuffer dst, VkDeviceSize size, VkCommandBuffer tempBuffer);
+    void bufferCopy(VkBuffer src, VkBuffer dst, VkDeviceSize size);
     void createCommandPool();
     void createAndBindDeviceBuffer( VkDeviceSize bufferSize, VkBufferUsageFlags bufferUsage, VkMemoryPropertyFlags propertyFlags, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     void createCommandBuffers();
     void createSyncObjects();
     #ifdef HELIUM_VERTEX_BUFFERS
-    void createDeviceVertexBuffer(VkCommandBuffer tempBuffer);
+    void createDeviceVertexBuffer();
     void createDescriptorSetLayout();
-    void createDeviceIndexBuffer(VkCommandBuffer tempBuffer);
+    void createDeviceIndexBuffer();
     void createCoherentUniformBuffers();
     void createDescriptorPool();
-    void createAndBindDeviceImage(int width, int height, VkImage image, VkDeviceMemory mem);
-    void createTextureImage(VkCommandBuffer tempBuffer);
+    void createAndBindDeviceImage(int width, int height, VkImage& image, VkDeviceMemory mem, VkFormat format);
+    void createTextureImage();
     void createDescriptorSets();
     #endif
-    void convertImageLayout(VkImage srcImage, VkFormat format, VkImageLayout srcLayout, VkImageLayout dstLayout, VkCommandBuffer tempBuffer);
-    void bufferCopyToImage(VkBuffer srcBuffer, VkImage dstImage, uint32_t w, uint32_t h, VkCommandBuffer tempBuffer);
+    void convertImageLayout(VkImage srcImage, VkFormat format, VkImageLayout srcLayout, VkImageLayout dstLayout);
+    void bufferCopyToImage(VkBuffer srcBuffer, VkImage dstImage, uint32_t w, uint32_t h);
     VkCommandBuffer beginOneTimeCommands();
     void endOneTimeCommands(VkCommandBuffer tempBuffer);
 
