@@ -12,9 +12,12 @@ VkVertexInputBindingDescription Vert::getBindingDescription(){
     return bindingDescription;
 }
 
-// We have two bindings, one for location 0 (inPosition), the other for location 1 (inColor)
-std::array<VkVertexInputAttributeDescription, 2> Vert::getAttributeDescription(){
-    std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+/* We have three bindings:
+ location 0 (inPosition)
+ color 1 (inColor)
+ texCoords 2 (uv) */
+std::array<VkVertexInputAttributeDescription, 3> Vert::getAttributeDescription(){
+    std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
     // The binding for Vert is defined at index 0 so 0.
     attributeDescriptions[0].binding = 0; // Binding index  from where the attribute takes data from ( the .binding from the binding descriptor)
     attributeDescriptions[0].location = 0; // number in the layout of the shader (layout(location =....))
@@ -38,5 +41,11 @@ std::array<VkVertexInputAttributeDescription, 2> Vert::getAttributeDescription()
     attributeDescriptions[1].location = 1; // inColor is at 1
     attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT; // vec3 of floats
     attributeDescriptions[1].offset = offsetof(Vert, col);
+
+    /*-----main tex-----*/
+    attributeDescriptions[2].binding = 0;
+    attributeDescriptions[2].location = 2;
+    attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[2].offset = offsetof(Vert, texCoords);
     return attributeDescriptions;
 }

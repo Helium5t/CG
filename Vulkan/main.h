@@ -81,7 +81,12 @@ private:
     VkRenderPass renderPass;
     VkPipeline gPipeline; 
 
-    VkDescriptorSetLayout mvpMatDescriptorMemLayout;
+    /*
+    Contains bindings for:
+    - MVP matrix
+    - Main Texture
+    */
+    VkDescriptorSetLayout mainDescriptorSetLayout;
 
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
@@ -89,8 +94,10 @@ private:
     VkBuffer indexBuffer;
     VkDeviceMemory indexBufferMemory;
 
-    VkImage textureImageDescriptor;
+    VkImage textureImageHandle;
     VkDeviceMemory textureImageDeviceMemory;
+    VkImageView textureImageView;
+    VkSampler textureSampler;
 
     /*-
         We need multiple buffers as the mvp mat is updated each frame and we might have multiple frames in flight
@@ -173,6 +180,8 @@ private:
     void createDescriptorPool();
     void createAndBindDeviceImage(int width, int height, VkImage& image, VkDeviceMemory& mem, VkFormat format);
     void createTextureImage();
+    void createTextureImageView();
+    void createTextureSampler();
     void createDescriptorSets();
     #endif
     void convertImageLayout(VkImage srcImage, VkFormat format, VkImageLayout srcLayout, VkImageLayout dstLayout);
@@ -218,6 +227,7 @@ private:
 
     //-------------------------------image.cpp
     stbi_uc* loadImage(const char* path, int* width, int* height, int* channels);
+    VkImageView createViewFor2DImage(VkImage image, VkFormat format);
 
     //-------------------------------shaders.cpp
     VkShaderModule createShaderModule(const std::vector<char> binary);
@@ -227,15 +237,16 @@ private:
 struct Vert{
     glm::vec2 pos;
     glm::vec3 col;
-    static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescription();
+    glm::vec2 texCoords;
+    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescription();
     static VkVertexInputBindingDescription getBindingDescription();
 };
 
 const std::vector<Vert> vertices = {
-    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
 };
 
 const std::vector<uint16_t> indices = {

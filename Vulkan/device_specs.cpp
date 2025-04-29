@@ -20,6 +20,11 @@ bool HelloTriangleApplication::rateDeviceSupport(VkPhysicalDevice vkpd){
     if (!supportsRequiredDeviceExtensions(vkpd)){
         return false;
     }
+    VkPhysicalDeviceFeatures features;
+    vkGetPhysicalDeviceFeatures(vkpd, &features);
+    if (!features.samplerAnisotropy){ // We need anisotropic filtering.
+        return false;
+    }
     SwapChainSpecifications swapChainSpecs = checkSwapChainSpecifications(vkpd);
     if (swapChainSpecs.presentModes.empty() || swapChainSpecs.imageFormats.empty()){
         return false;
