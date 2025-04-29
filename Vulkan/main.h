@@ -91,6 +91,7 @@ private:
 
     VkImage textureImageDescriptor;
     VkDeviceMemory textureImageDeviceMemory;
+    VkImageView textureImageView;
 
     /*-
         We need multiple buffers as the mvp mat is updated each frame and we might have multiple frames in flight
@@ -173,6 +174,7 @@ private:
     void createDescriptorPool();
     void createAndBindDeviceImage(int width, int height, VkImage& image, VkDeviceMemory& mem, VkFormat format);
     void createTextureImage();
+    void createTextureImageView();
     void createDescriptorSets();
     #endif
     void convertImageLayout(VkImage srcImage, VkFormat format, VkImageLayout srcLayout, VkImageLayout dstLayout);
@@ -218,6 +220,7 @@ private:
 
     //-------------------------------image.cpp
     stbi_uc* loadImage(const char* path, int* width, int* height, int* channels);
+    VkImageView createViewFor2DImage(VkImage image, VkFormat format);
 
     //-------------------------------shaders.cpp
     VkShaderModule createShaderModule(const std::vector<char> binary);

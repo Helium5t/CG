@@ -65,10 +65,12 @@ void HelloTriangleApplication::initVulkan() {
     createFramebuffers();
     std::cout<< "created frame buffers" << std::endl;
     createCommandPool();
-    std::cout<< "created command pool" << std::endl;
+    std::cout << "created command pool" << std::endl;
     #ifdef HELIUM_VERTEX_BUFFERS
     createTextureImage();
-    std::cout<< "created texture image" << std::endl;
+    std::cout << "created texture image" << std::endl;
+    createTextureImageView();
+    std::cout << "created view for texture image" << std::endl;
     createDeviceVertexBuffer();
     std::cout << "creates and bound vertex buffers" << std::endl;
     createDeviceIndexBuffer();
@@ -99,6 +101,7 @@ void HelloTriangleApplication::mainLoop() {
 void HelloTriangleApplication::cleanup() {
     destroySwapChain();
 
+    vkDestroyImageView(logiDevice, textureImageView, nullptr);
     vkDestroyImage(logiDevice, textureImageDescriptor, nullptr);
     vkFreeMemory(logiDevice, textureImageDeviceMemory, nullptr);
 

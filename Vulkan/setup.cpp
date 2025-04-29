@@ -250,42 +250,10 @@ void HelloTriangleApplication::createSwapChain(){
 void HelloTriangleApplication::createImageView(){
     swapChainImageViews.resize(swapChainImages.size());
     for (int i =0; i< swapChainImages.size(); i++){
-        VkImageViewCreateInfo viewCreationInfo{};
-        viewCreationInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        viewCreationInfo.format = selectedSwapChainFormat;
-        viewCreationInfo.image = swapChainImages[i];
-        viewCreationInfo.viewType = VK_IMAGE_VIEW_TYPE_2D; // We will be passing 2D textures (you can also pass 1D and 3D textures)
-        /*
-        Swizzle allows you to, intuitively, swizzle the source channels around. 
-        IDENTITY    : Channel is the same as the source (e.g. imageView.r = sourceImage.r)
-        ZERO        : Channel is always 0
-        ONE         : Channel is always 1 (e.g. if all image view channel are 1 the image will always be white)  
-        R           : Map channel to red channel    (imageView.x = sourceImage.r)
-        G           : Map channel to green channel  (e.g. imageView.r = sourceImage.g)
-        B           : Map channel to blue channel
-        A           : Map channel to alpha channel
-        */
-        viewCreationInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-        viewCreationInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-        viewCreationInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-        viewCreationInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-        viewCreationInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        // Multiple layers can be useful for steroscopic apps (VR) and have each eye map to a layer
-        viewCreationInfo.subresourceRange.baseArrayLayer = 0; // Only one layer, layer 0
-        viewCreationInfo.subresourceRange.baseMipLevel = 0; // No mipmaps 
-        viewCreationInfo.subresourceRange.layerCount = 1;
-        viewCreationInfo.subresourceRange.levelCount = 1;
-
-        VkResult viewCreationResult = vkCreateImageView(
-            logiDevice,
-            &viewCreationInfo,
-            nullptr,
-            &swapChainImageViews[i]
+        swapChainImageViews[i] = createViewFor2DImage(
+            swapChainImages[i],
+            selectedSwapChainFormat
         );
-        if (viewCreationResult != VK_SUCCESS){
-            throw std::runtime_error(strcat("Failed to create image view:", VkResultToString(viewCreationResult)));
-        }
     }
 }
 
@@ -961,6 +929,12 @@ void HelloTriangleApplication::createTextureImage(){
     vkDestroyBuffer(logiDevice, stagingBuffer, nullptr);
     vkFreeMemory(logiDevice, stagingMemory, nullptr);
 
+}
+
+void HelloTriangleApplication::createTextureImageView(){
+    textureImageView = createViewFor2DImage(
+        textureImageDescriptor, VK_FORMAT_R8G8B8A8_SRGB
+    );
 }
 
 void HelloTriangleApplication::convertImageLayout(VkImage srcImage, VkFormat format, VkImageLayout srcLayout, VkImageLayout dstLayout){
