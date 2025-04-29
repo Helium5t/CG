@@ -171,7 +171,7 @@ private:
     void createDeviceIndexBuffer();
     void createCoherentUniformBuffers();
     void createDescriptorPool();
-    void createAndBindDeviceImage(int width, int height, VkImage& image, VkDeviceMemory mem, VkFormat format);
+    void createAndBindDeviceImage(int width, int height, VkImage& image, VkDeviceMemory& mem, VkFormat format);
     void createTextureImage();
     void createDescriptorSets();
     #endif

@@ -857,7 +857,7 @@ void HelloTriangleApplication::createDescriptorSets(){
     }
 }
 
-void HelloTriangleApplication::createAndBindDeviceImage(int width, int height, VkImage& imageDescriptor, VkDeviceMemory imageMemory, VkFormat format){
+void HelloTriangleApplication::createAndBindDeviceImage(int width, int height, VkImage& imageDescriptor, VkDeviceMemory& imageMemory, VkFormat format){
 
     VkImageCreateInfo imageCreationInfo{};
     imageCreationInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -946,7 +946,7 @@ void HelloTriangleApplication::createTextureImage(){
 
     stbi_image_free(firstPixelPointer);
 
-    VkFormat selectedFormat = VK_FORMAT_R8G8B8A8_SRGB; // 8b * 4 = 32bits = 4 bytes per pixel from before)
+    VkFormat selectedFormat = VK_FORMAT_R8G8B8A8_SRGB; // 8b * 4 = 32bits = 4 bytes per pixel from before
     createAndBindDeviceImage(texWidth, texHeight, textureImageDescriptor, textureImageDeviceMemory, selectedFormat);
 
     std::cout << "creating first image layout conversion" << std::endl;
