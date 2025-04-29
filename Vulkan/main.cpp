@@ -71,6 +71,8 @@ void HelloTriangleApplication::initVulkan() {
     std::cout << "created texture image" << std::endl;
     createTextureImageView();
     std::cout << "created view for texture image" << std::endl;
+    createTextureSampler();
+    std::cout << "created texture sampler" << std::endl;
     createDeviceVertexBuffer();
     std::cout << "creates and bound vertex buffers" << std::endl;
     createDeviceIndexBuffer();
@@ -101,8 +103,9 @@ void HelloTriangleApplication::mainLoop() {
 void HelloTriangleApplication::cleanup() {
     destroySwapChain();
 
+    vkDestroySampler(logiDevice, textureSampler, nullptr);
     vkDestroyImageView(logiDevice, textureImageView, nullptr);
-    vkDestroyImage(logiDevice, textureImageDescriptor, nullptr);
+    vkDestroyImage(logiDevice, textureImageHandle, nullptr);
     vkFreeMemory(logiDevice, textureImageDeviceMemory, nullptr);
 
     for (size_t i =0 ; i < mvpMatUniformBuffers.size(); i++){
@@ -110,7 +113,7 @@ void HelloTriangleApplication::cleanup() {
         vkFreeMemory(logiDevice, mvpMatUniformBuffersMemory[i], nullptr);
     }
     vkDestroyDescriptorPool(logiDevice, descriptorPool, nullptr);
-    vkDestroyDescriptorSetLayout(logiDevice, mvpMatDescriptorMemLayout, nullptr);
+    vkDestroyDescriptorSetLayout(logiDevice, mainDescriptorSetLayout, nullptr);
     
     vkDestroyBuffer(logiDevice, vertexBuffer, nullptr);
     vkFreeMemory(logiDevice, vertexBufferMemory, nullptr);

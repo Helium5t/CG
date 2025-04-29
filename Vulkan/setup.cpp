@@ -154,6 +154,7 @@ void HelloTriangleApplication::createLogicalDevice(){
 
     // What features of the physical device are being actually used.
     VkPhysicalDeviceFeatures usedPhysicalDeviceFeatures{}; // Empty for now cause we're doing nothing
+    usedPhysicalDeviceFeatures.samplerAnisotropy = VK_TRUE; // We need anisotropic filtering for the main texture.
 
     VkDeviceCreateInfo logicalDeviceCreationInfo{};
     logicalDeviceCreationInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -344,15 +345,16 @@ void HelloTriangleApplication::createRenderPass(){
 void HelloTriangleApplication::createPipeline(){
     #ifndef HELIUM_VERTEX_BUFFERS
     std::vector<char> vShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/helloTriangle_v.spv");
+    std::vector<char> fShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/helloTriangle_f.spv");
     #else
 
     VkVertexInputBindingDescription bindingDescription = Vert::getBindingDescription();
-    std::array<VkVertexInputAttributeDescription, 2> attributeDescription = Vert::getAttributeDescription();
+    std::array<VkVertexInputAttributeDescription, 3> attributeDescription = Vert::getAttributeDescription();
     
 
     std::vector<char> vShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/mvpVertex_v.spv");
+    std::vector<char> fShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/textureSampling_f.spv");
     #endif 
-    std::vector<char> fShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/helloTriangle_f.spv");
 
     VkShaderModule vShader = createShaderModule(vShaderBinary);
     VkShaderModule fShader = createShaderModule(fShaderBinary);
@@ -556,7 +558,7 @@ void HelloTriangleApplication::createPipeline(){
     pipelineLayoutCreationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     // for explicity, these are not needed and are by default 0/null.
     pipelineLayoutCreationInfo.setLayoutCount = 1;
-    pipelineLayoutCreationInfo.pSetLayouts = &mvpMatDescriptorMemLayout;
+    pipelineLayoutCreationInfo.pSetLayouts = &mainDescriptorSetLayout;
     pipelineLayoutCreationInfo.pushConstantRangeCount = 0; // Number of push constant, an element that can be used to pass dynamic values to the shaders
     pipelineLayoutCreationInfo.pPushConstantRanges = nullptr;
     if(vkCreatePipelineLayout(logiDevice, &pipelineLayoutCreationInfo, nullptr, &pipelineLayout) != VK_SUCCESS){
@@ -740,14 +742,26 @@ void HelloTriangleApplication::createDescriptorSetLayout(){
     mvpMatDescriptorBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     mvpMatDescriptorBinding.pImmutableSamplers = nullptr;
     
+    VkDescriptorSetLayoutBinding textureSamplerLayoutBinding{};
+    textureSamplerLayoutBinding.binding = 1;
+    textureSamplerLayoutBinding.descriptorCount = 1;
+    textureSamplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    textureSamplerLayoutBinding.pImmutableSamplers = nullptr;
+    textureSamplerLayoutBinding.stageFlags  = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    std::array<VkDescriptorSetLayoutBinding,2> bindings = {
+        mvpMatDescriptorBinding, textureSamplerLayoutBinding
+    };
+
     VkDescriptorSetLayoutCreateInfo descriptorSetMemLayoutCreationInfo{};
     descriptorSetMemLayoutCreationInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    descriptorSetMemLayoutCreationInfo.bindingCount = 1;
-    descriptorSetMemLayoutCreationInfo.pBindings = &mvpMatDescriptorBinding;
+    descriptorSetMemLayoutCreationInfo.bindingCount = bindings.size();
+    descriptorSetMemLayoutCreationInfo.pBindings = bindings.data();
 
-    if(vkCreateDescriptorSetLayout(logiDevice, &descriptorSetMemLayoutCreationInfo, nullptr, &mvpMatDescriptorMemLayout) != VK_SUCCESS){
-        throw std::runtime_error("failed to create binding for MVP uniform buffer");
+    if(vkCreateDescriptorSetLayout(logiDevice, &descriptorSetMemLayoutCreationInfo, nullptr, &mainDescriptorSetLayout) != VK_SUCCESS){
+        throw std::runtime_error("failed to create main descriptor set layout. (MVP Mat and texture)");
     }
+
 }
 
 void HelloTriangleApplication::createCoherentUniformBuffers(){
@@ -771,14 +785,22 @@ void HelloTriangleApplication::createCoherentUniformBuffers(){
 }
 
 void HelloTriangleApplication::createDescriptorPool(){
-    VkDescriptorPoolSize poolSize{};
-    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+    VkDescriptorPoolSize poolSizeMVP{};
+    poolSizeMVP.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSizeMVP.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
+    VkDescriptorPoolSize poolSizeMainTex{};
+    poolSizeMainTex.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    poolSizeMainTex.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
+    std::array<VkDescriptorPoolSize, 2> poolSizes = {
+        poolSizeMVP, poolSizeMainTex
+    };
     
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = 1;
-    poolInfo.pPoolSizes = &poolSize;
+    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+    poolInfo.pPoolSizes = poolSizes.data();
     /* Maximum allocations expected by the program. Allows for optimization */
     poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 
@@ -788,7 +810,7 @@ void HelloTriangleApplication::createDescriptorPool(){
 }
 
 void HelloTriangleApplication::createDescriptorSets(){
-    std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, mvpMatDescriptorMemLayout);
+    std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, mainDescriptorSetLayout);
     VkDescriptorSetAllocateInfo descriptorSetAllocationInfo{};
     
     descriptorSetAllocationInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -807,21 +829,40 @@ void HelloTriangleApplication::createDescriptorSets(){
         bufferInfo.buffer = mvpMatUniformBuffers[i];
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(ModelViewProjection);
+
+        VkDescriptorImageInfo mainTexInfo{};
+        mainTexInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        mainTexInfo.imageView = textureImageView;
+        mainTexInfo.sampler = textureSampler;
         
-        VkWriteDescriptorSet writeDescriptorSetOp{};
-        writeDescriptorSetOp.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        writeDescriptorSetOp.dstSet = descriptorSets[i];
-        writeDescriptorSetOp.dstBinding = 0;
-        writeDescriptorSetOp.dstArrayElement = 0;
-        writeDescriptorSetOp.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        writeDescriptorSetOp.descriptorCount = 1;
 
-        writeDescriptorSetOp.pBufferInfo = &bufferInfo;
+        VkWriteDescriptorSet writeMvpMatOp{};
+        writeMvpMatOp.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writeMvpMatOp.dstSet = descriptorSets[i];
+        writeMvpMatOp.dstBinding = 0;
+        writeMvpMatOp.dstArrayElement = 0;
+        writeMvpMatOp.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        writeMvpMatOp.descriptorCount = 1;
+        
+        writeMvpMatOp.pBufferInfo = &bufferInfo;
         /*-- These next two are only used for other type of descriptors (e.g. texture samplers) --*/
-        writeDescriptorSetOp.pImageInfo = nullptr;
-        writeDescriptorSetOp.pTexelBufferView = nullptr;
+        writeMvpMatOp.pImageInfo = nullptr;
+        writeMvpMatOp.pTexelBufferView = nullptr;
 
-        vkUpdateDescriptorSets(logiDevice, 1, &writeDescriptorSetOp, 0, nullptr);
+        VkWriteDescriptorSet writeMainTexOp{};
+        writeMainTexOp.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writeMainTexOp.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        writeMainTexOp.dstBinding = 1;
+        writeMainTexOp.dstArrayElement = 0;
+        writeMainTexOp.descriptorCount = 1;
+        writeMainTexOp.dstSet = descriptorSets[i];
+        writeMainTexOp.pImageInfo = &mainTexInfo;
+
+        std::array<VkWriteDescriptorSet, 2> writeDescriptorOps = {
+            writeMvpMatOp, writeMainTexOp
+        };
+
+        vkUpdateDescriptorSets(logiDevice, static_cast<uint32_t>(writeDescriptorOps.size()), writeDescriptorOps.data(), 0, nullptr);
     }
 }
 
@@ -915,16 +956,16 @@ void HelloTriangleApplication::createTextureImage(){
     stbi_image_free(firstPixelPointer);
 
     VkFormat selectedFormat = VK_FORMAT_R8G8B8A8_SRGB; // 8b * 4 = 32bits = 4 bytes per pixel from before
-    createAndBindDeviceImage(texWidth, texHeight, textureImageDescriptor, textureImageDeviceMemory, selectedFormat);
+    createAndBindDeviceImage(texWidth, texHeight, textureImageHandle, textureImageDeviceMemory, selectedFormat);
 
     std::cout << "creating first image layout conversion" << std::endl;
-    convertImageLayout(textureImageDescriptor, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    convertImageLayout(textureImageHandle, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     bufferCopyToImage(
         stagingBuffer,
-        textureImageDescriptor, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight)
+        textureImageHandle, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight)
     );
     std::cout << "creating second image layout conversion" << std::endl;
-    convertImageLayout(textureImageDescriptor, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    convertImageLayout(textureImageHandle, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     vkDestroyBuffer(logiDevice, stagingBuffer, nullptr);
     vkFreeMemory(logiDevice, stagingMemory, nullptr);
@@ -933,8 +974,41 @@ void HelloTriangleApplication::createTextureImage(){
 
 void HelloTriangleApplication::createTextureImageView(){
     textureImageView = createViewFor2DImage(
-        textureImageDescriptor, VK_FORMAT_R8G8B8A8_SRGB
+        textureImageHandle, VK_FORMAT_R8G8B8A8_SRGB
     );
+}
+
+void HelloTriangleApplication::createTextureSampler(){
+    VkSamplerCreateInfo samplerCreationInfo{};
+    samplerCreationInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    // Filtering for magnified texels
+    samplerCreationInfo.magFilter = VK_FILTER_NEAREST;
+    // Filtering for minified texels (fragment is smaller than the texel)
+    samplerCreationInfo.minFilter = VK_FILTER_NEAREST;
+    samplerCreationInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+    samplerCreationInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+    samplerCreationInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+    samplerCreationInfo.anisotropyEnable = VK_TRUE;
+    samplerCreationInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    samplerCreationInfo.unnormalizedCoordinates = VK_FALSE; // If trues you use the number of pixels as coordinates. 
+    samplerCreationInfo.compareEnable = VK_FALSE;
+    samplerCreationInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+    samplerCreationInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerCreationInfo.mipLodBias = 0.0f;
+    samplerCreationInfo.minLod = 0.0f;
+    samplerCreationInfo.maxLod = 0.0f; // No LOD levels, so no mip maps.
+    
+    VkPhysicalDeviceProperties physicalDeviceProperties{};
+    vkGetPhysicalDeviceProperties(physGraphicDevice, &physicalDeviceProperties);
+    // This will use maximum number of anisotropic samples, ensuring best quality
+    // this affects performance, so lowering this improves perf.
+    samplerCreationInfo.maxAnisotropy = physicalDeviceProperties.limits.maxSamplerAnisotropy;
+
+    if(vkCreateSampler(logiDevice, &samplerCreationInfo, nullptr, &textureSampler) != VK_SUCCESS){
+        throw std::runtime_error("failed to create sampler for main texture");
+    }
+    std::cout << "texture sampler done: " << textureSampler << std::endl;
+
 }
 
 void HelloTriangleApplication::convertImageLayout(VkImage srcImage, VkFormat format, VkImageLayout srcLayout, VkImageLayout dstLayout){
