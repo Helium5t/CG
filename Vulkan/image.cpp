@@ -10,10 +10,9 @@ stbi_uc* HelloTriangleApplication::loadImage(const char* path, int* width, int* 
 
 /*
 Creates a view for a 2D image with no mip map levels and no layers.
-View will be generated for Color usage (`VK_IMAGE_ASPECT_COLOR_BIT`)
-and with no swizzle. 
+View will be generated with no swizzle. 
 */
-VkImageView HelloTriangleApplication::createViewFor2DImage(VkImage image, VkFormat format){
+VkImageView HelloTriangleApplication::createViewFor2DImage(VkImage image, VkFormat format, VkImageAspectFlags imageAspect){
     VkImageView view;
 
     VkImageViewCreateInfo imageViewCreationInfo{};
@@ -21,7 +20,7 @@ VkImageView HelloTriangleApplication::createViewFor2DImage(VkImage image, VkForm
     imageViewCreationInfo.format = format;
     imageViewCreationInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
     imageViewCreationInfo.image = image;
-    imageViewCreationInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    imageViewCreationInfo.subresourceRange.aspectMask = imageAspect;
     imageViewCreationInfo.subresourceRange.baseArrayLayer = 0;
     imageViewCreationInfo.subresourceRange.baseMipLevel = 0;
     imageViewCreationInfo.subresourceRange.levelCount = 1;

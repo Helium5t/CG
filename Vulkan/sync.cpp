@@ -25,7 +25,7 @@ void HelloTriangleApplication::resetSwapChain(){
     destroySwapChain();
 
     createSwapChain();
-    createImageView();
+    createSwapChainViews();
     createFramebuffers();
 }
 

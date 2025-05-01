@@ -54,7 +54,7 @@ void HelloTriangleApplication::initVulkan() {
     std::cout<< "created logical device" << std::endl;
     createSwapChain();
     std::cout<< "created swap chain" << std::endl;
-    createImageView();
+    createSwapChainViews();
     std::cout<< "created image view" << std::endl;
     createRenderPass();
     std::cout<< "created render pass" << std::endl;
@@ -67,6 +67,8 @@ void HelloTriangleApplication::initVulkan() {
     createCommandPool();
     std::cout << "created command pool" << std::endl;
     #ifdef HELIUM_VERTEX_BUFFERS
+    createDepthPassResources();
+    std::cout << "prepared depth pass" << std::endl;
     createTextureImage();
     std::cout << "created texture image" << std::endl;
     createTextureImageView();
