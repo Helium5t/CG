@@ -26,6 +26,9 @@ void HelloTriangleApplication::resetSwapChain(){
 
     createSwapChain();
     createSwapChainViews();
+    #ifdef HELIUM_VERTEX_BUFFERS
+    createDepthPassResources();
+    #endif
     createFramebuffers();
 }
 
