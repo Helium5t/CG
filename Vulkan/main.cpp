@@ -54,7 +54,7 @@ void HelloTriangleApplication::initVulkan() {
     std::cout<< "created logical device" << std::endl;
     createSwapChain();
     std::cout<< "created swap chain" << std::endl;
-    createImageView();
+    createSwapChainViews();
     std::cout<< "created image view" << std::endl;
     createRenderPass();
     std::cout<< "created render pass" << std::endl;
@@ -62,11 +62,11 @@ void HelloTriangleApplication::initVulkan() {
     std::cout<< "created uniform buffer object bindings" << std::endl;
     createPipeline();
     std::cout<< "created pipeline" << std::endl;
-    createFramebuffers();
-    std::cout<< "created frame buffers" << std::endl;
     createCommandPool();
     std::cout << "created command pool" << std::endl;
     #ifdef HELIUM_VERTEX_BUFFERS
+    createDepthPassResources();
+    std::cout << "prepared depth pass" << std::endl;
     createTextureImage();
     std::cout << "created texture image" << std::endl;
     createTextureImageView();
@@ -84,6 +84,8 @@ void HelloTriangleApplication::initVulkan() {
     createDescriptorSets();
     std::cout << "created descriptor sets" << std::endl;
     #endif
+    createFramebuffers();
+    std::cout<< "created frame buffers" << std::endl;
     createCommandBuffers();
     std::cout<< "created command buffers" << std::endl;
     createSyncObjects();
@@ -102,6 +104,10 @@ void HelloTriangleApplication::mainLoop() {
 
 void HelloTriangleApplication::cleanup() {
     destroySwapChain();
+
+    vkDestroyImageView(logiDevice, depthPassImageView, nullptr);
+    vkDestroyImage(logiDevice, depthPassImage, nullptr);
+    vkFreeMemory(logiDevice, depthPassMemory, nullptr);
 
     vkDestroySampler(logiDevice, textureSampler, nullptr);
     vkDestroyImageView(logiDevice, textureImageView, nullptr);

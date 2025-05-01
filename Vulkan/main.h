@@ -19,6 +19,7 @@
 // linear algebra library 
 #define GLM_FORCE_RADIANS // Make sure glm is using radians as the argument unit in the library definition
 #define GLM_FORCE_DEFAULT_ALIGNED_GENTYPES // For non-nested structures, makes sure all types are aligned according to Vulkan/SPIR-V specification https://docs.vulkan.org/guide/latest/shader_memory_layout.html
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE // Makes sure depth values cannot go outside [0,1] range. By default GLM uses OpenGL's convention of [-1,1]
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -99,6 +100,10 @@ private:
     VkImageView textureImageView;
     VkSampler textureSampler;
 
+    VkImage depthPassImage;
+    VkDeviceMemory depthPassMemory;
+    VkImageView depthPassImageView;
+
     /*-
         We need multiple buffers as the mvp mat is updated each frame and we might have multiple frames in flight
         having only one would cause us to have a delay/run condition and a whole slew of issues.
@@ -163,7 +168,7 @@ private:
     void createLogicalDevice();
     void setupRenderSurface();
     void createSwapChain();
-    void createImageView();
+    void createSwapChainViews();
     void createRenderPass();
     void createPipeline();
     void createFramebuffers();
@@ -172,18 +177,23 @@ private:
     void createAndBindDeviceBuffer( VkDeviceSize bufferSize, VkBufferUsageFlags bufferUsage, VkMemoryPropertyFlags propertyFlags, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     void createCommandBuffers();
     void createSyncObjects();
+
     #ifdef HELIUM_VERTEX_BUFFERS
     void createDeviceVertexBuffer();
     void createDescriptorSetLayout();
     void createDeviceIndexBuffer();
     void createCoherentUniformBuffers();
     void createDescriptorPool();
-    void createAndBindDeviceImage(int width, int height, VkImage& image, VkDeviceMemory& mem, VkFormat format);
+    void createAndBindDeviceImage(int width, int height, VkImage& imageDescriptor, VkDeviceMemory& imageMemory, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags);
     void createTextureImage();
     void createTextureImageView();
     void createTextureSampler();
     void createDescriptorSets();
+    void createDepthPassResources();
+    VkFormat findFirstSupportedDepthFormatFromDefaults();
+    VkFormat findFirstSupportedDepthFormat(const std::vector<VkFormat>& availableFormats, VkImageTiling depthTiling, VkFormatFeatureFlags features);
     #endif
+
     void convertImageLayout(VkImage srcImage, VkFormat format, VkImageLayout srcLayout, VkImageLayout dstLayout);
     void bufferCopyToImage(VkBuffer srcBuffer, VkImage dstImage, uint32_t w, uint32_t h);
     VkCommandBuffer beginOneTimeCommands();
@@ -227,7 +237,7 @@ private:
 
     //-------------------------------image.cpp
     stbi_uc* loadImage(const char* path, int* width, int* height, int* channels);
-    VkImageView createViewFor2DImage(VkImage image, VkFormat format);
+    VkImageView createViewFor2DImage(VkImage image, VkFormat format,VkImageAspectFlags imageAspect);
 
     //-------------------------------shaders.cpp
     VkShaderModule createShaderModule(const std::vector<char> binary);
@@ -235,7 +245,7 @@ private:
 
 //-------------------------------vertex.cpp
 struct Vert{
-    glm::vec2 pos;
+    glm::vec3 pos;
     glm::vec3 col;
     glm::vec2 texCoords;
     static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescription();
@@ -243,15 +253,22 @@ struct Vert{
 };
 
 const std::vector<Vert> vertices = {
-    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
+
+    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+    {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
 };
 
 const std::vector<uint16_t> indices = {
     0, 1, 2,
-    2, 3, 0
+    2, 3, 0,
+    4, 5, 6,
+    6, 7, 4
 };
 
 //-------------------------------PROJECTION RELATED STRUCTS

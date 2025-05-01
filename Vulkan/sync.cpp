@@ -25,7 +25,10 @@ void HelloTriangleApplication::resetSwapChain(){
     destroySwapChain();
 
     createSwapChain();
-    createImageView();
+    createSwapChainViews();
+    #ifdef HELIUM_VERTEX_BUFFERS
+    createDepthPassResources();
+    #endif
     createFramebuffers();
 }
 
@@ -59,9 +62,11 @@ void HelloTriangleApplication::recordCommandBuffer(VkCommandBuffer buffer, uint3
     renderPassBeginInfo.framebuffer = swapchainFramebuffers[swapchainImageIndex];
     renderPassBeginInfo.renderArea.offset = {0, 0};
     renderPassBeginInfo.renderArea.extent = selectedSwapChainWindowSize;
-    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f }}}; // Clear frame to black
-    renderPassBeginInfo.clearValueCount = 1;
-    renderPassBeginInfo.pClearValues = &clearColor;
+    std::array<VkClearValue,2> clearColorAndStencil{};
+    clearColorAndStencil[0].color = {{0.0f, 0.0f, 0.0f, 1.0f }}; // Clear frame to black
+    clearColorAndStencil[1].depthStencil = {1.0f, 0}; // Clear frame to black
+    renderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearColorAndStencil.size());
+    renderPassBeginInfo.pClearValues = clearColorAndStencil.data();
 
     vkCmdBeginRenderPass(buffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 

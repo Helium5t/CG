@@ -34,7 +34,7 @@ std::array<VkVertexInputAttributeDescription, 3> Vert::getAttributeDescription()
         UINT = uint
         SFLOAT = Signed float (both double and float)
     */
-    attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT; // Type of data
+    attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT; // Type of data
     attributeDescriptions[0].offset = offsetof(Vert, pos); // Byte offset of the field in the struct
 
     attributeDescriptions[1].binding = 0; // Vert is still bound at 0
