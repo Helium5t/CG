@@ -177,13 +177,14 @@ private:
     void createAndBindDeviceBuffer( VkDeviceSize bufferSize, VkBufferUsageFlags bufferUsage, VkMemoryPropertyFlags propertyFlags, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     void createCommandBuffers();
     void createSyncObjects();
+
     #ifdef HELIUM_VERTEX_BUFFERS
     void createDeviceVertexBuffer();
     void createDescriptorSetLayout();
     void createDeviceIndexBuffer();
     void createCoherentUniformBuffers();
     void createDescriptorPool();
-    void createAndBindDeviceImage(int width, int height, VkImage& image, VkDeviceMemory& mem, VkFormat format);
+    void createAndBindDeviceImage(int width, int height, VkImage& imageDescriptor, VkDeviceMemory& imageMemory, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags);
     void createTextureImage();
     void createTextureImageView();
     void createTextureSampler();
@@ -192,6 +193,7 @@ private:
     VkFormat findFirstSupportedDepthFormatFromDefaults();
     VkFormat findFirstSupportedDepthFormat(const std::vector<VkFormat>& availableFormats, VkImageTiling depthTiling, VkFormatFeatureFlags features);
     #endif
+
     void convertImageLayout(VkImage srcImage, VkFormat format, VkImageLayout srcLayout, VkImageLayout dstLayout);
     void bufferCopyToImage(VkBuffer srcBuffer, VkImage dstImage, uint32_t w, uint32_t h);
     VkCommandBuffer beginOneTimeCommands();
