@@ -423,7 +423,9 @@ float3 ComputeAlbedoWithDetail(vOutput vo){
 
 float4 frag(vOutput vo): SV_Target{
     float alpha = ALPHA(vo.uvM);
+    #ifdef HELIUM_TRANSPARENCY_CUTOUT
     clip(alpha-_AlphaThreshold);
+    #endif
 
     float3 albedo =  ComputeAlbedoWithDetail(vo);
 
@@ -440,7 +442,10 @@ float4 frag(vOutput vo): SV_Target{
         albedo, m, specularColor, invertedReflectivity
         ); 
         float3 viewdir = normalize(_WorldSpaceCameraPos - vo.wPos);
-        
+    #ifdef HELIUM_TRANSPARENCY_TRANSLUCENT
+    albedo *= alpha;
+    alpha = 1 - invertedReflectivity + alpha * invertedReflectivity;
+    #endif
     vo.n = normalize(vo.n);
     float3 approximatedCol = ShadeSH9(float4(vo.n, 1));
     
@@ -458,6 +463,9 @@ float4 frag(vOutput vo): SV_Target{
     );
     
     finalCol.rgb += EMISSION(vo.uvM);
+    #if defined(HELIUM_TRANSPARENCY_BLENDED) || defined(HELIUM_TRANSPARENCY_TRANSLUCENT)
+    finalCol.a = alpha;
+    #endif
 
     return finalCol;
 }

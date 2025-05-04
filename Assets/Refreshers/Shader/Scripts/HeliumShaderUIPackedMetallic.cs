@@ -1,18 +1,70 @@
 using UnityEngine;
 using UnityEditor;
+using UnityEngine.Rendering;
 using System.Diagnostics;
+using UnityEngine.XR;
 
 public class HeliumShaderPackedMetallicUI : ShaderGUI {
 
     enum RoughnessSource{
         Uniform, Albedo, Metallic
     }
+
+    enum TransparencyMode{
+        Disabled,
+        Cutout,
+        Blended,
+        Translucent
+    }
+
+    struct TransparencySettings{
+        public RenderQueue queue;
+        public string renderTypeValue;
+
+        public BlendMode blendModeSrc, blendModeDst;
+
+        public bool updateZBuffer;
+
+        public static TransparencySettings[] modes = {
+            new TransparencySettings(){
+                queue = RenderQueue.Geometry,
+                renderTypeValue = "",
+                blendModeSrc = BlendMode.One,
+                blendModeDst = BlendMode.Zero,
+                updateZBuffer = true,
+            },
+            new TransparencySettings(){
+                queue = RenderQueue.AlphaTest,
+                renderTypeValue = "TransparentCutout",
+                blendModeSrc = BlendMode.One,
+                blendModeDst = BlendMode.Zero,
+                updateZBuffer = true,
+            },
+            new TransparencySettings(){
+                queue = RenderQueue.Transparent,
+                renderTypeValue = "Transparent",
+                blendModeSrc = BlendMode.SrcAlpha,
+                blendModeDst = BlendMode.OneMinusSrcAlpha,
+                updateZBuffer = false,
+            },
+            new TransparencySettings(){
+                queue = RenderQueue.Transparent,
+                renderTypeValue = "Transparent",
+                blendModeSrc = BlendMode.One,
+                blendModeDst = BlendMode.OneMinusSrcAlpha,
+                updateZBuffer = false,
+            },
+        };
+    }
+
+
     Material target;
     MaterialEditor editor;
 	MaterialProperty[] properties;
     static GUIContent staticLabel = new GUIContent();
 
     bool dirty = false;
+    bool cutoutEnabled = false;
     static GUIContent MakeLabel (string text, string tooltip = null) {
 		staticLabel.text = text;
 		staticLabel.tooltip = tooltip;
@@ -36,6 +88,7 @@ public class HeliumShaderPackedMetallicUI : ShaderGUI {
         this.target = editor.target as Material;
 		this.editor = editor;
 		this.properties = properties;
+        DoTransparencyMode();
         DoMain();
 	}
 	
@@ -56,7 +109,9 @@ public class HeliumShaderPackedMetallicUI : ShaderGUI {
         DoEmission();
         DoOcclusion();
         DoDetailMask();
-        DoAlpha();
+        if(cutoutEnabled){
+            DoAlpha();
+        }
         editor.TextureScaleOffsetProperty(mainTex);
 
 	}
@@ -200,6 +255,38 @@ public class HeliumShaderPackedMetallicUI : ShaderGUI {
         EditorGUI.indentLevel +=2;
         editor.ShaderProperty(slider, MakeLabel(slider));
         EditorGUI.indentLevel -=2;
+    }
+
+    void DoTransparencyMode(){
+        TransparencyMode transparencyMode = TransparencyMode.Disabled;
+        if(IsDefined("HELIUM_TRANSPARENCY_CUTOUT")){
+            transparencyMode = TransparencyMode.Cutout;
+        } else if(IsDefined("HELIUM_TRANSPARENCY_BLENDED")){
+            transparencyMode = TransparencyMode.Blended;
+        } else if(IsDefined("HELIUM_TRANSPARENCY_TRANSLUCENT")){
+            transparencyMode = TransparencyMode.Translucent;
+        }
+
+        EditorGUI.BeginChangeCheck();
+        transparencyMode = (TransparencyMode)EditorGUILayout.EnumPopup(
+            MakeLabel("Cutout Transparency"), transparencyMode
+        );
+        if(EditorGUI.EndChangeCheck()){
+            RecordAction("Cutout Transparency");
+            SetKeyword("HELIUM_TRANSPARENCY_CUTOUT", transparencyMode == TransparencyMode.Cutout);
+            SetKeyword("HELIUM_TRANSPARENCY_BLENDED", transparencyMode == TransparencyMode.Blended);
+            SetKeyword("HELIUM_TRANSPARENCY_TRANSLUCENT", transparencyMode == TransparencyMode.Translucent);
+
+            TransparencySettings ts = TransparencySettings.modes[(int)transparencyMode];
+            foreach (Material m in editor.targets){
+                m.renderQueue = (int)ts.queue;
+                m.SetOverrideTag("RenderType", ts.renderTypeValue);
+                m.SetInt("_SourceBlend", (int)ts.blendModeSrc);
+                m.SetInt("_DestinationBlend", (int)ts.blendModeDst);
+                m.SetInt("_WriteToDepthBuffer",ts.updateZBuffer? 1 : 0);
+            }
+        };
+        cutoutEnabled = transparencyMode != TransparencyMode.Disabled;
     }
 
     MaterialProperty FindProperty (string name) {
