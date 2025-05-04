@@ -30,6 +30,8 @@ in "LightingFuncs.cginc"
 
 sampler2D _Tex;
 
+float _AlphaThreshold;
+
 #ifdef HELIUM_NORMAL_MAPPING
 
     #ifdef HELIUM_DETAIL_ALBEDO
@@ -109,6 +111,12 @@ sampler2D _Metallic, _Roughness;
 #else
     #define DETAIL_MASK(uv) 1
     #define DETAIL_MASK_N(uv) 1
+#endif
+
+#ifndef HELIUM_R_FROM_ALBEDO
+    #define ALPHA(uv) _Color.a * tex2D(_Tex, uv.xy).a
+#else
+    #define ALPHA(uv) _Color.a
 #endif
 
 int _UseTextures;
@@ -414,10 +422,12 @@ float3 ComputeAlbedoWithDetail(vOutput vo){
 
 
 float4 frag(vOutput vo): SV_Target{
-    
+    float alpha = ALPHA(vo.uvM);
+    #ifdef HELIUM_TRANSPARENCY_CUTOUT
+    clip(alpha-_AlphaThreshold);
+    #endif
+
     float3 albedo =  ComputeAlbedoWithDetail(vo);
-
-
 
     #ifdef HELIUM_NORMAL_MAPPING
     InitFragNormal(vo);
@@ -432,7 +442,10 @@ float4 frag(vOutput vo): SV_Target{
         albedo, m, specularColor, invertedReflectivity
         ); 
         float3 viewdir = normalize(_WorldSpaceCameraPos - vo.wPos);
-        
+    #ifdef HELIUM_TRANSPARENCY_TRANSLUCENT
+    albedo *= alpha;
+    alpha = 1 - invertedReflectivity + alpha * invertedReflectivity;
+    #endif
     vo.n = normalize(vo.n);
     float3 approximatedCol = ShadeSH9(float4(vo.n, 1));
     
@@ -450,6 +463,10 @@ float4 frag(vOutput vo): SV_Target{
     );
     
     finalCol.rgb += EMISSION(vo.uvM);
+    #if defined(HELIUM_TRANSPARENCY_BLENDED) || defined(HELIUM_TRANSPARENCY_TRANSLUCENT)
+    finalCol.a = alpha;
+    #endif
+
     return finalCol;
 }
 

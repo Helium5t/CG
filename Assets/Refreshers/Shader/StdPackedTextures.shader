@@ -19,6 +19,10 @@ Shader "Refreshers/StdPackedTextures"
         [NoScaleOffset] _Occlusion ("Occlusion", 2D) = "white" {}
 		_OcclusionStrength("Occlusion Strength", Range(0, 1)) = 1
         [NoScaleOffset] _DetailMask ("Detail Mask", 2D) = "white" {}
+        _AlphaThreshold("Alpha Cutoff", Range(0,1)) = 0.5 
+        [HideInInspector] _SourceBlend("_SourceBlend", Float) = 1
+        [HideInInspector] _DestinationBlend("_DestinationBlend", Float) = 0
+        [HideInInspector] _WriteToDepthBuffer("_WriteToDepthBuffer", Float) = 1
     }
     CGINCLUDE
     #define HELIUM_FRAGMENT_BINORMAL
@@ -27,8 +31,11 @@ Shader "Refreshers/StdPackedTextures"
 
         Pass{
             Tags {
-				"LightMode" = "ForwardBase"
+                "LightMode" = "ForwardBase"
 			}
+            Blend [_SourceBlend] [_DestinationBlend]
+            ZWrite [_WriteToDepthBuffer]
+
             CGPROGRAM
             #pragma target 3.0 // to enable BRDF
             #pragma vertex vert
@@ -40,6 +47,7 @@ Shader "Refreshers/StdPackedTextures"
 
 			#pragma multi_compile _ SHADOWS_SCREEN 
 
+            #pragma shader_feature _ HELIUM_TRANSPARENCY_CUTOUT HELIUM_TRANSPARENCY_BLENDED HELIUM_TRANSPARENCY_TRANSLUCENT
             #pragma shader_feature HELIUM_2D_METALLIC
             #pragma shader_feature _ HELIUM_R_FROM_METALLIC HELIUM_R_FROM_ALBEDO
             #pragma shader_feature HELIUM_EMISSION_FROM_MAP
@@ -60,7 +68,6 @@ Shader "Refreshers/StdPackedTextures"
 
 			#include "LightingFuncsV2B.cginc"
 
-
             ENDCG
         }
 
@@ -70,7 +77,9 @@ Shader "Refreshers/StdPackedTextures"
             }
             // In this case Blend 0 One One is the same as Blend One One 
             // since this shader is not using the other targets.
-            Blend 0 One One 
+            // Blend 0 One One // Old Values
+
+            Blend [_SourceBlend] One
             // In forward rendering, we only use the first (0 through 7) 
             // render target for the "main color" which would be the final look of a rendered image.
             // In deferred, all the targets are used for different things: 0 = Albedo, 1 = Normals etc.... 
@@ -96,6 +105,9 @@ Shader "Refreshers/StdPackedTextures"
             
             #define HELIUM_NORMAL_MAPPING
             #define HELIUM_ADD_PASS
+            #define HELIUM_BASE_COLOR
+
+            #pragma shader_feature _ HELIUM_TRANSPARENCY_CUTOUT HELIUM_TRANSPARENCY_BLENDED HELIUM_TRANSPARENCY_TRANSLUCENT
             #pragma shader_feature HELIUM_2D_METALLIC
             #pragma shader_feature _ HELIUM_R_FROM_METALLIC HELIUM_R_FROM_ALBEDO
             #pragma shader_feature HELIUM_DETAIL_MASK
