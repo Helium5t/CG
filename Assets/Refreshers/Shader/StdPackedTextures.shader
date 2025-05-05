@@ -136,6 +136,10 @@ Shader "Refreshers/StdPackedTextures"
 
             #pragma multi_compile_shadowcaster
             
+            #pragma shader_feature _ HELIUM_TRANSPARENCY_CUTOUT HELIUM_TRANSPARENCY_BLENDED HELIUM_TRANSPARENCY_TRANSLUCENT
+            #pragma shader_feature HELIUM_SHADOWS_FORCE_CUTOUT
+            #pragma shader_feature HELIUM_R_FROM_ALBEDO
+            
             #include "ShadowFuncs.cginc"
 
             ENDCG
