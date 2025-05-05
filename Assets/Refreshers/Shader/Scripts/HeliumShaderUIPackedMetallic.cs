@@ -64,7 +64,7 @@ public class HeliumShaderPackedMetallicUI : ShaderGUI {
     static GUIContent staticLabel = new GUIContent();
 
     bool dirty = false;
-    bool cutoutEnabled = false;
+    bool showAlphaThresholdSlider = false;
     static GUIContent MakeLabel (string text, string tooltip = null) {
 		staticLabel.text = text;
 		staticLabel.tooltip = tooltip;
@@ -109,8 +109,8 @@ public class HeliumShaderPackedMetallicUI : ShaderGUI {
         DoEmission();
         DoOcclusion();
         DoDetailMask();
-        if(cutoutEnabled){
-            DoAlpha();
+        if(showAlphaThresholdSlider){
+            DoAlphaThreshold();
         }
         editor.TextureScaleOffsetProperty(mainTex);
 
@@ -250,7 +250,7 @@ public class HeliumShaderPackedMetallicUI : ShaderGUI {
 		}
     }
 
-    void DoAlpha(){
+    void DoAlphaThreshold(){
         MaterialProperty slider = FindProperty("_AlphaThreshold");
         EditorGUI.indentLevel +=2;
         editor.ShaderProperty(slider, MakeLabel(slider));
@@ -286,7 +286,25 @@ public class HeliumShaderPackedMetallicUI : ShaderGUI {
                 m.SetInt("_WriteToDepthBuffer",ts.updateZBuffer? 1 : 0);
             }
         };
-        cutoutEnabled = transparencyMode != TransparencyMode.Disabled;
+        showAlphaThresholdSlider = transparencyMode == TransparencyMode.Cutout;
+        if (transparencyMode == TransparencyMode.Blended || transparencyMode == TransparencyMode.Translucent){
+            DoShadowSemitransparency();
+        }
+    }
+
+    void DoShadowSemitransparency(){
+        EditorGUI.BeginChangeCheck();
+        bool forceCutout = 
+        EditorGUILayout.Toggle(
+            MakeLabel("Force cutout", "Force cutout shadows on semi transparent objects"),
+            IsDefined("HELIUM_SHADOWS_FORCE_CUTOUT")
+        );
+        if (EditorGUI.EndChangeCheck()){
+            SetKeyword("HELIUM_SHADOWS_FORCE_CUTOUT", forceCutout);
+        }
+        if(forceCutout){
+            showAlphaThresholdSlider = true;
+        }
     }
 
     MaterialProperty FindProperty (string name) {
