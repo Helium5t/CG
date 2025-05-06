@@ -13,6 +13,7 @@ Material:
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - HELIUM_EMISSION_FROM_MAP
+  - HELIUM_SHADOWS_FORCE_CUTOUT
   - HELIUM_TRANSPARENCY_BLENDED
   m_InvalidKeywords:
   - HELIUM_CUTOUT_TRANSPARENCY
@@ -102,7 +103,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _AlphaCutoff: 0.5
-    - _AlphaThreshold: 0
+    - _AlphaThreshold: 0.29
     - _BumpScale: 1
     - _Cutoff: 0.5
     - _DestinationBlend: 10
