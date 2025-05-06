@@ -70,7 +70,6 @@ Shader "Refreshers/StdPackedTextures"
 
             ENDCG
         }
-
         Pass{
             Tags{
                 "LightMode" = "ForwardAdd" // ForwardAdd makes it so this pass is "added" on top of the base one, used for the main light
@@ -124,6 +123,51 @@ Shader "Refreshers/StdPackedTextures"
             ENDCG
             
 
+        }  
+        Pass {
+            Tags {
+                "LightMode" = "Deferred"
+            }
+            Blend [_SourceBlend] [_DestinationBlend]
+            ZWrite [_WriteToDepthBuffer]
+
+            CGPROGRAM
+            #pragma target 3.0 // to enable BRDF
+            #pragma exclude_renderers nomrt
+            #pragma vertex vert
+            #pragma fragment frag
+            
+            // Compile a version that computes light per vertex, much cheaper than per fragment.
+            // Only point is supported
+            #pragma multi_compile _ VERTEXLIGHT_ON
+
+			#pragma multi_compile _ SHADOWS_SCREEN 
+
+            #pragma shader_feature _ HELIUM_TRANSPARENCY_CUTOUT // Not needed in deferred : HELIUM_TRANSPARENCY_BLENDED HELIUM_TRANSPARENCY_TRANSLUCENT
+            #pragma shader_feature HELIUM_2D_METALLIC
+            #pragma shader_feature _ HELIUM_R_FROM_METALLIC HELIUM_R_FROM_ALBEDO
+            #pragma shader_feature HELIUM_EMISSION_FROM_MAP
+            #pragma shader_feature HELIUM_OCCLUSION_FROM_MAP
+            #pragma shader_feature HELIUM_DETAIL_MASK
+
+            #pragma shader_feature _ UNITY_HDR_ON
+
+            #pragma shader_feature HELIUM_NORMAL_MAP
+            #pragma shader_feature HELIUM_DETAIL_ALBEDO
+            #pragma shader_feature HELIUM_DETAIL_NORMAL_MAP
+            
+            #define HELIUM_NORMAL_MAPPING
+            #define HELIUM_BASE_COLOR
+            #define HELIUM_EMISSION
+            #define HELIUM_AMBIENT_OCCLUSION
+        
+            #pragma multi_compile_fwdadd_fullshadows // equivalent of the following
+            // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
+
+            #define HELIUM_DEFERRED_PASS
+			#include "LightingFuncsV2B_With_Deferred.cginc"
+
+            ENDCG
         }
         Pass{
             Tags{
