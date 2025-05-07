@@ -65,8 +65,9 @@ Shader "Refreshers/StdPackedTextures"
         
             #pragma multi_compile_fwdadd_fullshadows // equivalent of the following
             // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
+            #pragma multi_compile_fog
 
-			#include "LightingFuncsV2B.cginc"
+			#include "LightingFuncsV3.cginc"
 
             ENDCG
         }
@@ -101,6 +102,7 @@ Shader "Refreshers/StdPackedTextures"
             //#pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
             // Equivalent of the one above
             #pragma multi_compile_fwdadd_fullshadows
+            #pragma multi_compile_fog
             
             #define HELIUM_NORMAL_MAPPING
             #define HELIUM_ADD_PASS
@@ -119,7 +121,7 @@ Shader "Refreshers/StdPackedTextures"
             #pragma vertex vert
             #pragma fragment frag
             
-			#include "LightingFuncsV2B.cginc"
+			#include "LightingFuncsV3.cginc"
             ENDCG
             
 
@@ -165,7 +167,7 @@ Shader "Refreshers/StdPackedTextures"
             // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
 
             #define HELIUM_DEFERRED_PASS
-			#include "LightingFuncsV2B_With_Deferred.cginc"
+			#include "LightingFuncsV3.cginc"
 
             ENDCG
         }
