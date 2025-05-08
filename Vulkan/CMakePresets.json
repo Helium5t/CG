@@ -1,0 +1,29 @@
+{
+    "version": 8,
+    "configurePresets": [
+        {
+            "name": "Debug",
+            "displayName": "Debug",
+            "description": "Uses Ninja generator for debug build",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install",
+                "CMAKE_BUILD_TYPE" : "Debug"
+            }
+        },
+        {
+            "name": "Release",
+            "displayName": "Release",
+            "description": "Uses Ninja generator for release build",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install",
+                "CMAKE_BUILD_TYPE" : "Release"
+            }
+        }
+    ]
+}

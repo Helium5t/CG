@@ -92,7 +92,7 @@ void HelloTriangleApplication::recordCommandBuffer(VkCommandBuffer buffer, uint3
     VkBuffer vertBuffers[]= {vertexBuffer};
     VkDeviceSize memoryOffsets[] = {0};
     vkCmdBindVertexBuffers(buffer, 0, 1, vertBuffers, memoryOffsets);
-    vkCmdBindIndexBuffer(buffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindIndexBuffer(buffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
     vkCmdBindDescriptorSets(
         buffer, 
         VK_PIPELINE_BIND_POINT_GRAPHICS, 
