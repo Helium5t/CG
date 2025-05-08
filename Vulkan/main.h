@@ -43,7 +43,7 @@ private:
     const int MAX_FRAMES_IN_FLIGHT = 3;
 
     const std::string MODEL_PATH = "/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/objects/viking_room.obj";
-    const std::string TEX_PATH = "/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/textures/viking_room.jpg";
+    const std::string TEX_PATH = "/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/textures/viking_room.png";
     
     const std::vector<const char*> validationLayerNames = {
         // Here the name has been removed because this validation layer crashes creation of frame buffer.

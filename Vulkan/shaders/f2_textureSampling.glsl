@@ -12,5 +12,5 @@ layout(set = 0, binding = 1) uniform sampler2D mainTexSampler;
 
 
 void main() {
-    outColor = texture(mainTexSampler, uvMainTex*2.0)*0.5 +  0.5* vec4(inColor,1.0);
+    outColor = texture(mainTexSampler, uvMainTex*2.0);
 }
