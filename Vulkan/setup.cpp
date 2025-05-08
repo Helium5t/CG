@@ -729,7 +729,7 @@ void HelloTriangleApplication::createDeviceIndexBuffer(){
 void HelloTriangleApplication::createDeviceVertexBuffer(){
     VkDeviceSize vertexBufferSize = 
         sizeof(vertices[0]) * vertices.size();
-
+    std::cout << "size of vbuffer is " << vertexBufferSize  << "(" << sizeof(vertices[0]) << ")" << std::endl;
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
 
@@ -971,6 +971,7 @@ void HelloTriangleApplication::createAndBindDeviceImage(int width, int height, V
 
 void HelloTriangleApplication::createTextureImage(){
     int texWidth, texHeight, texChannels;
+
     /*
     stbi_uc* points to the first pixel in an array of pixels of the image. Each pixels occupies 4 bytes.
     Order is row by row, so if an image is 100 wide and 200 high we will have:
@@ -978,7 +979,11 @@ void HelloTriangleApplication::createTextureImage(){
     [row 2] 
     [row 199] 
     */
+    #ifdef HELIUM_LOAD_MODEL
+    stbi_uc* firstPixelPointer = loadImage(TEX_PATH.c_str(), &texWidth, &texHeight, &texChannels);
+    #else
     stbi_uc* firstPixelPointer = loadImage("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/textures/tex.jpg", &texWidth, &texHeight, &texChannels);
+    #endif
     VkDeviceSize imageSize = texWidth * texHeight * 4;
     if (!firstPixelPointer) {
         throw std::runtime_error("failed to load texture");

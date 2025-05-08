@@ -20,6 +20,7 @@ add_executable(
     sync.cpp
     vertex.cpp
     image.cpp
+    model.cpp
 )
 
 # Adding stb_image which is not CPM friendly

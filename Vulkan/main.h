@@ -28,6 +28,7 @@
 #include <chrono>
 
 #define HELIUM_VERTEX_BUFFERS
+#define HELIUM_LOAD_MODEL
 // #define HELIUM_DEBUG_LOG_FRAMES
 
 class HelloTriangleApplication{
@@ -40,6 +41,9 @@ private:
     const uint32_t WIDTH = 800;
     const uint32_t HEIGHT = 600;
     const int MAX_FRAMES_IN_FLIGHT = 3;
+
+    const std::string MODEL_PATH = "/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/objects/viking_room.obj";
+    const std::string TEX_PATH = "/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/textures/viking_room.jpg";
     
     const std::vector<const char*> validationLayerNames = {
         // Here the name has been removed because this validation layer crashes creation of frame buffer.
@@ -239,9 +243,16 @@ private:
     stbi_uc* loadImage(const char* path, int* width, int* height, int* channels);
     VkImageView createViewFor2DImage(VkImage image, VkFormat format,VkImageAspectFlags imageAspect);
 
+    //-------------------------------model.cpp
+    #ifdef HELIUM_LOAD_MODEL
+    void loadModel();
+    #endif
+
     //-------------------------------shaders.cpp
     VkShaderModule createShaderModule(const std::vector<char> binary);
 };
+
+// cmake --build /Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/build --config Debug --target all -j 12 -v
 
 //-------------------------------vertex.cpp
 struct Vert{
@@ -252,6 +263,10 @@ struct Vert{
     static VkVertexInputBindingDescription getBindingDescription();
 };
 
+#ifdef HELIUM_LOAD_MODEL
+extern std::vector<Vert> vertices;
+extern std::vector<uint32_t> indices;
+#else
 const std::vector<Vert> vertices = {
     {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
     {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
@@ -264,12 +279,13 @@ const std::vector<Vert> vertices = {
     {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
 };
 
-const std::vector<uint16_t> indices = {
+const std::vector<uint32_t> indices = {
     0, 1, 2,
     2, 3, 0,
     4, 5, 6,
     6, 7, 4
 };
+#endif
 
 //-------------------------------PROJECTION RELATED STRUCTS
 // Struct used as UBO (Uniform Buffer Object) binding in the vertex shader to apply projection
