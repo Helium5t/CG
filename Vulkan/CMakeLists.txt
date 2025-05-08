@@ -37,3 +37,6 @@ target_link_libraries(hello glfw)
 
 CPMAddPackage("gh:g-truc/glm#1.0.1")
 target_link_libraries(hello glm)
+
+CPMAddPackage("gh:tinyobjloader/tinyobjloader#v1.0.6")
+target_link_libraries(hello tinyobjloader)
