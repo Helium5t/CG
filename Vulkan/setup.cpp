@@ -375,16 +375,15 @@ void HelloTriangleApplication::createRenderPass(){
 
 void HelloTriangleApplication::createPipeline(){
     #ifndef HELIUM_VERTEX_BUFFERS
-    std::vector<char> vShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/helloTriangle_v.spv");
-    std::vector<char> fShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/helloTriangle_f.spv");
+    std::vector<char> vShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/v1_helloTriangle.spv");
+    std::vector<char> fShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/f1_helloTriangle.spv");
     #else
 
     VkVertexInputBindingDescription bindingDescription = Vert::getBindingDescription();
     std::array<VkVertexInputAttributeDescription, 3> attributeDescription = Vert::getAttributeDescription();
-    
 
-    std::vector<char> vShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/mvpVertex_v.spv");
-    std::vector<char> fShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/textureSampling_f.spv");
+    std::vector<char> vShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/v3_mvpVertex.spv");
+    std::vector<char> fShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/f2_textureSampling.spv");
     #endif 
 
     VkShaderModule vShader = createShaderModule(vShaderBinary);
