@@ -1,7 +1,11 @@
 /*
-Same file as LightingFuncs.cginc but it used Unity naming convention 
-in order to leverage its standard macros. Done in order to simplify code 
-for future commits.
+An iteration of LightingFuncsV2B. 
+Uses unity's standard convetion to allow leveraging the macros. 
+
+Compared to V2B Adds:
+ - Deferred rendering support
+ - Fog
+
 
 If notes or comments are missing here, they should be present for the same line
 in "LightingFuncs.cginc"
@@ -26,6 +30,12 @@ in "LightingFuncs.cginc"
 // To prove TRANSFORM_TEX is just a define
 #define HELIUM_TRANSFORM_TEX(x,y) (x.xy * y##_ST.xy + y##_ST.zw)
 
+#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
+    #ifndef HELIUM_FOG_USE_WORLD_SPACE_DISTANCE
+        #define HELIUM_FOG_USE_CLIP_SPACE_DEPTH
+    #endif
+    #define HELIUM_FOG_ACTIVE 1
+#endif 
 
 
 sampler2D _Tex;
@@ -299,6 +309,29 @@ float3 BoxProjectionIfActive(
     return refelctionDir;
 }
 
+#ifdef HELIUM_FOG_ACTIVE
+    #ifdef HELIUM_ADD_PASS
+        #define FOG_COLOR 0.0
+    #else
+        #define FOG_COLOR unity_FogColor.rgb
+    #endif
+
+    #ifdef HELIUM_FOG_USE_CLIP_SPACE_DEPTH
+        #define HELIUM_COMPUTE_FOG(c, vo)\
+        float viewDist =  UNITY_Z_0_FAR_FROM_CLIPSPACE(vo.pos.z*vo.pos.w);\
+        UNITY_CALC_FOG_FACTOR_RAW(viewDist);\
+        c.rgb = lerp(FOG_COLOR, c.rgb, saturate(unityFogFactor));
+    #else
+        #define HELIUM_COMPUTE_FOG(c, vo)\
+        float viewDist = length(_WorldSpaceCameraPos - vo.wPos);\
+        UNITY_CALC_FOG_FACTOR_RAW(viewDist);\
+        c.rgb = lerp(FOG_COLOR, c.rgb, saturate(unityFogFactor));
+    #endif
+    
+#else
+    #define HELIUM_COMPUTE_FOG(c, vo);
+#endif 
+
 
 #define HELIUM_COMPUTE_REFLECTION(pn, a, b,c, destName) \
 float3 rsv##pn = reflect(-a, b.n);\
@@ -332,7 +365,7 @@ UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo, float3 viewDir)
         
         il.specular = 0;
 
-        #else
+    #else
 
         HELIUM_COMPUTE_REFLECTION(0, viewDir, vo,roughnessToMipMap, specular0)
         il.specular = specular0;
@@ -375,11 +408,10 @@ UnityLight CreateLight(vOutput vo){
             l.dir = _WorldSpaceLightPos0.xyz;
         #endif
     
-
-    // Check LightingFuncs.cginc to better see how this works
-    UNITY_LIGHT_ATTENUATION(dimming, vo, vo.wPos.xyz);
-    l.color = _LightColor0  * dimming;
-    // angle with surface normal
+        // Check LightingFuncs.cginc to better see how this works
+        UNITY_LIGHT_ATTENUATION(dimming, vo, vo.wPos.xyz);
+        l.color = _LightColor0  * dimming;
+        // angle with surface normal
     #endif 
     return l;
 }
@@ -493,24 +525,26 @@ fOutput frag(vOutput vo){
     #endif
 
     #ifdef HELIUM_DEFERRED_PASS
-    float ao = OCCLUSION(vo.uvM);
-    fout.g0 = float4(
-        albedo.rgb,
-        ao) ;
-    fout.g1 = float4(
-        specularColor,
-        1.0 - ROUGHNESS(vo.uvM)
-    );
-    fout.g2 = float4(
-        vo.n * 0.5 + 0.5, 1.0);
-    #ifndef UNITY_HDR_ON
-        finalCol.rgb = exp2(-finalCol.rgb);
-    #endif
-    fout.g3 = finalCol;
-    return fout;
+        float ao = OCCLUSION(vo.uvM);
+        fout.g0 = float4(
+            albedo.rgb,
+            ao) ;
+        fout.g1 = float4(
+            specularColor,
+            1.0 - ROUGHNESS(vo.uvM)
+        );
+        fout.g2 = float4(
+            vo.n * 0.5 + 0.5, 1.0);
+        #ifndef UNITY_HDR_ON
+            finalCol.rgb = exp2(-finalCol.rgb);
+        #endif
+        fout.g3 = finalCol;
+        return fout;
     #else
-    fout.colorOut = finalCol;
-    return fout;
+        // finalCol =   (vo.pos.z/vo.pos.w);
+        fout.colorOut = finalCol;
+        HELIUM_COMPUTE_FOG(fout.colorOut, vo);
+        return fout; 
     #endif
 }
 

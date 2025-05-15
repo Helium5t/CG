@@ -7,18 +7,13 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: StdComplexWithCutout 2
+  m_Name: StdComplexDefaultValues
   m_Shader: {fileID: 4800000, guid: 72ae64e63e31f422da1bfc0c13f1dcfe, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - HELIUM_2D_METALLIC
-  - HELIUM_DETAIL_ALBEDO
-  - HELIUM_DETAIL_NORMAL_MAP
   - HELIUM_EMISSION_FROM_MAP
-  - HELIUM_NORMAL_MAP
-  - HELIUM_OCCLUSION_FROM_MAP
-  - HELIUM_R_FROM_METALLIC
   m_InvalidKeywords:
   - HELIUM_CUTOUT_TRANSPARENCY
   m_LightmapFlags: 4
@@ -60,7 +55,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Metallic:
-        m_Texture: {fileID: 2800000, guid: 43e7cb5fd06804a00ac4db26a9d42c3f, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
@@ -68,11 +63,11 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Normal:
-        m_Texture: {fileID: 2800000, guid: 14458fde86aa749adb868ed761d86303, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Occlusion:
-        m_Texture: {fileID: 2800000, guid: f32ff02ed0b37472eb0e1e9e06cfe631, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _OcclusionMap:
@@ -92,15 +87,15 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SecondaryNormal:
-        m_Texture: {fileID: 2800000, guid: be97c530ba60742bfb4fb4e3bcdd2746, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SecondaryTex:
-        m_Texture: {fileID: 2800000, guid: 832ee0d2be3f2478cbab6cef2766f0f0, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Tex:
-        m_Texture: {fileID: 2800000, guid: 354055f3962fb453d9ce96ef2fcc6c03, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
@@ -126,12 +121,12 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _UVSec: 0
-    - _UniformMetallic: 0
-    - _UniformRoughness: 0.162
+    - _UniformMetallic: 1
+    - _UniformRoughness: 1
     - _WriteToDepthBuffer: 1
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _EmissionColor: {r: 1, g: 0, b: 0, a: 1}
+    - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
