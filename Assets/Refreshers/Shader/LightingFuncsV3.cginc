@@ -31,7 +31,10 @@ in "LightingFuncs.cginc"
 #define HELIUM_TRANSFORM_TEX(x,y) (x.xy * y##_ST.xy + y##_ST.zw)
 
 #if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
-    #define HELIUM_USE_CLIP_SPACE_DEPTH
+    #ifndef HELIUM_FOG_USE_WORLD_SPACE_DISTANCE
+        #define HELIUM_FOG_USE_CLIP_SPACE_DEPTH
+    #endif
+    #define HELIUM_FOG_ACTIVE 1
 #endif 
 
 
@@ -306,17 +309,28 @@ float3 BoxProjectionIfActive(
     return refelctionDir;
 }
 
-#ifdef HELIUM_USE_CLIP_SPACE_DEPTH
-    #define HELIUM_COMPUTE_FOG(c, vo)\
-    float viewDist =  UNITY_Z_0_FAR_FROM_CLIPSPACE(vo.pos.z*vo.pos.w);\
-    UNITY_CALC_FOG_FACTOR_RAW(viewDist);\
-    c.rgb = lerp(unity_FogColor.rgb, c.rgb, saturate(unityFogFactor));
+#ifdef HELIUM_FOG_ACTIVE
+    #ifdef HELIUM_ADD_PASS
+        #define FOG_COLOR 0.0
+    #else
+        #define FOG_COLOR unity_FogColor.rgb
+    #endif
+
+    #ifdef HELIUM_FOG_USE_CLIP_SPACE_DEPTH
+        #define HELIUM_COMPUTE_FOG(c, vo)\
+        float viewDist =  UNITY_Z_0_FAR_FROM_CLIPSPACE(vo.pos.z*vo.pos.w);\
+        UNITY_CALC_FOG_FACTOR_RAW(viewDist);\
+        c.rgb = lerp(FOG_COLOR, c.rgb, saturate(unityFogFactor));
+    #else
+        #define HELIUM_COMPUTE_FOG(c, vo)\
+        float viewDist = length(_WorldSpaceCameraPos - vo.wPos);\
+        UNITY_CALC_FOG_FACTOR_RAW(viewDist);\
+        c.rgb = lerp(FOG_COLOR, c.rgb, saturate(unityFogFactor));
+    #endif
+    
 #else
-    #define HELIUM_COMPUTE_FOG(c, vo)\
-    float viewDist = length(_WorldSpaceCameraPos - vo.wPos);\
-    UNITY_CALC_FOG_FACTOR_RAW(viewDist);\
-    c.rgb = lerp(unity_FogColor.rgb, c.rgb, saturate(unityFogFactor));
-#endif
+    #define HELIUM_COMPUTE_FOG(c, vo);
+#endif 
 
 
 #define HELIUM_COMPUTE_REFLECTION(pn, a, b,c, destName) \

@@ -25,7 +25,9 @@ Shader "Refreshers/StdPackedTextures"
         [HideInInspector] _WriteToDepthBuffer("_WriteToDepthBuffer", Float) = 1
     }
     CGINCLUDE
-    #define HELIUM_FRAGMENT_BINORMAL
+    #define HELIUM_FRAGMENT_BINORMAL 1
+    #define HELIUM_FOG_USE_WORLD_SPACE_DISTANCE 1
+
     ENDCG
     SubShader{
 
