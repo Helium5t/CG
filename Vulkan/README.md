@@ -44,4 +44,5 @@ There are also Metal specific env variables that can help you debug stuff.
 - `HELIUM_PRINT_EXTENSIONS` : Prints supported instance extensions
 - `HELIUM_PRINT_LAYERS` : Prints available layers
 - `HELIUM_DEBUG_LOG_FRAMES`: Printing for each frame can slow down things, so define this when you need debug prints inside the frame rendering process (drawFrame()).
-- `HELIUM_DO_NOT_REFRESH` : Some platforms crash after the first frame. This is due to some moltenVK incompatibility (same code with no changes works on other platforms, both mac and not )
+- `HELIUM_DO_NOT_REFRESH` : Do not render again after the first frame. 
+- `HELIUM_LOAD_MODEL` : Load model from static path instead of using statically defined vertices and indices.

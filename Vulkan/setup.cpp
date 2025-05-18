@@ -253,6 +253,7 @@ void HelloTriangleApplication::createSwapChainViews(){
     for (int i =0; i< swapChainImages.size(); i++){
         swapChainImageViews[i] = createViewFor2DImage(
             swapChainImages[i],
+            1,
             selectedSwapChainFormat,
             VK_IMAGE_ASPECT_COLOR_BIT
         );
@@ -375,16 +376,15 @@ void HelloTriangleApplication::createRenderPass(){
 
 void HelloTriangleApplication::createPipeline(){
     #ifndef HELIUM_VERTEX_BUFFERS
-    std::vector<char> vShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/helloTriangle_v.spv");
-    std::vector<char> fShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/helloTriangle_f.spv");
+    std::vector<char> vShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/v1_helloTriangle.spv");
+    std::vector<char> fShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/f1_helloTriangle.spv");
     #else
 
     VkVertexInputBindingDescription bindingDescription = Vert::getBindingDescription();
     std::array<VkVertexInputAttributeDescription, 3> attributeDescription = Vert::getAttributeDescription();
-    
 
-    std::vector<char> vShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/mvpVertex_v.spv");
-    std::vector<char> fShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/textureSampling_f.spv");
+    std::vector<char> vShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/v3_mvpVertex.spv");
+    std::vector<char> fShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/f2_textureSampling.spv");
     #endif 
 
     VkShaderModule vShader = createShaderModule(vShaderBinary);
@@ -729,7 +729,7 @@ void HelloTriangleApplication::createDeviceIndexBuffer(){
 void HelloTriangleApplication::createDeviceVertexBuffer(){
     VkDeviceSize vertexBufferSize = 
         sizeof(vertices[0]) * vertices.size();
-
+    std::cout << "size of vbuffer is " << vertexBufferSize  << "(" << sizeof(vertices[0]) << ")" << std::endl;
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
 
@@ -911,7 +911,7 @@ void HelloTriangleApplication::createDescriptorSets(){
     }
 }
 
-void HelloTriangleApplication::createAndBindDeviceImage(int width, int height, VkImage& imageDescriptor, VkDeviceMemory& imageMemory, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memProperties){
+void HelloTriangleApplication::createAndBindDeviceImage(int width, int height, VkImage& imageDescriptor, VkDeviceMemory& imageMemory, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memProperties, int mipmapLevels){
 
     VkImageCreateInfo imageCreationInfo{};
     imageCreationInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -924,7 +924,7 @@ void HelloTriangleApplication::createAndBindDeviceImage(int width, int height, V
     imageCreationInfo.extent.width = width;
     imageCreationInfo.extent.height = height;
     imageCreationInfo.extent.depth = 1; // For cubemaps
-    imageCreationInfo.mipLevels = 1;
+    imageCreationInfo.mipLevels = std::max(1, mipmapLevels);
     imageCreationInfo.arrayLayers = 1;
     imageCreationInfo.format = format;
     /*
@@ -971,6 +971,7 @@ void HelloTriangleApplication::createAndBindDeviceImage(int width, int height, V
 
 void HelloTriangleApplication::createTextureImage(){
     int texWidth, texHeight, texChannels;
+
     /*
     stbi_uc* points to the first pixel in an array of pixels of the image. Each pixels occupies 4 bytes.
     Order is row by row, so if an image is 100 wide and 200 high we will have:
@@ -978,7 +979,14 @@ void HelloTriangleApplication::createTextureImage(){
     [row 2] 
     [row 199] 
     */
+    #ifdef HELIUM_LOAD_MODEL
+    stbi_uc* firstPixelPointer = loadImage(TEX_PATH.c_str(), &texWidth, &texHeight, &texChannels);
+    #else
     stbi_uc* firstPixelPointer = loadImage("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/textures/tex.jpg", &texWidth, &texHeight, &texChannels);
+    #endif
+    textureMipmaps = static_cast<uint32_t>(std::floor(
+        std::log2(std::max(texWidth, texHeight)))
+    ) + 1; // +1 because of level 0
     VkDeviceSize imageSize = texWidth * texHeight * 4;
     if (!firstPixelPointer) {
         throw std::runtime_error("failed to load texture");
@@ -1008,18 +1016,21 @@ void HelloTriangleApplication::createTextureImage(){
         textureImageDeviceMemory, 
         selectedFormat, 
         VK_IMAGE_TILING_OPTIMAL, 
-        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        textureMipmaps
     );
 
     std::cout << "creating first image layout conversion" << std::endl;
-    convertImageLayout(textureImageHandle, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    convertImageLayout(textureImageHandle, textureMipmaps, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     bufferCopyToImage(
         stagingBuffer,
         textureImageHandle, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight)
     );
     std::cout << "creating second image layout conversion" << std::endl;
-    convertImageLayout(textureImageHandle, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    generatateImageMipMaps(
+        textureImageHandle, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, textureMipmaps
+    );
 
     vkDestroyBuffer(logiDevice, stagingBuffer, nullptr);
     vkFreeMemory(logiDevice, stagingMemory, nullptr);
@@ -1028,6 +1039,7 @@ void HelloTriangleApplication::createTextureImage(){
 void HelloTriangleApplication::createTextureImageView(){
     textureImageView = createViewFor2DImage(
         textureImageHandle, 
+        textureMipmaps,
         VK_FORMAT_R8G8B8A8_SRGB,
         VK_IMAGE_ASPECT_COLOR_BIT
     );
@@ -1037,9 +1049,9 @@ void HelloTriangleApplication::createTextureSampler(){
     VkSamplerCreateInfo samplerCreationInfo{};
     samplerCreationInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     // Filtering for magnified texels
-    samplerCreationInfo.magFilter = VK_FILTER_NEAREST;
+    samplerCreationInfo.magFilter = VK_FILTER_LINEAR;
     // Filtering for minified texels (fragment is smaller than the texel)
-    samplerCreationInfo.minFilter = VK_FILTER_NEAREST;
+    samplerCreationInfo.minFilter = VK_FILTER_LINEAR;
     samplerCreationInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
     samplerCreationInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
     samplerCreationInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
@@ -1051,7 +1063,7 @@ void HelloTriangleApplication::createTextureSampler(){
     samplerCreationInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
     samplerCreationInfo.mipLodBias = 0.0f;
     samplerCreationInfo.minLod = 0.0f;
-    samplerCreationInfo.maxLod = 0.0f; // No LOD levels, so no mip maps.
+    samplerCreationInfo.maxLod = static_cast<float>(textureMipmaps);
     
     VkPhysicalDeviceProperties physicalDeviceProperties{};
     vkGetPhysicalDeviceProperties(physGraphicDevice, &physicalDeviceProperties);
@@ -1066,7 +1078,7 @@ void HelloTriangleApplication::createTextureSampler(){
 
 }
 
-void HelloTriangleApplication::convertImageLayout(VkImage srcImage, VkFormat format, VkImageLayout srcLayout, VkImageLayout dstLayout){
+void HelloTriangleApplication::convertImageLayout(VkImage srcImage, int mipmapLevels, VkFormat format, VkImageLayout srcLayout, VkImageLayout dstLayout){
     VkCommandBuffer oneTimeBuffer = beginOneTimeCommands();
 
     /* Memory barriers not only act as synchronizers in the pipeline, but
@@ -1090,7 +1102,7 @@ void HelloTriangleApplication::convertImageLayout(VkImage srcImage, VkFormat for
         layoutConversionBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     }
     layoutConversionBarrier.subresourceRange.baseMipLevel = 0;
-    layoutConversionBarrier.subresourceRange.levelCount = 1;
+    layoutConversionBarrier.subresourceRange.levelCount = std::max(1, mipmapLevels);
     layoutConversionBarrier.subresourceRange.baseArrayLayer = 0;
     layoutConversionBarrier.subresourceRange.layerCount = 1;
 
@@ -1130,7 +1142,7 @@ void HelloTriangleApplication::convertImageLayout(VkImage srcImage, VkFormat for
         0, 0, nullptr, 0, nullptr, 1 , &layoutConversionBarrier
     );
 
-    endOneTimeCommands(oneTimeBuffer);
+    endAndSubmitOneTimeCommands(oneTimeBuffer);
 }
 
 
@@ -1145,11 +1157,13 @@ void HelloTriangleApplication::createDepthPassResources(){
         format,
         VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        1
     );
 
     depthPassImageView = createViewFor2DImage(
         depthPassImage,
+        1,
         format,
         VK_IMAGE_ASPECT_DEPTH_BIT
     );
@@ -1157,6 +1171,7 @@ void HelloTriangleApplication::createDepthPassResources(){
     /*--- Unnecessary steps technically because they are done in the render pass as well. Here for completeness ---*/
     convertImageLayout(
         depthPassImage,
+        1,
         format,
         VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
@@ -1229,7 +1244,7 @@ void HelloTriangleApplication::bufferCopyToImage(VkBuffer srcBuffer, VkImage dst
         oneTimeBuffer, srcBuffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageCopyOp
     );
 
-    endOneTimeCommands(oneTimeBuffer);
+    endAndSubmitOneTimeCommands(oneTimeBuffer);
 }
 
 VkCommandBuffer HelloTriangleApplication::beginOneTimeCommands(){
@@ -1252,7 +1267,7 @@ VkCommandBuffer HelloTriangleApplication::beginOneTimeCommands(){
     return tempBuffer;
 }
 
-void HelloTriangleApplication::endOneTimeCommands(VkCommandBuffer buffer){
+void HelloTriangleApplication::endAndSubmitOneTimeCommands(VkCommandBuffer buffer){
     vkEndCommandBuffer(buffer);
 
     VkSubmitInfo submitInfo{};
@@ -1280,7 +1295,7 @@ void HelloTriangleApplication::bufferCopy(VkBuffer src, VkBuffer dst, VkDeviceSi
 
     vkCmdCopyBuffer(oneTimeCommandBuffer, src, dst, 1, &copyOpDesc);
 
-    endOneTimeCommands(oneTimeCommandBuffer);
+    endAndSubmitOneTimeCommands(oneTimeCommandBuffer);
 
 }
 

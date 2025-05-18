@@ -73,6 +73,9 @@ void HelloTriangleApplication::initVulkan() {
     std::cout << "created view for texture image" << std::endl;
     createTextureSampler();
     std::cout << "created texture sampler" << std::endl;
+    loadModel();
+    std::cout << "loaded model from" << MODEL_PATH << std::endl;
+    std::cout << "loaded " << vertices.size() << " vertices" << std::endl;
     createDeviceVertexBuffer();
     std::cout << "creates and bound vertex buffers" << std::endl;
     createDeviceIndexBuffer();
