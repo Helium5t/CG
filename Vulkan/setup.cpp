@@ -125,6 +125,7 @@ void HelloTriangleApplication::setPhysicalDevice(){
     if (possibleDevices.rbegin() -> first > 0 ){
         physGraphicDevice = possibleDevices.rbegin() -> second;
         std::cout << "Selecting " << physGraphicDevice << " with support score: " << possibleDevices.cbegin()->first << std::endl;
+        maxMsaaSupported = getMaxSamplesMSAA();
     } else {
         throw std::runtime_error("No device meets requirements");
     }
@@ -911,7 +912,16 @@ void HelloTriangleApplication::createDescriptorSets(){
     }
 }
 
-void HelloTriangleApplication::createAndBindDeviceImage(int width, int height, VkImage& imageDescriptor, VkDeviceMemory& imageMemory, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memProperties, int mipmapLevels){
+void HelloTriangleApplication::createAndBindDeviceImage(int width, 
+                                                        int height, 
+                                                        VkSampleCountFlagBits samples,
+                                                        VkImage& imageDescriptor, 
+                                                        VkDeviceMemory& imageMemory, 
+                                                        VkFormat format,
+                                                        VkImageTiling tiling, 
+                                                        VkImageUsageFlags usage, 
+                                                        VkMemoryPropertyFlags memProperties, 
+                                                        int mipmapLevels){
 
     VkImageCreateInfo imageCreationInfo{};
     imageCreationInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -1012,6 +1022,7 @@ void HelloTriangleApplication::createTextureImage(){
     createAndBindDeviceImage(
         texWidth,
         texHeight, 
+        VK_SAMPLE_COUNT_1_BIT,
         textureImageHandle, 
         textureImageDeviceMemory, 
         selectedFormat, 
@@ -1152,6 +1163,7 @@ void HelloTriangleApplication::createDepthPassResources(){
     createAndBindDeviceImage(
         selectedSwapChainWindowSize.width,
         selectedSwapChainWindowSize.height,
+        maxMsaaSupported,
         depthPassImage,
         depthPassMemory,
         format,
@@ -1220,6 +1232,23 @@ VkFormat HelloTriangleApplication::findFirstSupportedDepthFormat(const std::vect
 
 
 #endif 
+
+void HelloTriangleApplication::createMsaaColorResources(){
+    VkFormat colorFormat = selectedSwapChainFormat;
+
+    createAndBindDeviceImage(
+        selectedSwapChainWindowSize.width,
+        selectedSwapChainWindowSize.height,
+        maxMsaaSupported,
+        msaaColorImage,
+        msaaColorMemory,
+        colorFormat,
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, //only used by gpu for sampling from this color framebuffer to swapchain fb
+        1
+    );
+}
 
 void HelloTriangleApplication::bufferCopyToImage(VkBuffer srcBuffer, VkImage dstImage, uint32_t w, uint32_t h){
     VkCommandBuffer oneTimeBuffer = beginOneTimeCommands();

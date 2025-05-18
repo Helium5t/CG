@@ -64,6 +64,8 @@ void HelloTriangleApplication::initVulkan() {
     std::cout<< "created pipeline" << std::endl;
     createCommandPool();
     std::cout << "created command pool" << std::endl;
+    createMsaaColorResources();
+    std::cout << "created resources for multisampling" << std::endl;
     #ifdef HELIUM_VERTEX_BUFFERS
     createDepthPassResources();
     std::cout << "prepared depth pass" << std::endl;

@@ -2,6 +2,9 @@
 
 
 void HelloTriangleApplication::destroySwapChain(){
+    vkDestroyImageView(logiDevice, msaaColorView, nullptr);
+    vkDestroyImage(logiDevice, msaaColorImage, nullptr);
+    vkFreeMemory(logiDevice, msaaColorMemory, nullptr);
     for(size_t i =0 ;  i < swapchainFramebuffers.size(); i++){
         vkDestroyFramebuffer(logiDevice, swapchainFramebuffers[i], nullptr);
     }
@@ -26,6 +29,7 @@ void HelloTriangleApplication::resetSwapChain(){
 
     createSwapChain();
     createSwapChainViews();
+    createMsaaColorResources();
     #ifdef HELIUM_VERTEX_BUFFERS
     createDepthPassResources();
     #endif

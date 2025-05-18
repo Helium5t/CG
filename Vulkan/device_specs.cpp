@@ -181,3 +181,20 @@ VkPresentModeKHR HelloTriangleApplication::choosePresentMode(const std::vector<V
     }
     return VK_PRESENT_MODE_FIFO_KHR; // FIFO is always present
 }
+
+
+VkSampleCountFlagBits HelloTriangleApplication::getMaxSamplesMSAA(){
+    VkPhysicalDeviceProperties pdProps;
+    vkGetPhysicalDeviceProperties(
+        physGraphicDevice, &pdProps
+    );
+
+    VkSampleCountFlags samplesSupported = (pdProps.limits.framebufferColorSampleCounts & pdProps.limits.framebufferDepthSampleCounts);
+    if (samplesSupported & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
+    if (samplesSupported & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; }
+    if (samplesSupported & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; }
+    if (samplesSupported & VK_SAMPLE_COUNT_8_BIT) { return VK_SAMPLE_COUNT_8_BIT; }
+    if (samplesSupported & VK_SAMPLE_COUNT_4_BIT) { return VK_SAMPLE_COUNT_4_BIT; }
+    if (samplesSupported & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
+    return VK_SAMPLE_COUNT_1_BIT;
+}

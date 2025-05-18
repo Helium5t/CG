@@ -109,6 +109,10 @@ private:
     VkDeviceMemory depthPassMemory;
     VkImageView depthPassImageView;
 
+    VkImage msaaColorImage;
+    VkDeviceMemory msaaColorMemory;
+    VkImageView msaaColorView;
+
     /*-
         We need multiple buffers as the mvp mat is updated each frame and we might have multiple frames in flight
         having only one would cause us to have a delay/run condition and a whole slew of issues.
@@ -142,6 +146,7 @@ private:
 
     uint32_t frameCounter  = 0;
 
+    VkSampleCountFlagBits maxMsaaSupported = VK_SAMPLE_COUNT_1_BIT;
 
 
     //-------------------------------main.cpp
@@ -189,12 +194,13 @@ private:
     void createDeviceIndexBuffer();
     void createCoherentUniformBuffers();
     void createDescriptorPool();
-    void createAndBindDeviceImage(int width, int height, VkImage& imageDescriptor, VkDeviceMemory& imageMemory, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags, int mipmaps);
+    void createAndBindDeviceImage(int width, int height, VkSampleCountFlagBits samples, VkImage& imageDescriptor, VkDeviceMemory& imageMemory, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags, int mipmaps);
     void createTextureImage();
     void createTextureImageView();
     void createTextureSampler();
     void createDescriptorSets();
     void createDepthPassResources();
+    void createMsaaColorResources();
     VkFormat findFirstSupportedDepthFormatFromDefaults();
     VkFormat findFirstSupportedDepthFormat(const std::vector<VkFormat>& availableFormats, VkImageTiling depthTiling, VkFormatFeatureFlags features);
     #endif
@@ -208,36 +214,33 @@ private:
 
 
     //-------------------------------device_specs.cpp
-
-    bool rateDeviceSupport(VkPhysicalDevice vkpd);
-
     struct SwapChainSpecifications {
         VkSurfaceCapabilitiesKHR surfaceCapabilities;
         std::vector<VkSurfaceFormatKHR> imageFormats;
         std::vector<VkPresentModeKHR> presentModes;
     };
-    SwapChainSpecifications checkSwapChainSpecifications(VkPhysicalDevice vkpd);
-
+    
     // Contains the index of the queue family we need. The index refers to the position in the array returned by vkGetPhysicalDeviceQueueFamilyProperties.
     struct QueueFamilyIndices{
         // Queue family for graphics commands
         std::optional<uint32_t> graphicsFamilyIndex; // 0 is a valid family index (each index represents a queue family that supports certain commands) so we need a way to discern between null and 0.
         // Queue family for presentation to surface
         std::optional<uint32_t> presentationFamilyIndex; 
-
+        
         inline bool has_values(){
             return graphicsFamilyIndex.has_value() && presentationFamilyIndex.has_value();
         }
     };
+    SwapChainSpecifications checkSwapChainSpecifications(VkPhysicalDevice vkpd);
+    bool rateDeviceSupport(VkPhysicalDevice vkpd);
     QueueFamilyIndices findRequiredQueueFamily(VkPhysicalDevice vkpd);
-
     bool supportsRequiredDeviceExtensions(VkPhysicalDevice vkpd);
-    VkExtent2D chooseWindowSize(const VkSurfaceCapabilitiesKHR& capabilities);
     VkSurfaceFormatKHR chooseImageFormat(const std::vector<VkSurfaceFormatKHR>& formats);
     VkPresentModeKHR choosePresentMode(const std::vector<VkPresentModeKHR>& modes);
-
-    //-------------------------------device_specs.cpp
+    VkExtent2D chooseWindowSize(const VkSurfaceCapabilitiesKHR& capabilities);
+    VkSampleCountFlagBits getMaxSamplesMSAA();
     
+    //-------------------------------appdebug.cpp
     void fillCreateInfoForDebugHandler(VkDebugUtilsMessengerCreateInfoEXT& toBeFilled);
 
     //-------------------------------image.cpp
