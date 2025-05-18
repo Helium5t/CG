@@ -1048,9 +1048,9 @@ void HelloTriangleApplication::createTextureImageView(){
 void HelloTriangleApplication::createTextureSampler(){
     VkSamplerCreateInfo samplerCreationInfo{};
     samplerCreationInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    // Filtering for magnified texels
+    // Filtering for magnified texels (a texel overlaps multiple fragments)
     samplerCreationInfo.magFilter = VK_FILTER_LINEAR;
-    // Filtering for minified texels (fragment is smaller than the texel)
+    // Filtering for minified texels (multiple texels overlap in a fragment)
     samplerCreationInfo.minFilter = VK_FILTER_LINEAR;
     samplerCreationInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
     samplerCreationInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
