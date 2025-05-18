@@ -99,6 +99,7 @@ private:
     VkBuffer indexBuffer;
     VkDeviceMemory indexBufferMemory;
 
+    uint32_t textureMipmaps;
     VkImage textureImageHandle;
     VkDeviceMemory textureImageDeviceMemory;
     VkImageView textureImageView;
@@ -188,7 +189,7 @@ private:
     void createDeviceIndexBuffer();
     void createCoherentUniformBuffers();
     void createDescriptorPool();
-    void createAndBindDeviceImage(int width, int height, VkImage& imageDescriptor, VkDeviceMemory& imageMemory, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags);
+    void createAndBindDeviceImage(int width, int height, VkImage& imageDescriptor, VkDeviceMemory& imageMemory, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags, int mipmaps);
     void createTextureImage();
     void createTextureImageView();
     void createTextureSampler();
@@ -198,10 +199,10 @@ private:
     VkFormat findFirstSupportedDepthFormat(const std::vector<VkFormat>& availableFormats, VkImageTiling depthTiling, VkFormatFeatureFlags features);
     #endif
 
-    void convertImageLayout(VkImage srcImage, VkFormat format, VkImageLayout srcLayout, VkImageLayout dstLayout);
+    void convertImageLayout(VkImage srcImage, int mipmaps, VkFormat format, VkImageLayout srcLayout, VkImageLayout dstLayout);
     void bufferCopyToImage(VkBuffer srcBuffer, VkImage dstImage, uint32_t w, uint32_t h);
     VkCommandBuffer beginOneTimeCommands();
-    void endOneTimeCommands(VkCommandBuffer tempBuffer);
+    void endAndSubmitOneTimeCommands(VkCommandBuffer tempBuffer);
 
 
 
@@ -241,7 +242,8 @@ private:
 
     //-------------------------------image.cpp
     stbi_uc* loadImage(const char* path, int* width, int* height, int* channels);
-    VkImageView createViewFor2DImage(VkImage image, VkFormat format,VkImageAspectFlags imageAspect);
+    VkImageView createViewFor2DImage(VkImage image, int mipmaps, VkFormat format,VkImageAspectFlags imageAspect);
+    void generatateImageMipMaps(VkImage image, VkFormat f, int32_t w, int32_t h, uint32_t levels);
 
     //-------------------------------model.cpp
     #ifdef HELIUM_LOAD_MODEL
