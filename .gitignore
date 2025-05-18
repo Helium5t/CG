@@ -8,6 +8,9 @@
 /[Aa]ssets/[Rr]efreshers/[Nn]oise/*
 /[Aa]ssets/[Tt]extMesh [Pp]ro/*
 
+# Pesky MacOS FS files 
+*/.DS_Store
+
 ########## ADDED BY HELIUM5T ##########
 # Makes the repo only code focused, ignores the rest. (Also imports, so beware!)
 /[Pp]ackages/
