@@ -126,6 +126,7 @@ void HelloTriangleApplication::setPhysicalDevice(){
         physGraphicDevice = possibleDevices.rbegin() -> second;
         std::cout << "Selecting " << physGraphicDevice << " with support score: " << possibleDevices.cbegin()->first << std::endl;
         maxMsaaSupported = getMaxSamplesMSAA();
+        std::cout << "Max MSAA samples supported: " << static_cast<uint32_t>(maxMsaaSupported) << std::endl;
     } else {
         throw std::runtime_error("No device meets requirements");
     }
@@ -264,7 +265,7 @@ void HelloTriangleApplication::createSwapChainViews(){
 void HelloTriangleApplication::createRenderPass(){
     VkAttachmentDescription mainColorAttachmentDescription{}; 
     mainColorAttachmentDescription.format = selectedSwapChainFormat; // Image format i.e. bits per channel and linear/gamma etc...
-    mainColorAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT; // Only one sample
+    mainColorAttachmentDescription.samples = maxMsaaSupported; // Max supported samples
     /*
     Defines what to do before the render pass
     LOAD : Preserve what is already there
@@ -292,7 +293,7 @@ void HelloTriangleApplication::createRenderPass(){
     - VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL use as destination for a copy operation in memory
      */
     mainColorAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // pre-pass
-    mainColorAttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; //post-pass
+    mainColorAttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // This will be multisampled into the resolve attachment
 
     // Used to set the binding for the render pass
     VkAttachmentReference mainColorAttachmentRef{};
@@ -304,7 +305,7 @@ void HelloTriangleApplication::createRenderPass(){
     depthAttachmentDescription.format = findFirstSupportedDepthFormatFromDefaults();
     depthAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     depthAttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    depthAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachmentDescription.samples = maxMsaaSupported;
     depthAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     depthAttachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     depthAttachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -313,6 +314,20 @@ void HelloTriangleApplication::createRenderPass(){
     VkAttachmentReference depthAttachmentRef{};
     depthAttachmentRef.attachment = 1;
     depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentDescription msaaResultColorAttachmentDescription{};
+    msaaResultColorAttachmentDescription.format = selectedSwapChainFormat;
+    msaaResultColorAttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
+    msaaResultColorAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    msaaResultColorAttachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    msaaResultColorAttachmentDescription.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    msaaResultColorAttachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    msaaResultColorAttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    msaaResultColorAttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // Actually the color attachment presented to screen.
+
+    VkAttachmentReference msaaResultAttachmentRef{};
+    msaaResultAttachmentRef.attachment = 2;
+    msaaResultAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     
     VkSubpassDescription subpassDesc{};
     /*
@@ -330,6 +345,7 @@ void HelloTriangleApplication::createRenderPass(){
     subpassDesc.colorAttachmentCount = 1;
     subpassDesc.pColorAttachments = &mainColorAttachmentRef;
     subpassDesc.pDepthStencilAttachment = &depthAttachmentRef;
+    subpassDesc.pResolveAttachments = &msaaResultAttachmentRef;
 
     // Add dependency to make sure pipeline waits for the image to be writeable
     VkSubpassDependency dependency{};
@@ -356,9 +372,10 @@ void HelloTriangleApplication::createRenderPass(){
         VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
 
-    std::array<VkAttachmentDescription,2> descriptions = {
+    std::array<VkAttachmentDescription,3> descriptions = {
         mainColorAttachmentDescription,
-        depthAttachmentDescription
+        depthAttachmentDescription,
+        msaaResultColorAttachmentDescription,
     };
     VkRenderPassCreateInfo renderPassCreationInfo{};
     renderPassCreationInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -539,7 +556,7 @@ void HelloTriangleApplication::createPipeline(){
     // Disabled so 0/min values
     // Enable running fragment shader once for each sample rather than each pixel => multiple times per pixel based on amount of overlapping geometry
     multisamplingStageCreationInfo.sampleShadingEnable = VK_FALSE; 
-    multisamplingStageCreationInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT; // num of samples
+    multisamplingStageCreationInfo.rasterizationSamples = maxMsaaSupported;
     // In range [0,1], how many samples of the total number of samples in a pixel to actually shade.
     // 0 => only one sample => shade per pixel
     // 1 => all samples => shade per sample
@@ -951,7 +968,7 @@ void HelloTriangleApplication::createAndBindDeviceImage(int width,
     imageCreationInfo.usage  = usage;
     imageCreationInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imageCreationInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE; /* Only used by graphics queue */
-    imageCreationInfo.samples = VK_SAMPLE_COUNT_1_BIT; /* No multisampling, as that is reserved to color attachments*/
+    imageCreationInfo.samples = samples;
     imageCreationInfo.flags = 0;
 
     if(vkCreateImage(logiDevice, &imageCreationInfo, nullptr, &imageDescriptor) != VK_SUCCESS){
@@ -1248,6 +1265,13 @@ void HelloTriangleApplication::createMsaaColorResources(){
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, //only used by gpu for sampling from this color framebuffer to swapchain fb
         1
     );
+
+    msaaColorView = createViewFor2DImage(
+        msaaColorImage,
+        1,
+        colorFormat,
+        VK_IMAGE_ASPECT_COLOR_BIT
+    );
 }
 
 void HelloTriangleApplication::bufferCopyToImage(VkBuffer srcBuffer, VkImage dstImage, uint32_t w, uint32_t h){
@@ -1345,16 +1369,21 @@ void HelloTriangleApplication::createFramebuffers(){
     swapchainFramebuffers.resize(swapChainImageViews.size());
 
     for (size_t i =0 ; i < swapChainImageViews.size(); i++){
-        std::array<VkImageView,2> iv = {
-            swapChainImageViews[i],
-            depthPassImageView
+        std::array<VkImageView,3> iv = {
+            // Order cannot be random
+            // 1. Present view
+            // 2. Depth View 
+            // 3. Color view (for MSAA)
+            msaaColorView,
+            depthPassImageView,
+            swapChainImageViews[i] 
         };
 
         VkFramebufferCreateInfo framebufferCreationInfo{};
         framebufferCreationInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferCreationInfo.attachmentCount = static_cast<uint32_t>(iv.size());
         framebufferCreationInfo.height = selectedSwapChainWindowSize.height;
         framebufferCreationInfo.width = selectedSwapChainWindowSize.width;
+        framebufferCreationInfo.attachmentCount = static_cast<uint32_t>(iv.size());
         framebufferCreationInfo.pAttachments = iv.data();
         framebufferCreationInfo.renderPass = renderPass;
         framebufferCreationInfo.layers = 1;
