@@ -157,12 +157,15 @@ void HelloTriangleApplication::createLogicalDevice(){
     // What features of the physical device are being actually used.
     VkPhysicalDeviceFeatures usedPhysicalDeviceFeatures{}; // Empty for now cause we're doing nothing
     usedPhysicalDeviceFeatures.samplerAnisotropy = VK_TRUE; // We need anisotropic filtering for the main texture.
+    usedPhysicalDeviceFeatures.sampleRateShading = VK_TRUE; // Small optimization to improve antialiasing, by shading per sample instead of per fragment.
+    // Given MSAA's nature, this will multiplicate effectively the amount of fragment shader runs.
 
     VkDeviceCreateInfo logicalDeviceCreationInfo{};
     logicalDeviceCreationInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     logicalDeviceCreationInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreationInfos.size()); 
     logicalDeviceCreationInfo.pQueueCreateInfos = queueCreationInfos.data();
     logicalDeviceCreationInfo.pEnabledFeatures = &usedPhysicalDeviceFeatures;
+    
 
     logicalDeviceCreationInfo.enabledExtensionCount =static_cast<uint32_t>(requiredDeviceExtensionNames.size()); // No extensions needed atm.
     logicalDeviceCreationInfo.ppEnabledExtensionNames = requiredDeviceExtensionNames.data();
@@ -402,7 +405,7 @@ void HelloTriangleApplication::createPipeline(){
     std::array<VkVertexInputAttributeDescription, 3> attributeDescription = Vert::getAttributeDescription();
 
     std::vector<char> vShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/v3_mvpVertex.spv");
-    std::vector<char> fShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/f2_textureSampling.spv");
+    std::vector<char> fShaderBinary = readFile("/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/shaders/f3_gammaCorrection.spv");
     #endif 
 
     VkShaderModule vShader = createShaderModule(vShaderBinary);
@@ -553,9 +556,9 @@ void HelloTriangleApplication::createPipeline(){
     // Requires GPU features for it enabled.
     VkPipelineMultisampleStateCreateInfo  multisamplingStageCreationInfo{};
     multisamplingStageCreationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    // Disabled so 0/min values
+
     // Enable running fragment shader once for each sample rather than each pixel => multiple times per pixel based on amount of overlapping geometry
-    multisamplingStageCreationInfo.sampleShadingEnable = VK_FALSE; 
+    multisamplingStageCreationInfo.sampleShadingEnable = VK_TRUE; 
     multisamplingStageCreationInfo.rasterizationSamples = maxMsaaSupported;
     // In range [0,1], how many samples of the total number of samples in a pixel to actually shade.
     // 0 => only one sample => shade per pixel
