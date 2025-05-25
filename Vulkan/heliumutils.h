@@ -1,6 +1,7 @@
 #ifndef HELIUM_UTILS
 #define HELIUM_UTILS
 
+#include "helium_required.h"
 #include <string>
 #include <fstream>
 #define VK_KHRONOS_VALIDATION_VALIDATE_BEST_PRACTICES true

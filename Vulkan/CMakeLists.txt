@@ -4,11 +4,6 @@ project(hello VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 
-
-# add_definitions(
-#     -DSTB_IMAGE_IMPLEMENTATION
-# )
-
 add_executable(
     hello heliumdebug.cpp
     main.cpp 
@@ -20,7 +15,7 @@ add_executable(
     sync.cpp
     vertex.cpp
     image.cpp
-    model.cpp
+    assetload.cpp
 )
 
 # Adding stb_image which is not CPM friendly
@@ -41,3 +36,6 @@ target_link_libraries(hello glm)
 
 CPMAddPackage("gh:tinyobjloader/tinyobjloader#v1.0.6")
 target_link_libraries(hello tinyobjloader)
+
+CPMAddPackage("gh:syoyo/tinygltf#v2.9.6")
+target_link_libraries(hello tinygltf)

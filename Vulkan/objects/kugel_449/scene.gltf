@@ -1,0 +1,848 @@
+{
+  "accessors": [
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 48,
+      "max": [
+        0.13660180568695068,
+        0.30543413758277893,
+        0.30543410778045654
+      ],
+      "min": [
+        -0.13660173118114471,
+        -0.3054341971874237,
+        -0.3054342567920685
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 576,
+      "componentType": 5126,
+      "count": 48,
+      "max": [
+        1.0,
+        0.9551103115081787,
+        0.9551070928573608
+      ],
+      "min": [
+        -1.0,
+        -0.9551103115081787,
+        -0.9551072120666504
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 48,
+      "max": [
+        1.0,
+        1.0
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "componentType": 5125,
+      "count": 84,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 1152,
+      "componentType": 5126,
+      "count": 48,
+      "max": [
+        0.13660180568695068,
+        0.30543413758277893,
+        0.30543410778045654
+      ],
+      "min": [
+        -0.13660173118114471,
+        -0.3054341971874237,
+        -0.3054342567920685
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 1728,
+      "componentType": 5126,
+      "count": 48,
+      "max": [
+        1.0,
+        0.9551103115081787,
+        0.9551070928573608
+      ],
+      "min": [
+        -1.0,
+        -0.9551103115081787,
+        -0.9551072120666504
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 384,
+      "componentType": 5126,
+      "count": 48,
+      "max": [
+        1.0,
+        1.0
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 336,
+      "componentType": 5125,
+      "count": 84,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 2304,
+      "componentType": 5126,
+      "count": 48,
+      "max": [
+        0.13660180568695068,
+        0.30543413758277893,
+        0.30543410778045654
+      ],
+      "min": [
+        -0.13660173118114471,
+        -0.3054341971874237,
+        -0.3054342567920685
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 2880,
+      "componentType": 5126,
+      "count": 48,
+      "max": [
+        1.0,
+        0.9551103115081787,
+        0.9551070928573608
+      ],
+      "min": [
+        -1.0,
+        -0.9551103115081787,
+        -0.9551072120666504
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 768,
+      "componentType": 5126,
+      "count": 48,
+      "max": [
+        1.0,
+        1.0
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 672,
+      "componentType": 5125,
+      "count": 84,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 3456,
+      "componentType": 5126,
+      "count": 48,
+      "max": [
+        0.13660180568695068,
+        0.30543413758277893,
+        0.30543410778045654
+      ],
+      "min": [
+        -0.13660173118114471,
+        -0.3054341971874237,
+        -0.3054342567920685
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 4032,
+      "componentType": 5126,
+      "count": 48,
+      "max": [
+        1.0,
+        0.9551103115081787,
+        0.9551070928573608
+      ],
+      "min": [
+        -1.0,
+        -0.9551103115081787,
+        -0.9551072120666504
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 1152,
+      "componentType": 5126,
+      "count": 48,
+      "max": [
+        1.0,
+        1.0
+      ],
+      "min": [
+        0.0,
+        0.0
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 1008,
+      "componentType": 5125,
+      "count": 84,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 4608,
+      "componentType": 5126,
+      "count": 338,
+      "max": [
+        0.8664798140525818,
+        1.988896369934082,
+        1.118741512298584
+      ],
+      "min": [
+        -0.8664798140525818,
+        -2.086071252822876,
+        0.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 8664,
+      "componentType": 5126,
+      "count": 338,
+      "max": [
+        1.0,
+        0.9999706745147705,
+        0.9999688267707825
+      ],
+      "min": [
+        -1.0,
+        -0.9727747440338135,
+        -1.0
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 1536,
+      "componentType": 5126,
+      "count": 338,
+      "max": [
+        0.9435862302780151,
+        0.9928684234619141
+      ],
+      "min": [
+        0.007131549995392561,
+        0.007131549995392561
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 1344,
+      "componentType": 5125,
+      "count": 840,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 12720,
+      "componentType": 5126,
+      "count": 36,
+      "max": [
+        0.5884915590286255,
+        0.0,
+        0.07948431372642517
+      ],
+      "min": [
+        -0.5884915590286255,
+        -0.2823648452758789,
+        -0.03201952576637268
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "byteOffset": 13152,
+      "componentType": 5126,
+      "count": 36,
+      "max": [
+        1.0,
+        0.2741270065307617,
+        0.955232560634613
+      ],
+      "min": [
+        -1.0,
+        -0.9240210652351379,
+        -0.014629309065639973
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "byteOffset": 4240,
+      "componentType": 5126,
+      "count": 36,
+      "max": [
+        0.96875,
+        0.5546875
+      ],
+      "min": [
+        0.890625,
+        0.5078125
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 4704,
+      "componentType": 5125,
+      "count": 36,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5126,
+      "count": 109,
+      "max": [
+        10.375
+      ],
+      "min": [
+        0.0
+      ],
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5126,
+      "count": 109,
+      "max": [
+        0.5,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "min": [
+        -6.617444900424222e-24,
+        0.0,
+        0.0,
+        0.8660253882408142
+      ],
+      "type": "VEC4"
+    }
+  ],
+  "animations": [
+    {
+      "channels": [
+        {
+          "sampler": 0,
+          "target": {
+            "node": 15,
+            "path": "rotation"
+          }
+        }
+      ],
+      "name": "Kugel449_headlights|BunrakuTX6_headlightsAction",
+      "samplers": [
+        {
+          "input": 24,
+          "interpolation": "LINEAR",
+          "output": 25
+        }
+      ]
+    }
+  ],
+  "asset": {
+    "extras": {
+      "author": "m0nochr0me (https://sketchfab.com/m0nochr0mex)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/kugel-449-8ce97807d0684eeda9b7b7f46e6213e3",
+      "title": "Kugel 449"
+    },
+    "generator": "Sketchfab-16.9.0",
+    "version": "2.0"
+  },
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 4848,
+      "name": "floatBufferViews",
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 4528,
+      "byteOffset": 4848,
+      "byteStride": 8,
+      "name": "floatBufferViews",
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 13584,
+      "byteOffset": 9376,
+      "byteStride": 12,
+      "name": "floatBufferViews",
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 436,
+      "byteOffset": 22960,
+      "name": "floatBufferViews"
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1744,
+      "byteOffset": 23396,
+      "byteStride": 16,
+      "name": "floatBufferViews"
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 25140,
+      "uri": "scene.bin"
+    }
+  ],
+  "extensionsRequired": [
+    "KHR_materials_pbrSpecularGlossiness"
+  ],
+  "extensionsUsed": [
+    "KHR_materials_pbrSpecularGlossiness"
+  ],
+  "images": [
+    {
+      "uri": "textures/WheelMat_diffuse.png"
+    },
+    {
+      "uri": "textures/Car_Material_Kugel449_diffuse.png"
+    },
+    {
+      "uri": "textures/Car_Material_Kugel449_specularGlossiness.png"
+    }
+  ],
+  "materials": [
+    {
+      "doubleSided": true,
+      "extensions": {
+        "KHR_materials_pbrSpecularGlossiness": {
+          "diffuseFactor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "diffuseTexture": {
+            "index": 0
+          },
+          "glossinessFactor": 0.0,
+          "specularFactor": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "name": "WheelMat"
+    },
+    {
+      "doubleSided": true,
+      "extensions": {
+        "KHR_materials_pbrSpecularGlossiness": {
+          "diffuseFactor": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "diffuseTexture": {
+            "index": 1
+          },
+          "glossinessFactor": 0.5,
+          "specularFactor": [
+            0.5,
+            0.5,
+            0.5
+          ],
+          "specularGlossinessTexture": {
+            "index": 2
+          }
+        }
+      },
+      "name": "Car_Material_Kugel449"
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Kugel449_Wheel_RR_WheelMat_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 1,
+            "POSITION": 0,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "Kugel449_Wheel_RL_WheelMat_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 5,
+            "POSITION": 4,
+            "TEXCOORD_0": 6
+          },
+          "indices": 7,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "Kugel449_Wheel_FR_WheelMat_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 9,
+            "POSITION": 8,
+            "TEXCOORD_0": 10
+          },
+          "indices": 11,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "Kugel449_Wheel_FL_WheelMat_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 13,
+            "POSITION": 12,
+            "TEXCOORD_0": 14
+          },
+          "indices": 15,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "Kugel449_Car_Material_Kugel449_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 17,
+            "POSITION": 16,
+            "TEXCOORD_0": 18
+          },
+          "indices": 19,
+          "material": 1,
+          "mode": 4
+        }
+      ]
+    },
+    {
+      "name": "Kugel449_headlights_Car_Material_Kugel449_0",
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 21,
+            "POSITION": 20,
+            "TEXCOORD_0": 22
+          },
+          "indices": 23,
+          "material": 1,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "children": [
+        1
+      ],
+      "matrix": [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        2.220446049250313e-16,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        2.220446049250313e-16,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "Sketchfab_model"
+    },
+    {
+      "children": [
+        2
+      ],
+      "matrix": [
+        0.009999999776482582,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.009999999776482582,
+        0.0,
+        0.0,
+        -0.009999999776482582,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "name": "f63c45b320be49b4972080b485c7433d.fbx"
+    },
+    {
+      "children": [
+        3
+      ],
+      "name": "Object_2"
+    },
+    {
+      "children": [
+        4
+      ],
+      "name": "RootNode"
+    },
+    {
+      "children": [
+        5,
+        7,
+        9,
+        11,
+        13,
+        15
+      ],
+      "name": "Kugel449_c",
+      "rotation": [
+        -0.7071068286895752,
+        0.0,
+        0.0,
+        0.7071068286895752
+      ],
+      "scale": [
+        100.0,
+        100.0,
+        100.0
+      ],
+      "translation": [
+        0.0,
+        0.0,
+        -214.24932861328125
+      ]
+    },
+    {
+      "children": [
+        6
+      ],
+      "name": "Kugel449_Wheel_RR",
+      "rotation": [
+        -6.617444900424222e-24,
+        -0.0,
+        0.0,
+        1.0
+      ],
+      "translation": [
+        -0.6882543563842773,
+        1.0774235725402832,
+        0.1298532336950302
+      ]
+    },
+    {
+      "mesh": 0,
+      "name": "Kugel449_Wheel_RR_WheelMat_0"
+    },
+    {
+      "children": [
+        8
+      ],
+      "name": "Kugel449_Wheel_RL",
+      "rotation": [
+        -6.617444900424222e-24,
+        -0.0,
+        0.0,
+        1.0
+      ],
+      "translation": [
+        0.6882543563842773,
+        1.0774235725402832,
+        0.1298532336950302
+      ]
+    },
+    {
+      "mesh": 1,
+      "name": "Kugel449_Wheel_RL_WheelMat_0"
+    },
+    {
+      "children": [
+        10
+      ],
+      "name": "Kugel449_Wheel_FR",
+      "rotation": [
+        -6.617444900424222e-24,
+        -0.0,
+        0.0,
+        1.0
+      ],
+      "translation": [
+        -0.6882543563842773,
+        -1.2953360080718994,
+        0.1298532336950302
+      ]
+    },
+    {
+      "mesh": 2,
+      "name": "Kugel449_Wheel_FR_WheelMat_0"
+    },
+    {
+      "children": [
+        12
+      ],
+      "name": "Kugel449_Wheel_FL",
+      "rotation": [
+        -6.617444900424222e-24,
+        -0.0,
+        0.0,
+        1.0
+      ],
+      "translation": [
+        0.6882543563842773,
+        -1.2953360080718994,
+        0.1298532485961914
+      ]
+    },
+    {
+      "mesh": 3,
+      "name": "Kugel449_Wheel_FL_WheelMat_0"
+    },
+    {
+      "children": [
+        14
+      ],
+      "name": "Kugel449",
+      "rotation": [
+        -6.617444900424222e-24,
+        -0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "mesh": 4,
+      "name": "Kugel449_Car_Material_Kugel449_0"
+    },
+    {
+      "children": [
+        16
+      ],
+      "name": "Kugel449_headlights",
+      "rotation": [
+        0.2588191032409668,
+        0.0,
+        0.0,
+        0.9659258127212524
+      ],
+      "translation": [
+        0.0,
+        -1.6958410739898682,
+        0.4706701338291168
+      ]
+    },
+    {
+      "mesh": 5,
+      "name": "Kugel449_headlights_Car_Material_Kugel449_0"
+    }
+  ],
+  "samplers": [
+    {
+      "magFilter": 9728,
+      "minFilter": 9728,
+      "wrapS": 10497,
+      "wrapT": 10497
+    },
+    {
+      "magFilter": 9728,
+      "minFilter": 9986,
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "name": "Sketchfab_Scene",
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    },
+    {
+      "sampler": 1,
+      "source": 1
+    },
+    {
+      "sampler": 1,
+      "source": 2
+    }
+  ]
+}

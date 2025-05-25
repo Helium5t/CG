@@ -6,8 +6,6 @@ stbi_uc* HelloTriangleApplication::loadImage(const char* path, int* width, int* 
     stbi_uc* pixels = stbi_load(path, width, height, channels, STBI_rgb_alpha);
     return pixels;
 }
-
-
 /*
 Creates a view for a 2D image with no mip map levels and no layers.
 View will be generated with no swizzle. 
