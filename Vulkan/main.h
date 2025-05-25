@@ -1,5 +1,7 @@
 #pragma once
 
+#include "helium_required.h"
+
 #include <iostream>
 #include <stdexcept>
 #include <cstdlib> // Used for the two success statuses EXIT_SUCCESS and EXIT_FAILURE 
@@ -43,6 +45,7 @@ private:
     const int MAX_FRAMES_IN_FLIGHT = 3;
 
     const std::string MODEL_PATH = "/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/objects/viking_room.obj";
+    const std::string GLTF_MODEL_PATH = "/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/objects/P911/scene.gltf";
     const std::string TEX_PATH = "/Users/kambo/Helium/GameDev/Projects/CGSamples/Vulkan/textures/viking_room.png";
     
     const std::vector<const char*> validationLayerNames = {
@@ -251,6 +254,7 @@ private:
     //-------------------------------model.cpp
     #ifdef HELIUM_LOAD_MODEL
     void loadModel();
+    void loadModelFromGltf();
     #endif
 
     //-------------------------------shaders.cpp

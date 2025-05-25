@@ -1,0 +1,4 @@
+#ifndef HELIUM_REQUIRED
+#define HELIUM_REQUIRED
+
+#endif

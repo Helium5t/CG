@@ -23,6 +23,11 @@ void HelloTriangleApplication::run() {
     }else{
         std::cout<< "VL Disabled" << std::endl;
     }
+
+    /* Just to test gltf, kill this after and integrate in the project */
+    loadModelFromGltf();
+    return;
+
     initWindow();
     initVulkan();
     std::cout<< "starting main loop" << std::endl;
