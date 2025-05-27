@@ -13,8 +13,8 @@
     #define HELIUM_DIRECTIONAL_LIGHT_MODEL
 #endif
 
-#if defined(SPOT) && defined(DIRECTIONAL_COOKIE)
-    #define SPOT_COOKIE
+#if defined(POINT) || defined(POINT_COOKIE)
+    #define HELIUM_POINT_LIGHT_MODEL
 #endif
 
 struct vInput{
@@ -48,6 +48,15 @@ vOutput vert(vInput v){
     // Get the position of the pyramid vertices in camera space (0,0,0 centered in the camera, rotation aligned with the camera)
     // Then invert x and y (z is positive in Unity camera space so it's already inverted). 
     o.screenRay = lerp(
+        UnityObjectToViewPos(v.pos) * float3(1,1,-1),
+        v.normal,
+        _LightAsQuad
+    );
+    #else 
+    o.screenUVClipSpace = ComputeScreenPos(o.cPos);// from clip space to coordinates on the screen
+    // Get the position of the pyramid vertices in camera space (0,0,0 centered in the camera, rotation aligned with the camera)
+    // Then invert x and y (z is positive in Unity camera space so it's already inverted). 
+    o.screenRay = lerp(
         UnityObjectToViewPos(v.pos) * float3(-1,-1,1),
         v.normal,
         _LightAsQuad
@@ -72,7 +81,12 @@ sampler2D _CameraGBufferTexture2;
 // Directional Light info
 float4 _LightColor, _LightDir, _LightPos;
 // Light Cookie Map and Spotlight fadeout map.
-sampler2D _LightTexture0, _LightTextureB0;
+#ifdef POINT_COOKIE
+samplerCUBE _LightTexture0;
+#else
+sampler2D _LightTexture0;
+#endif
+sampler2D _LightTextureB0;
 float4x4 unity_WorldToLight; // World to light space
 /* ------------------------------- */
 
@@ -90,9 +104,16 @@ float3 DirectionalShadowMap(float2 screenUV, float3 wPos, float depthViewSpace){
 }
 #endif
 
+#ifdef SHADOWS_CUBE
+float3 PointLightShadowMap(float3 lVec){
+    float dim = UnitySampleShadowmap(-lVec);
+    return dim;
+}
+#endif
+
 #ifdef SHADOWS_DEPTH
-float3 SpotlightShadowMap(float3 wPos){
-    float3 dim = UnitySampleShadowmap(mul(unity_WorldToShadow[0], float4(wPos, 1)));
+float SpotlightShadowMap(float3 wPos){
+    float dim = UnitySampleShadowmap(mul(unity_WorldToShadow[0], float4(wPos, 1)));
     return dim;
 }
 #endif
@@ -101,17 +122,24 @@ float LightCookie(float3 wPos){
     #if DIRECTIONAL_COOKIE
         float2 cookieUV = mul(unity_WorldToLight, float4(wPos, 1)).xy;
         return tex2Dbias(_LightTexture0, float4(cookieUV, 0, -8)).w; // This might not yield the desired result for some cookies and still show rims.
-    #else  // Spot cookie is always enabled to get the fadeout, so assume spotlight otherwise
+    #elif defined(SPOT) // Spot cookie is always enabled to get the fadeout
         float4 cookieUV = mul(unity_WorldToLight, float4(wPos, 1));
         cookieUV.xy /= cookieUV.w; // Account for the conic nature of spotlights
         float dim =  tex2Dbias(_LightTexture0, float4(cookieUV.xy, 0, -8)).w; // This might not yield the desired result for some cookies and still show rims.
         dim *= cookieUV.w < 0; // avoid rear facing cones
         return dim;
+    #elif defined(POINT_COOKIE)
+        float3 cookieUV = mul(unity_WorldToLight, float4(wPos, 1)).xyz;
+        return texCUBEbias(
+            _LightTexture0, float4(cookieUV, -8)
+        ).w;
+    #else
+        return 1;
     #endif
 }
 
-#ifdef SPOT
-float SpotlightFadeout(float3 lVec){
+#if defined(SPOT) || defined(HELIUM_POINT_LIGHT_MODEL)
+float LightRangeFadeout(float3 lVec){
     return tex2D(
         _LightTextureB0,
         (dot(lVec,lVec) * _LightPos.w).rr
@@ -120,20 +148,15 @@ float SpotlightFadeout(float3 lVec){
 #endif
 
 #ifndef HELIUM_SHADOWS_DISABLED
-float MaxDistShadowFade(float3 wPos, float depthViewSpace, float dim){
-    float maxDistFade = UnityComputeShadowFadeDistance(wPos, depthViewSpace);
-    /*
-    _LightShadowData : x - shadow strength | y - Appears to be unused | z - 1.0 / shadow far distance | w - shadow near distance
-    */
-    float fadeAdditive = saturate(maxDistFade * _LightShadowData.z + _LightShadowData.w);
-    return saturate(dim + fadeAdditive); // Add value to dimming to fade to white
+float MaxDistShadowFade(float3 wPos, float depthViewSpace, float dim, float maxDistFade){
+    return saturate(dim + maxDistFade); // Add value to dimming to fade to white
 }
 #endif
 
 float3 lightDir(float3 wPos){
     #ifdef HELIUM_DIRECTIONAL_LIGHT_MODEL
     return -_LightDir;
-    #elif defined(SPOT)
+    #elif defined(SPOT) || defined(HELIUM_POINT_LIGHT_MODEL)
     return normalize(_LightPos.xyz - wPos);
     #else
     return float3(1.0,0.0,0.0);
@@ -144,21 +167,46 @@ UnityLight ComputeDirectLighting(float2 screenUV, float3 wPos, float depthViewSp
     UnityLight l;
 
     l.dir = lightDir(wPos);
+    float3 lVec = _LightPos.xyz - wPos;
 
     float shadowDimming = 1;
-    #ifdef SHADOWS_SCREEN // SHADOWS_SCREEN is only used by directional light, POINT uses CUBE and SPOT uses DEPTH
-        shadowDimming = DirectionalShadowMap(screenUV, wPos, depthViewSpace);
-    #elif defined(SHADOWS_DEPTH)
-        shadowDimming = SpotlightFadeout(wPos) * SpotlightShadowMap(wPos);
+
+    float shadowFading = 0;
+    #ifndef HELIUM_SHADOWS_DISABLED
+    shadowFading = UnityComputeShadowFadeDistance(wPos, depthViewSpace);
+    /*
+    _LightShadowData : x - shadow strength | y - Appears to be unused | z - 1.0 / shadow far distance | w - shadow near distance
+    */
+    shadowFading = saturate(shadowFading * _LightShadowData.z + _LightShadowData.w);
     #endif
-    #ifndef HELIUM_SHADOWS_DISABLED 
-    shadowDimming = MaxDistShadowFade(wPos, depthViewSpace, shadowDimming);
+    
+    #if defined(UNITY_FAST_COHERENT_DYNAMIC_BRANCHING) && defined(SHADOWS_SOFT)
+        UNITY_BRANCH
+        if (shadowFading > 0.99){
+            shadowDimming = 1;
+        }else{
+    #endif
+            #ifdef SHADOWS_SCREEN // SHADOWS_SCREEN is only used by directional light, POINT uses CUBE and SPOT uses DEPTH
+            shadowDimming = DirectionalShadowMap(screenUV, wPos, depthViewSpace);
+            #elif defined(SHADOWS_DEPTH) 
+            shadowDimming *= SpotlightShadowMap(wPos);
+            #elif defined(SHADOWS_CUBE)
+            shadowDimming *= PointLightShadowMap(lVec);
+            #endif
+    #if defined(UNITY_FAST_COHERENT_DYNAMIC_BRANCHING) && defined(SHADOWS_SOFT)
+        }
     #endif
 
-    shadowDimming *= LightCookie(wPos);
-    #ifdef SPOT
-    // shadowDimming *= SpotlightFadeout(_LightPos.xyz - wPos);
+
+    #ifndef HELIUM_SHADOWS_DISABLED 
+    shadowDimming = MaxDistShadowFade(wPos, depthViewSpace, shadowDimming, shadowFading);
     #endif
+    
+    #if defined(SPOT) || defined(HELIUM_POINT_LIGHT_MODEL)
+    shadowDimming *= LightRangeFadeout(lVec);
+    #endif
+    
+    shadowDimming *= LightCookie(wPos);
     
     l.color = _LightColor.rgb * shadowDimming;
     // When computing the light we utilize the direction from the source to the light as this eases computations.
