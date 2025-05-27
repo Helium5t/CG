@@ -43,21 +43,12 @@ vOutput vert(vInput v){
     // In layman terms, each corner has the same coords of the corners of the screen (BL00,BR01, TL10, TR11)
     o.screenUVClipSpace = v.pos; // v is already in screen position
     o.screenRay = v.normal;
-    #elif defined(SPOT)
+    #elif defined(SPOT) || defined(HELIUM_POINT_LIGHT_MODEL)
     o.screenUVClipSpace = ComputeScreenPos(o.cPos);// from clip space to coordinates on the screen
     // Get the position of the pyramid vertices in camera space (0,0,0 centered in the camera, rotation aligned with the camera)
     // Then invert x and y (z is positive in Unity camera space so it's already inverted). 
     o.screenRay = lerp(
         UnityObjectToViewPos(v.pos) * float3(1,1,-1),
-        v.normal,
-        _LightAsQuad
-    );
-    #else 
-    o.screenUVClipSpace = ComputeScreenPos(o.cPos);// from clip space to coordinates on the screen
-    // Get the position of the pyramid vertices in camera space (0,0,0 centered in the camera, rotation aligned with the camera)
-    // Then invert x and y (z is positive in Unity camera space so it's already inverted). 
-    o.screenRay = lerp(
-        UnityObjectToViewPos(v.pos) * float3(-1,-1,1),
         v.normal,
         _LightAsQuad
     );
