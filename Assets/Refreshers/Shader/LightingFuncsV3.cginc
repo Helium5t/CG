@@ -76,6 +76,10 @@ float _OcclusionStrength;
 sampler2D _DetailMask;
 #endif
 
+#ifdef LIGHTMAP_ON
+#define HELIUM_TRANSFORM_LIGHTMAP(uvVar, mapName) uvVar * mapName##ST.xy + mapName##ST.zw; // suffix is different compared to normal TRASNFORM_TEX
+#endif
+
 float4 _Tex_ST;
 
 float _UniformRoughness,_UniformMetallic;;
@@ -144,7 +148,8 @@ struct vInput{
     float4 vertex: POSITION;
     float3 n : NORMAL;
     float2 uv : TEXCOORD0;
-
+    float2 uvLight : TEXCOORD1;
+    
     #ifdef HELIUM_NORMAL_MAPPING
     float4 tan : TANGENT;
     #endif
@@ -179,13 +184,15 @@ struct vOutput{
     /*
     Same as 
     #ifdef SHADOWS_SCREEN
-    float4 _ShadowCoord : TEXCOORD5; //<--- NAME IS IMPORTANT
+    float4 _ShadowCoord : TEXCOORD5; //<--- NAME IS IMPORTANT as it's assumed in the macros
     #endif
     */
     SHADOW_COORDS(5) // 5 for the index of TEXCOORD
 
-    #if defined(VERTEXLIGHT_ON)
+    #ifdef VERTEXLIGHT_ON
     float3 lColor: TEXCOORD6; // Computed vertex light
+    #elif defined(LIGHTMAP_ON)
+    float2 uvLight : TEXCOORD6;
     #endif
 
 };
@@ -206,8 +213,8 @@ float3 ComputeBinormal(float3 n, float3 t, float sign){
     return cross(n,t) * (sign * unity_WorldTransformParams.w/*Handles cases where object is mirrored in some dimension*/);
 }
 
+#if defined(VERTEXLIGHT_ON)
 void ComputeVertexLight(inout vOutput v){
-    #if defined(VERTEXLIGHT_ON)
     /*
         float3 lPos = float3(
             // unity_4LightPosA0 contains up to 4 vertex light information
@@ -241,8 +248,8 @@ void ComputeVertexLight(inout vOutput v){
             v.n
         );
 
-    #endif
-}
+    }
+#endif
 
 vOutput vert(vInput i){
     vOutput o;
@@ -269,7 +276,11 @@ vOutput vert(vInput i){
     vInput v = i; // Unity assumes inpux from vertex shader is called v.
     TRANSFER_SHADOW(o);
     
+    #ifdef VERTEXLIGHT_ON
     ComputeVertexLight(o);
+    #elif defined(LIGHTMAP_ON)
+    o.uvLight = HELIUM_TRANSFORM_LIGHTMAP(i.uvLight, unity_Lightmap); 
+    #endif
     return o;
 }
 
@@ -345,27 +356,37 @@ UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo, float3 viewDir)
     UnityIndirect il;
     il.diffuse =0;
     il.specular = 0;
+
     #if defined(VERTEXLIGHT_ON)
     il.diffuse = vo.lColor;
     #endif
+
     #if !defined(HELIUM_ADD_PASS) || defined(HELIUM_DEFERRED_PASS)
-    il.diffuse += max(0, ShadeSH9(float4(vo.n, 1)));
+
+        #ifdef LIGHTMAP_ON
+         // overrides vertexlight value, although we don't expect to have it since Unity either defined VERTEXLIGHT_ON or LIGHTMAP_ON
+        il.diffuse = DecodeLightmap(UNITY_SAMPLE_TEX2D(
+            unity_Lightmap, vo.uvLight
+        ));
+        #else
+        il.diffuse += max(0, ShadeSH9(float4(vo.n, 1)));
+        #endif
     
     float roughnessToMipMap = 1.7 - 0.7* ROUGHNESS(vo.uvM);
-    // float3 reflectionSampleVec = reflect(-viewDir, vo.n);
-    // reflectionSampleVec = BoxProjectionIfActive(reflectionSampleVec, vo.wPos, 
-    //      unity_SpecCube0_ProbePosition, unity_SpecCube0_BoxMin, unity_SpecCube0_BoxMax);
+        // float3 reflectionSampleVec = reflect(-viewDir, vo.n);
+        // reflectionSampleVec = BoxProjectionIfActive(reflectionSampleVec, vo.wPos, 
+        //      unity_SpecCube0_ProbePosition, unity_SpecCube0_BoxMin, unity_SpecCube0_BoxMax);
     
-    // // Approximates this https://s3.amazonaws.com/docs.knaldtech.com/knald/1.0.0/lys_power_drops.html
-    // // fundamentally roughness should not be treated linearly because visibly it does not do it.
-    // float4 specularHDR = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflectionSampleVec, roughnessToMipMap *  _Roughness * HELIUM_MAX_LOD);
-    // float3 specular0 = DecodeHDR(specularHDR, unity_SpecCube0_HDR);//contains HDR decoding instructions
-    // These two macros summarize the previous lines
-    #if defined(DEFERRED_PASS) && UNITY_ENABLE_REFLECTION_BUFFERS
-        
+        // // Approximates this https://s3.amazonaws.com/docs.knaldtech.com/knald/1.0.0/lys_power_drops.html
+        // // fundamentally roughness should not be treated linearly because visually it does not behave so.
+        // float4 specularHDR = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflectionSampleVec, roughnessToMipMap *  _Roughness * HELIUM_MAX_LOD);
+        // float3 specular0 = DecodeHDR(specularHDR, unity_SpecCube0_HDR);//contains HDR decoding instructions
+        // These two macros summarize the previous lines
+        #if defined(DEFERRED_PASS) && UNITY_ENABLE_REFLECTION_BUFFERS
+            
         il.specular = 0;
 
-    #else
+        #else
 
         HELIUM_COMPUTE_REFLECTION(0, viewDir, vo,roughnessToMipMap, specular0)
         il.specular = specular0;

@@ -45,7 +45,7 @@ Shader "Refreshers/StdPackedTextures"
             
             // Compile a version that computes light per vertex, much cheaper than per fragment.
             // Only point is supported
-            #pragma multi_compile _ VERTEXLIGHT_ON
+            #pragma multi_compile _ VERTEXLIGHT_ON LIGHTMAP_ON
 
 			#pragma multi_compile _ SHADOWS_SCREEN 
 
@@ -143,7 +143,7 @@ Shader "Refreshers/StdPackedTextures"
             
             // Compile a version that computes light per vertex, much cheaper than per fragment.
             // Only point is supported
-            #pragma multi_compile _ VERTEXLIGHT_ON
+            #pragma multi_compile _ VERTEXLIGHT_ON LIGHTMAP_ON
 
 			#pragma multi_compile _ SHADOWS_SCREEN 
 
@@ -194,5 +194,5 @@ Shader "Refreshers/StdPackedTextures"
         }
     }
     Fallback "Diffuse"
-    CustomEditor "HeliumShaderPackedMetallicUI"
+    CustomEditor "HeliumShaderStandardUI"
 }

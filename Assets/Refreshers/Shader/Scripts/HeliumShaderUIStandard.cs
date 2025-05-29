@@ -4,7 +4,7 @@ using UnityEngine.Rendering;
 using System.Diagnostics;
 using UnityEngine.XR;
 
-public class HeliumShaderPackedMetallicUI : ShaderGUI {
+public class HeliumShaderStandardUI : ShaderGUI {
 
     enum RoughnessSource{
         Uniform, Albedo, Metallic
@@ -250,11 +250,12 @@ public class HeliumShaderPackedMetallicUI : ShaderGUI {
 		}
     }
 
-    void DoAlphaThreshold(){
+    void DoAlphaThreshold()
+    {
         MaterialProperty slider = FindProperty("_AlphaThreshold");
-        EditorGUI.indentLevel +=2;
+        EditorGUI.indentLevel += 2;
         editor.ShaderProperty(slider, MakeLabel(slider));
-        EditorGUI.indentLevel -=2;
+        EditorGUI.indentLevel -= 2;
     }
 
     void DoTransparencyMode(){
