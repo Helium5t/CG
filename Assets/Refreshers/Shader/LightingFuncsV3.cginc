@@ -15,20 +15,12 @@ in "LightingFuncs.cginc"
 
 #define HELIUM_MAX_LOD 6
 
-// cginc because it is an include file
-// #include "UnityCG.cginc" // Already included by UnityStandardBRDF
-// #include "UnityStandardBRDF.cginc" // in UnityPBSLighting
-// #include "UnityStandardUtils.cginc" // in UnityPBSLighting 
-#include "UnityPBSLighting.cginc"
+#if !defined(HELIUM_ADD_PASS) || defined(HELIUM_DEFERRED_PASS)
+    #define HELIUM_COMPUTE_EMISSION
+#endif
 
-// Helper functions for lights. 
-// Here light falloff for the point light is computed by transforming coordinates
-// in the light's local space scaled by its attenuation. Anything further than 1
-// from the light is considered out of range and thus attenuation = 0.
-#include "AutoLight.cginc"
 
-// To prove TRANSFORM_TEX is just a define
-#define HELIUM_TRANSFORM_TEX(x,y) (x.xy * y##_ST.xy + y##_ST.zw)
+#include "LightingCommon.cginc"
 
 #if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
     #ifndef HELIUM_FOG_USE_WORLD_SPACE_DISTANCE
@@ -37,73 +29,23 @@ in "LightingFuncs.cginc"
     #define HELIUM_FOG_ACTIVE 1
 #endif 
 
+// Alpha threshold to clip the pixel. Called like this because Unity wouldn't be able to handle shadows otherwise.
+float _Cutoff;
 
-sampler2D _Tex;
+#ifdef HELIUM_DETAIL_NORMAL_MAP
+sampler2D _SecondaryNormal;
+float _SecondaryNormalStrength;
+#endif 
 
-float _AlphaThreshold;
+sampler2D _Normal;
+float _NormalStrength;
 
-#ifdef HELIUM_NORMAL_MAPPING
-
-    #ifdef HELIUM_DETAIL_ALBEDO
-    sampler2D _SecondaryTex;
-    float4 _SecondaryTex_ST;
-    #endif
-
-    #ifdef HELIUM_DETAIL_NORMAL_MAP
-    sampler2D _SecondaryNormal;
-    float _SecondaryNormalStrength;
-    #endif 
-
-    sampler2D _Normal;
-    float _NormalStrength;
-#endif
-
-#ifdef HELIUM_BASE_COLOR
-float4 _Color;
-#endif
-
-#ifdef HELIUM_EMISSION
-float3 _EmissionColor;
-sampler2D _Emission;
-#endif
 
 #ifdef HELIUM_AMBIENT_OCCLUSION
 sampler2D _Occlusion;
 float _OcclusionStrength;
 #endif
 
-#ifdef HELIUM_DETAIL_MASK
-sampler2D _DetailMask;
-#endif
-
-float4 _Tex_ST;
-
-float _UniformRoughness,_UniformMetallic;;
-sampler2D _Metallic, _Roughness;
-
-#ifdef HELIUM_2D_METALLIC
-    #define METALLIC(uv) tex2D(_Metallic, uv.xy).r
-#else
-    #define METALLIC(x) _UniformMetallic
-#endif 
-
-#if defined(HELIUM_R_FROM_METALLIC) && defined(HELIUM_2D_METALLIC)
-    #define ROUGHNESS(uv) (1.0 - tex2D(_Metallic, uv.xy).a) * _UniformRoughness
-#elif defined(HELIUM_R_FROM_ALBEDO)
-    #define ROUGHNESS(uv) (1.0 - tex2D(_Tex, uv.xy).a) * _UniformRoughness
-#else
-    #define ROUGHNESS(x) _UniformRoughness
-#endif 
-
-#if !defined(HELIUM_ADD_PASS) || defined(HELIUM_DEFERRED_PASS)
-    #ifdef HELIUM_EMISSION_FROM_MAP
-        #define EMISSION(uv) tex2D(_Emission, uv.xy) * _EmissionColor
-    #else
-        #define EMISSION(uv) _EmissionColor
-    #endif
-#else
-    #define EMISSION(uv) 0
-#endif
 
 #if !defined(HELIUM_ADD_PASS) && defined(HELIUM_AMBIENT_OCCLUSION)
     #ifdef HELIUM_OCCLUSION_FROM_MAP
@@ -115,81 +57,14 @@ sampler2D _Metallic, _Roughness;
     #define OCCLUSION(uv) 1
 #endif
 
-#ifdef HELIUM_DETAIL_MASK
-    #define DETAIL_MASK(uv) tex2D(_DetailMask,uv.xy).a
-    #define DETAIL_MASK_N(uv) tex2D(_DetailMask,uv.zw).a
-#else
-    #define DETAIL_MASK(uv) 1
-    #define DETAIL_MASK_N(uv) 1
-#endif
 
 #ifndef HELIUM_R_FROM_ALBEDO
-    #define ALPHA(uv) _Color.a * tex2D(_Tex, uv.xy).a
+    #define ALPHA(uv) _Color.a * tex2D(_MainTex, uv.xy).a
 #else
     #define ALPHA(uv) _Color.a
 #endif
 
 int _UseTextures;
-
-struct vInput{
-    /*
-    In order to use some Unity Macros, namely:
-    - UNITY_LIGHT_ATTENUATION
-    - SHADOW_ATTENUATION
-    - TRANSFER_SHADOW
-    - SHADOW_COORDS
-    We needed to rename "csPos" to "pos" as it is the name
-    of the field assuemd by the Unity macros.
-    */
-    float4 vertex: POSITION;
-    float3 n : NORMAL;
-    float2 uv : TEXCOORD0;
-
-    #ifdef HELIUM_NORMAL_MAPPING
-    float4 tan : TANGENT;
-    #endif
-};
-
-struct vOutput{
-
-    /*
-    In order to use some Unity Macros, namely:
-    - UNITY_LIGHT_ATTENUATION
-    - SHADOW_ATTENUATION
-    - TRANSFER_SHADOW
-    - SHADOW_COORDS
-    We needed to rename "csPos" to "pos" as it is the name
-    of the field assuemd by the Unity macros.
-    */
-    float4 pos : SV_Position; // Clip Space
-    float3 n :   TEXCOORD0;
-    #ifdef HELIUM_NORMAL_MAPPING
-    float4 uvM : TEXCOORD1; // Main(xy) and Secondary(zw)
-    #ifdef HELIUM_FRAGMENT_BINORMAL
-    float4 tan : TEXCOORD3;
-    #else
-    float4 tan : TEXCOORD3;
-    float3 bin : TEXCOORD4;
-    #endif
-    #else
-    float2 uvM : TEXCOORD1; // Main
-    #endif
-    float4 wPos : TEXCOORD2; // World Space Position
-
-    /*
-    Same as 
-    #ifdef SHADOWS_SCREEN
-    float4 _ShadowCoord : TEXCOORD5; //<--- NAME IS IMPORTANT
-    #endif
-    */
-    SHADOW_COORDS(5) // 5 for the index of TEXCOORD
-
-    #if defined(VERTEXLIGHT_ON)
-    float3 lColor: TEXCOORD6; // Computed vertex light
-    #endif
-
-};
-
 
 struct fOutput{
     #ifdef HELIUM_DEFERRED_PASS
@@ -206,8 +81,8 @@ float3 ComputeBinormal(float3 n, float3 t, float sign){
     return cross(n,t) * (sign * unity_WorldTransformParams.w/*Handles cases where object is mirrored in some dimension*/);
 }
 
+#if defined(VERTEXLIGHT_ON)
 void ComputeVertexLight(inout vOutput v){
-    #if defined(VERTEXLIGHT_ON)
     /*
         float3 lPos = float3(
             // unity_4LightPosA0 contains up to 4 vertex light information
@@ -241,22 +116,20 @@ void ComputeVertexLight(inout vOutput v){
             v.n
         );
 
-    #endif
-}
+    }
+#endif
 
 vOutput vert(vInput i){
     vOutput o;
 
     o.uvM = 0;
-    o.uvM.xy = HELIUM_TRANSFORM_TEX(i.uv, _Tex);  // QOL command that summarizes texture tiling and offset
-    #ifdef HELIUM_NORMAL_MAPPING
-        #ifdef HELIUM_DETAIL_ALBEDO
+    o.uvM.xy = HELIUM_TRANSFORM_TEX(i.uv, _MainTex);  // QOL command that summarizes texture tiling and offset
+    #ifdef HELIUM_DETAIL_ALBEDO
         o.uvM.zw = HELIUM_TRANSFORM_TEX(i.uv, _SecondaryTex);
-        #endif
+    #endif
     o.tan = float4(UnityObjectToWorldDir(i.tan.xyz), i.tan.w);
     #ifndef HELIUM_FRAGMENT_BINORMAL
     o.bin = ComputeBinormal(i.n, i.tan.xyz, i.tan.w);
-    #endif
 
     #endif
     o.pos = UnityObjectToClipPos(i.vertex);
@@ -266,10 +139,14 @@ vOutput vert(vInput i){
     o.n = normalize(o.n);
 
     // Check LightingFuncs.cginc to see deeper explanation of how this works
-    vInput v = i; // Unity assumes inpux from vertex shader is called v.
+    vInput v = i; // Unity assumes input from vertex shader is called v.
     TRANSFER_SHADOW(o);
     
+    #ifdef VERTEXLIGHT_ON
     ComputeVertexLight(o);
+    #elif defined(LIGHTMAP_ON)
+    o.uvLight = HELIUM_TRANSFORM_LIGHTMAP(i.uvLight, unity_Lightmap); 
+    #endif
     return o;
 }
 
@@ -345,27 +222,45 @@ UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo, float3 viewDir)
     UnityIndirect il;
     il.diffuse =0;
     il.specular = 0;
+
     #if defined(VERTEXLIGHT_ON)
     il.diffuse = vo.lColor;
     #endif
+
     #if !defined(HELIUM_ADD_PASS) || defined(HELIUM_DEFERRED_PASS)
-    il.diffuse += max(0, ShadeSH9(float4(vo.n, 1)));
+
+        #ifdef LIGHTMAP_ON
+         // overrides vertexlight value, although we don't expect to have it since Unity either defined VERTEXLIGHT_ON or LIGHTMAP_ON
+        il.diffuse = DecodeLightmap(UNITY_SAMPLE_TEX2D(
+            unity_Lightmap, vo.uvLight
+        ));
+            #ifdef DIRLIGHTMAP_COMBINED // We have direction info from lightmap
+                float4 lightmapDir = UNITY_SAMPLE_TEX2D_SAMPLER(
+                    unity_LightmapInd, unity_Lightmap, vo.uvLight
+                );
+                il.diffuse = DecodeDirectionalLightmap(
+                    il.diffuse, lightmapDir, vo.n
+                );
+            #endif
+        #else
+        il.diffuse += max(0, ShadeSH9(float4(vo.n, 1)));
+        #endif
     
     float roughnessToMipMap = 1.7 - 0.7* ROUGHNESS(vo.uvM);
-    // float3 reflectionSampleVec = reflect(-viewDir, vo.n);
-    // reflectionSampleVec = BoxProjectionIfActive(reflectionSampleVec, vo.wPos, 
-    //      unity_SpecCube0_ProbePosition, unity_SpecCube0_BoxMin, unity_SpecCube0_BoxMax);
+        // float3 reflectionSampleVec = reflect(-viewDir, vo.n);
+        // reflectionSampleVec = BoxProjectionIfActive(reflectionSampleVec, vo.wPos, 
+        //      unity_SpecCube0_ProbePosition, unity_SpecCube0_BoxMin, unity_SpecCube0_BoxMax);
     
-    // // Approximates this https://s3.amazonaws.com/docs.knaldtech.com/knald/1.0.0/lys_power_drops.html
-    // // fundamentally roughness should not be treated linearly because visibly it does not do it.
-    // float4 specularHDR = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflectionSampleVec, roughnessToMipMap *  _Roughness * HELIUM_MAX_LOD);
-    // float3 specular0 = DecodeHDR(specularHDR, unity_SpecCube0_HDR);//contains HDR decoding instructions
-    // These two macros summarize the previous lines
-    #if defined(DEFERRED_PASS) && UNITY_ENABLE_REFLECTION_BUFFERS
-        
+        // // Approximates this https://s3.amazonaws.com/docs.knaldtech.com/knald/1.0.0/lys_power_drops.html
+        // // fundamentally roughness should not be treated linearly because visually it does not behave so.
+        // float4 specularHDR = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflectionSampleVec, roughnessToMipMap *  _Roughness * HELIUM_MAX_LOD);
+        // float3 specular0 = DecodeHDR(specularHDR, unity_SpecCube0_HDR);//contains HDR decoding instructions
+        // These two macros summarize the previous lines
+        #if defined(DEFERRED_PASS) && UNITY_ENABLE_REFLECTION_BUFFERS
+            
         il.specular = 0;
 
-    #else
+        #else
 
         HELIUM_COMPUTE_REFLECTION(0, viewDir, vo,roughnessToMipMap, specular0)
         il.specular = specular0;
@@ -416,7 +311,7 @@ UnityLight CreateLight(vOutput vo){
     return l;
 }
 
-#ifdef HELIUM_NORMAL_MAPPING
+
 float3 TanSpaceNormal(vOutput vo){
     float3 n1 = UnpackScaleNormal(tex2D(_Normal, vo.uvM.xy),-_NormalStrength); 
 
@@ -432,10 +327,8 @@ float3 TanSpaceNormal(vOutput vo){
 
     return n1;
 }
-#endif
 
 void InitFragNormal(inout vOutput vo){
-    #ifdef HELIUM_NORMAL_MAPPING
     float3 tanSpaceNormal = TanSpaceNormal(vo);
     // Normal maps store the up direction in the z component 
     tanSpaceNormal = tanSpaceNormal.xzy;
@@ -449,31 +342,6 @@ void InitFragNormal(inout vOutput vo){
         tanSpaceNormal.y * vo.n +
         tanSpaceNormal.z * bn
     );
-    #endif
-}
-
-float3 ComputeAlbedoWithDetail(vOutput vo){
-    float3 a = tex2D(_Tex, vo.uvM.xy);
-
-    #ifdef HELIUM_BASE_COLOR
-    a *= _Color.xyz;
-    #endif
-
-    #ifdef HELIUM_NORMAL_MAPPING
-
-    #ifdef HELIUM_DETAIL_ALBEDO
-    float3 d = tex2D(_SecondaryTex, vo.uvM.zw) * unity_ColorSpaceDouble;
-    #else
-    float3 d = 1;
-    #endif
-
-    #ifdef HELIUM_DETAIL_MASK
-    a = lerp(a, a * d, DETAIL_MASK(vo.uvM));
-    #endif
-
-    #endif
-
-    return a;
 }
 
 
@@ -481,14 +349,12 @@ fOutput frag(vOutput vo){
     fOutput fout;
     float alpha = ALPHA(vo.uvM);
     #ifdef HELIUM_TRANSPARENCY_CUTOUT
-    clip(alpha-_AlphaThreshold);
+    clip(alpha-_Cutoff);
     #endif
 
     float3 albedo =  ComputeAlbedoWithDetail(vo);
 
-    #ifdef HELIUM_NORMAL_MAPPING
     InitFragNormal(vo);
-    #endif
 
     
     float invertedReflectivity;

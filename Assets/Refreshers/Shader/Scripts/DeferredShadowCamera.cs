@@ -27,17 +27,6 @@ public class DeferredShadowCamera : MonoBehaviour
             cam = GetComponent<Camera>();
             frustCorners = new Vector3[4];
             shaderArgs = new Vector4[4];
-            // Debug.Log(source.descriptor.autoGenerateMips);
-            // Debug.Log(source.descriptor.bindMS);
-            // Debug.Log(source.descriptor.colorFormat);
-            // Debug.Log(source.descriptor.depthBufferBits);
-            // Debug.Log(source.descriptor.dimension);
-            // Debug.Log(source.descriptor.enableRandomWrite);
-            // Debug.Log(source.descriptor.flags);
-            // Debug.Log(source.descriptor.graphicsFormat);
-            // Debug.Log(source.descriptor.sRGB);
-            // Debug.Log(source.descriptor.stencilFormat);
-            // Debug.Log(source.descriptor.volumeDepth);
         }   
         cam.CalculateFrustumCorners(
             new Rect(0f,0f,1f,1f), // Our camera occupies the entire screen, the rect is in screen space
