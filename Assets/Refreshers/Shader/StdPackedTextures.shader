@@ -3,7 +3,7 @@ Shader "Refreshers/StdPackedTextures"
 {   
     Properties{
         _Color("Color", Color) = (1,1,1,1)
-        _Tex ("Texture", 2D) = "white" {}
+        _MainTex ("Texture", 2D) = "white" {}
         [NoScaleOffset] _Normal ("Normal map", 2D) = "bump" {}
         _NormalStrength("Normal Strength", Float) = 1
         _SecondaryTex("Secondary Texture", 2D) = "gray"{}
@@ -19,7 +19,7 @@ Shader "Refreshers/StdPackedTextures"
         [NoScaleOffset] _Occlusion ("Occlusion", 2D) = "white" {}
 		_OcclusionStrength("Occlusion Strength", Range(0, 1)) = 1
         [NoScaleOffset] _DetailMask ("Detail Mask", 2D) = "white" {}
-        _AlphaThreshold("Alpha Cutoff", Range(0,1)) = 0.5 
+        _Cutoff("Alpha Cutoff", Range(0,1)) = 0.5 
         [HideInInspector] _SourceBlend("_SourceBlend", Float) = 1
         [HideInInspector] _DestinationBlend("_DestinationBlend", Float) = 0
         [HideInInspector] _WriteToDepthBuffer("_WriteToDepthBuffer", Float) = 1
@@ -43,11 +43,12 @@ Shader "Refreshers/StdPackedTextures"
             #pragma vertex vert
             #pragma fragment frag
             
-            // Compile a version that computes light per vertex, much cheaper than per fragment.
-            // Only point is supported
-            #pragma multi_compile _ VERTEXLIGHT_ON LIGHTMAP_ON
+            
+            // #pragma multi_compile _ VERTEXLIGHT_ON LIGHTMAP_ON
+			// #pragma multi_compile _ SHADOWS_SCREEN 
+            // #pragma multi_compile _ DIRLIGHTMAP_COMBINED
+            #pragma multi_compile_fwdbase // Same as the lines above together
 
-			#pragma multi_compile _ SHADOWS_SCREEN 
 
             #pragma shader_feature _ HELIUM_TRANSPARENCY_CUTOUT HELIUM_TRANSPARENCY_BLENDED HELIUM_TRANSPARENCY_TRANSLUCENT
             #pragma shader_feature HELIUM_2D_METALLIC
@@ -141,9 +142,6 @@ Shader "Refreshers/StdPackedTextures"
             #pragma vertex vert
             #pragma fragment frag
             
-            // Compile a version that computes light per vertex, much cheaper than per fragment.
-            // Only point is supported
-            #pragma multi_compile _ VERTEXLIGHT_ON LIGHTMAP_ON
 
 			#pragma multi_compile _ SHADOWS_SCREEN 
 
@@ -154,7 +152,11 @@ Shader "Refreshers/StdPackedTextures"
             #pragma shader_feature HELIUM_OCCLUSION_FROM_MAP
             #pragma shader_feature HELIUM_DETAIL_MASK
 
-            #pragma shader_feature _ UNITY_HDR_ON
+
+            // #pragma multi_compile _ VERTEXLIGHT_ON LIGHTMAP_ON
+            // #pragma shader_feature _ UNITY_HDR_ON
+            // #pragma multi_compile _ DIRLIGHTMAP_COMBINED
+            #pragma multi_compile_prepassfinal // Same as the lines above 
 
             #pragma shader_feature HELIUM_NORMAL_MAP
             #pragma shader_feature HELIUM_DETAIL_ALBEDO
@@ -188,9 +190,33 @@ Shader "Refreshers/StdPackedTextures"
             #pragma shader_feature HELIUM_SHADOWS_FORCE_CUTOUT
             #pragma shader_feature HELIUM_R_FROM_ALBEDO
             
-            #include "ShadowFuncs.cginc"
+            #include "ShadowFuncsV2.cginc"
 
             ENDCG
+        }
+        Pass{ // Communicates with the Unity lightmapper to compute colored reflections
+            Tags{
+                "LightMode" = "Meta"
+            }
+            Cull Off
+
+            CGPROGRAM
+            #pragma vertex vertLightMap
+			#pragma fragment fragLightMap
+
+            #pragma shader_feature HELIUM_2D_METALLIC
+            #pragma shader_feature _ HELIUM_R_FROM_METALLIC HELIUM_R_FROM_ALBEDO
+            #pragma shader_feature HELIUM_EMISSION_FROM_MAP
+            #pragma shader_feature HELIUM_DETAIL_MASK
+
+            #pragma shader_feature HELIUM_DETAIL_ALBEDO
+
+            #define HELIUM_BASE_COLOR
+            #define HELIUM_EMISSION
+			
+            #include "LightMappingFuncs.cginc"
+
+			ENDCG
         }
     }
     Fallback "Diffuse"

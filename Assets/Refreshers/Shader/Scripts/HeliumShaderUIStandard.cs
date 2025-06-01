@@ -94,7 +94,7 @@ public class HeliumShaderStandardUI : ShaderGUI {
 	
 	void DoMain() {
         GUILayout.Label("Main Maps", EditorStyles.boldLabel);
-        MaterialProperty mainTex = FindProperty("_Tex");
+        MaterialProperty mainTex = FindProperty("_MainTex");
         MaterialProperty tint = FindProperty("_Color");
 		
         editor.TexturePropertySingleLine(MakeLabel(mainTex, "Albedo (RGB)"), mainTex, tint);
@@ -208,21 +208,28 @@ public class HeliumShaderStandardUI : ShaderGUI {
         }
 	}
 
-    void DoEmission(){
+    void DoEmission()
+    {
         MaterialProperty map = FindProperty("_Emission");
         bool useTex = map.textureValue;
         Texture t = map.textureValue;
-		EditorGUI.BeginChangeCheck();
+        EditorGUI.BeginChangeCheck();
         MaterialProperty mp = FindProperty("_EmissionColor");
-        if (useTex){
+        if (useTex)
+        {
             mp.colorValue = Color.white;
         }
         editor.TexturePropertyWithHDRColor(
             MakeLabel(map, "Emission"), map, mp, false
         );
-		if (EditorGUI.EndChangeCheck() && t != map.textureValue) {
+        if (EditorGUI.EndChangeCheck() && t != map.textureValue)
+        {
             SetKeyword("HELIUM_EMISSION_FROM_MAP", useTex);
-		}
+        }
+        foreach (Material m in editor.targets)
+        {
+            m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.BakedEmissive;
+        }
     }
 
     void DoOcclusion(){
@@ -252,7 +259,7 @@ public class HeliumShaderStandardUI : ShaderGUI {
 
     void DoAlphaThreshold()
     {
-        MaterialProperty slider = FindProperty("_AlphaThreshold");
+        MaterialProperty slider = FindProperty("_Cutoff");
         EditorGUI.indentLevel += 2;
         editor.ShaderProperty(slider, MakeLabel(slider));
         EditorGUI.indentLevel -= 2;
@@ -298,10 +305,11 @@ public class HeliumShaderStandardUI : ShaderGUI {
         bool forceCutout = 
         EditorGUILayout.Toggle(
             MakeLabel("Force cutout", "Force cutout shadows on semi transparent objects"),
-            IsDefined("HELIUM_SHADOWS_FORCE_CUTOUT")
+            IsDefined("HELIUM_SHADOWS_FORCE_CUTOUT") || IsDefined("HELIUM_TRANSPARENCY_FORCE_CUTOUT")
         );
         if (EditorGUI.EndChangeCheck()){
             SetKeyword("HELIUM_SHADOWS_FORCE_CUTOUT", forceCutout);
+            SetKeyword("HELIUM_TRANSPARENCY_FORCE_CUTOUT", forceCutout);
         }
         if(forceCutout){
             showAlphaThresholdSlider = true;
