@@ -290,6 +290,17 @@ UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo, float3 viewDir)
     return il;
 }
 
+#ifdef HANDLE_SHADOWS_BLENDING_IN_GI // Unity variable telling us whether GI is handling shadows, which usually breaks the fading.
+float ComputeShadowFading(vOutput vo, float dimming){
+    float viewSpaceZ = dot(_WorldSpaceCameraPos - vo.wPos, UNITY_MATRIX_V[2].xyz);
+    // Depending on Unity's Light fit type (Close or Stable fit) we need to use a different value to know how much to fade the shadow
+    float fadeOffset = UnityComputeShadowFadeDistance(vo.wPos, viewSpaceZ); 
+    fadeOffset = UnityComputeShadowFade(fadeOffset);
+    dimming = saturate(dimming + fadeOffset);
+    return dimming;
+}
+#endif
+
 UnityLight CreateLight(vOutput vo){
     UnityLight l;
     #ifdef HELIUM_DEFERRED_PASS
@@ -305,12 +316,16 @@ UnityLight CreateLight(vOutput vo){
     
         // Check LightingFuncs.cginc to better see how this works
         UNITY_LIGHT_ATTENUATION(dimming, vo, vo.wPos.xyz);
+
+        #ifdef HANDLE_SHADOWS_BLENDING_IN_GI
+        dimming = ComputeShadowFading(vo, dimming);
+        #endif
+
         l.color = _LightColor0  * dimming;
         // angle with surface normal
     #endif 
     return l;
 }
-
 
 float3 TanSpaceNormal(vOutput vo){
     float3 n1 = UnpackScaleNormal(tex2D(_Normal, vo.uvM.xy),-_NormalStrength); 
