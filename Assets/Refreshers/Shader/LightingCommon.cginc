@@ -82,7 +82,7 @@ struct vOutput{
     float4 _ShadowCoord : TEXCOORD5; //<--- NAME IS IMPORTANT as it's assumed in the macros
     #endif
     */
-    SHADOW_COORDS(5) // 5 for the index of TEXCOORD
+    UNITY_SHADOW_COORDS(5) // 5 for the index of TEXCOORD 
 
     #ifdef VERTEXLIGHT_ON
     float3 lColor: TEXCOORD6; // Computed vertex light

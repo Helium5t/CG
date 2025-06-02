@@ -140,7 +140,7 @@ vOutput vert(vInput i){
 
     // Check LightingFuncs.cginc to see deeper explanation of how this works
     vInput v = i; // Unity assumes input from vertex shader is called v.
-    TRANSFER_SHADOW(o);
+    UNITY_TRANSFER_SHADOW(o, i.uvLight);
     
     #ifdef VERTEXLIGHT_ON
     ComputeVertexLight(o);
