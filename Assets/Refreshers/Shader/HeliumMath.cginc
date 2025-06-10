@@ -1,0 +1,8 @@
+#ifndef HELIUM_MATH
+#define HELIUM_MATH
+
+#define GAMMA_FACTOR 0.4545454545454
+
+#define GAMMATOLINEAR(x) pow(x,GAMMA_FACTOR)
+
+#endif

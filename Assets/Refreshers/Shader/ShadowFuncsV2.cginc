@@ -2,7 +2,7 @@
 #ifndef HELIUM_SHADOWS
 #define HELIUM_SHADOWS
 
-
+#include "HeliumMath.cginc"
 // Technically not needed because CGPROGRAM always includes it https://docs.unity3d.com/6000.0/Documentation/Manual/shader-shaderlab-code-blocks.html
 // but UnityClipSpaceShadowCasterPos does not get auto-included
 #include "UnityCG.cginc"
@@ -21,14 +21,14 @@
 
 
 #ifdef HELIUM_SHADOWS_SAMPLE_ALPHA
-    #define ALPHA(uv) _Color.a * tex2D(_Tex, uv.xy).a;
+    #define ALPHA(uv) _Color.a * tex2D(_MainTex, uv.xy).a;
 #else 
     #define ALPHA(uv) _Color.a;
 #endif 
 
 float4 _Color;
-sampler2D _Tex;
-float4 _Tex_ST;
+sampler2D _MainTex;
+float4 _MainTex_ST;
 float _Cutoff;
 
 sampler3D _DitherMaskLOD;
@@ -80,7 +80,7 @@ svOutput shadowVert(svInput i){
         o.lVec = mul(unity_ObjectToWorld, i.pos).xyz - _LightPositionRange.xyz;
     #endif 
     #ifdef HELIUM_SHADOWS_SAMPLE_ALPHA
-        o.uv = TRANSFORM_TEX(i.uv, _Tex);
+        o.uv = TRANSFORM_TEX(i.uv, _MainTex);
     #endif
     return o;
 }
@@ -93,7 +93,6 @@ half4 shadowFrag(sfInput vo): SV_Target{
     #if HELIUM_SHADOWS_DITHERED
         float dither = tex3D(_DitherMaskLOD, float3(vo.ssPos.xy*0.25, alpha * 0.9375)).a;
         clip( dither - 0.01);
-        clip(-0.01);
     #endif
     #ifdef SHADOWS_CUBE
         float depth = length(vo.lVec) + unity_LightShadowBias.x;
