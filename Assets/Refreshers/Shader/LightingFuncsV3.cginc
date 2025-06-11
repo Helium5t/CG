@@ -13,12 +13,9 @@ in "LightingFuncs.cginc"
 #if !defined(HELIUM_LIGHTING_INCLUDED)
 #define HELIUM_LIGHTING_INCLUDED
 
-#define HELIUM_MAX_LOD 6
-
 #if !defined(HELIUM_ADD_PASS) || defined(HELIUM_DEFERRED_PASS)
     #define HELIUM_COMPUTE_EMISSION
 #endif
-
 
 #include "LightingCommon.cginc"
 
@@ -72,6 +69,11 @@ struct fOutput{
     float4 g1 : SV_Target1;
     float4 g2 : SV_Target2;
     float4 g3 : SV_Target3;
+
+    #ifdef HELIUM_SHADOWMASK_ENABLED // Some platforms don't support 5+ gbuffers
+    float4 g4 : SV_Target4; // gBuffer reserved for the shadowmask when active
+    #endif
+
     #else
     float4 colorOut  : SV_Target;
     #endif
@@ -144,7 +146,7 @@ vOutput vert(vInput i){
     
     #ifdef VERTEXLIGHT_ON
     ComputeVertexLight(o);
-    #elif defined(LIGHTMAP_ON)
+    #elif defined(LIGHTMAP_ON) || defined(HELIUM_MULTIPLE_DIRECTIONAL_SHADOWMASKS)
     o.uvLight = HELIUM_TRANSFORM_LIGHTMAP(i.uvLight, unity_Lightmap); 
     #endif
     return o;
@@ -218,6 +220,26 @@ rsv##pn = BoxProjectionIfActive(rsv##pn, b.wPos, unity_SpecCube##pn##_ProbePosit
 float4 specHDR##pn = UNITY_SAMPLE_TEXCUBE_SAMPLER_LOD(unity_SpecCube##pn , unity_SpecCube0, rsv##pn, c * ROUGHNESS(b.uvM.xy) * HELIUM_MAX_LOD); \
 float3 destName = DecodeHDR(specHDR##pn, unity_SpecCube##pn##_HDR); 
 
+
+#ifdef HELIUM_APPROX_SUBTRACTIVE_LIGHTING
+void ApplySubtractiveLighting(vOutput vo, inout UnityIndirect il){
+    UNITY_LIGHT_ATTENUATION(dimming, vo, vo.wPos.xyz);
+    dimming = ComputeShadowFading(vo, dimming);
+
+    float nl = saturate(
+        dot(
+            vo.n, _WorldSpaceLightPos0.xyz
+        ));
+    float3 dimmedLightApprox = nl * (1-dimming) * _LightColor0.rgb;
+    dimmedLightApprox = max(dimmedLightApprox, unity_ShadowColor.rgb);
+    dimmedLightApprox = lerp(
+        dimmedLightApprox, il.diffuse, _LightShadowData.x // _LightShadowData.x is shadow strength
+    );
+    float3 l = il.diffuse - dimmedLightApprox;
+    il.diffuse = min(l, il.diffuse);
+}
+#endif
+
 UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo, float3 viewDir){
     UnityIndirect il;
     il.diffuse =0;
@@ -241,6 +263,10 @@ UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo, float3 viewDir)
                 il.diffuse = DecodeDirectionalLightmap(
                     il.diffuse, lightmapDir, vo.n
                 );
+            #endif
+            
+            #ifdef HELIUM_APPROX_SUBTRACTIVE_LIGHTING
+                ApplySubtractiveLighting(vo, il);
             #endif
         #else
         il.diffuse += max(0, ShadeSH9(float4(vo.n, 1)));
@@ -290,20 +316,23 @@ UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo, float3 viewDir)
     return il;
 }
 
-#ifdef HANDLE_SHADOWS_BLENDING_IN_GI // Unity variable telling us whether GI is handling shadows, which usually breaks the fading.
+#if defined(HANDLE_SHADOWS_BLENDING_IN_GI) || defined(HELIUM_MULTIPLE_DIRECTIONAL_SHADOWMASKS) // Unity variable telling us whether GI is handling shadows, which usually breaks the fading.
 float ComputeShadowFading(vOutput vo, float dimming){
     float viewSpaceZ = dot(_WorldSpaceCameraPos - vo.wPos, UNITY_MATRIX_V[2].xyz);
+    float bakedShadow = UnitySampleBakedOcclusion(vo.uvLight, vo.wPos);
     // Depending on Unity's Light fit type (Close or Stable fit) we need to use a different value to know how much to fade the shadow
     float fadeOffset = UnityComputeShadowFadeDistance(vo.wPos, viewSpaceZ); 
     fadeOffset = UnityComputeShadowFade(fadeOffset);
-    dimming = saturate(dimming + fadeOffset);
+    dimming = UnityMixRealtimeAndBakedShadows(
+        dimming, bakedShadow, fadeOffset
+    );
     return dimming;
 }
 #endif
 
 UnityLight CreateLight(vOutput vo){
     UnityLight l;
-    #ifdef HELIUM_DEFERRED_PASS
+    #if defined(HELIUM_DEFERRED_PASS) || defined(HELIUM_APPROX_SUBTRACTIVE_LIGHTING)
         l.dir = float3(0,1,0);
         l.color = 0.0;
     #else
@@ -315,9 +344,13 @@ UnityLight CreateLight(vOutput vo){
         #endif
     
         // Check LightingFuncs.cginc to better see how this works
+        #ifndef HELIUM_MULTIPLE_DIRECTIONAL_SHADOWMASKS
         UNITY_LIGHT_ATTENUATION(dimming, vo, vo.wPos.xyz);
+        #else
+        dimming = SHADOW_ATTENUATION(vo);
+        #endif
 
-        #ifdef HANDLE_SHADOWS_BLENDING_IN_GI
+        #if defined(HANDLE_SHADOWS_BLENDING_IN_GI) || defined(HELIUM_MULTIPLE_DIRECTIONAL_SHADOWMASKS)
         dimming = ComputeShadowFading(vo, dimming);
         #endif
 
@@ -420,6 +453,16 @@ fOutput frag(vOutput vo){
             finalCol.rgb = exp2(-finalCol.rgb);
         #endif
         fout.g3 = finalCol;
+        
+        #ifdef HELIUM_SHADOWMASK_ENABLED
+        float2 uv = 0;
+            #ifdef LIGHTMAP_ON
+            uv = vo.uvLight;
+            #endif
+        fout.g4 = UnityGetRawBakedOcclusions(
+           uv, vo.wPos.xyz
+        );
+        #endif
         return fout;
     #else
         // finalCol =   (vo.pos.z/vo.pos.w);

@@ -4,6 +4,8 @@
 // Includes UnityCG
 #include "UnityPBSLighting.cginc"
 
+#include "HeliumCustomDefines.cginc"
+
 
 #if !defined(SHADOWS_DEPTH) && !defined(SHADOWS_SCREEN) && !defined(SHADOWS_CUBE) && !defined(SHADOWS_SOFT) && !defined(SHADOWS_SHADOWMASK)
     #define HELIUM_SHADOWS_DISABLED
@@ -16,6 +18,12 @@
 #if defined(POINT) || defined(POINT_COOKIE)
     #define HELIUM_POINT_LIGHT_MODEL
 #endif
+
+#if defined(UNITY_FAST_COHERENT_DYNAMIC_BRANCHING) && defined(SHADOWS_SOFT) && !defined(SHADOWS_SHADOWMASK)
+    #define HELIUM_USE_FAST_BRANCHING
+#endif
+
+
 
 struct vInput{
     float4 pos : POSITION;
@@ -63,6 +71,7 @@ UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
 sampler2D _CameraGBufferTexture0;
 sampler2D _CameraGBufferTexture1;
 sampler2D _CameraGBufferTexture2;
+sampler2D _CameraGBufferTexture4; 
 
 #ifndef HELIUM_SHADOWS_DISABLED
     #ifdef SHADOWS_SCREEN
@@ -106,6 +115,17 @@ float3 PointLightShadowMap(float3 lVec){
 float SpotlightShadowMap(float3 wPos){
     float dim = UnitySampleShadowmap(mul(unity_WorldToShadow[0], float4(wPos, 1)));
     return dim;
+}
+#endif
+
+#ifdef SHADOWS_SHADOWMASK
+float ApplyShadowMask(float2 uv){
+    float mask = tex2D(_CameraGBufferTexture4, uv);
+    return saturate(
+        dot(
+            mask, unity_OcclusionMaskSelector
+        )
+    );
 }
 #endif
 
@@ -154,6 +174,7 @@ float3 lightDir(float3 wPos){
     #endif
 }
 
+
 UnityLight ComputeDirectLighting(float2 screenUV, float3 wPos, float depthViewSpace){
     UnityLight l;
 
@@ -163,15 +184,8 @@ UnityLight ComputeDirectLighting(float2 screenUV, float3 wPos, float depthViewSp
     float shadowDimming = 1;
 
     float shadowFading = 0;
-    #ifndef HELIUM_SHADOWS_DISABLED
-    shadowFading = UnityComputeShadowFadeDistance(wPos, depthViewSpace);
-    /*
-    _LightShadowData : x - shadow strength | y - Appears to be unused | z - 1.0 / shadow far distance | w - shadow near distance
-    */
-    shadowFading = saturate(shadowFading * _LightShadowData.z + _LightShadowData.w);
-    #endif
     
-    #if defined(UNITY_FAST_COHERENT_DYNAMIC_BRANCHING) && defined(SHADOWS_SOFT)
+    #ifdef HELIUM_USE_FAST_BRANCHING
         UNITY_BRANCH
         if (shadowFading > 0.99){
             shadowDimming = 1;
@@ -184,7 +198,7 @@ UnityLight ComputeDirectLighting(float2 screenUV, float3 wPos, float depthViewSp
             #elif defined(SHADOWS_CUBE)
             shadowDimming *= PointLightShadowMap(lVec);
             #endif
-    #if defined(UNITY_FAST_COHERENT_DYNAMIC_BRANCHING) && defined(SHADOWS_SOFT)
+    #ifdef HELIUM_USE_FAST_BRANCHING
         }
     #endif
 
@@ -198,12 +212,29 @@ UnityLight ComputeDirectLighting(float2 screenUV, float3 wPos, float depthViewSp
     #endif
     
     shadowDimming *= LightCookie(wPos);
+
+    #ifndef HELIUM_SHADOWS_DISABLED
+    shadowFading = UnityComputeShadowFadeDistance(wPos, depthViewSpace);
+    shadowFading = saturate(shadowFading * _LightShadowData.z + _LightShadowData.w);
+    #ifdef SHADOWS_SHADOWMASK
+    float x = shadowDimming;
+    shadowDimming = UnityMixRealtimeAndBakedShadows(
+        shadowDimming, ApplyShadowMask(screenUV), shadowFading
+        );
+        #else
+        /*
+        _LightShadowData : x - shadow strength | y - Appears to be unused | z - 1.0 / shadow far distance | w - shadow near distance
+        */
+        shadowDimming = saturate(shadowDimming + 1);
+        #endif
+    #endif
     
     l.color = _LightColor.rgb * shadowDimming;
     // When computing the light we utilize the direction from the source to the light as this eases computations.
     // So we need to invert the _LightDir representation, as it represents the tavelling direction.
     return l;
 }
+
 float4 frag (vOutput i) : SV_Target
 {
     float2 uvScreenSpace = i.screenUVClipSpace.xy / i.screenUVClipSpace.w;
