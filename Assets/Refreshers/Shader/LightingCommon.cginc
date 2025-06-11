@@ -12,6 +12,7 @@
 // from the light is considered out of range and thus attenuation = 0.
 #include "AutoLight.cginc"
 
+#include "HeliumCustomDefines.cginc"
 
 #ifdef HELIUM_BASE_COLOR
 float4 _Color;
@@ -86,7 +87,7 @@ struct vOutput{
 
     #ifdef VERTEXLIGHT_ON
     float3 lColor: TEXCOORD6; // Computed vertex light
-    #elif defined(LIGHTMAP_ON)
+    #elif defined(LIGHTMAP_ON) || defined(HELIUM_MULITPLE_DIRECTIONAL_SHADOWMASKS)
     float2 uvLight : TEXCOORD6;
     #endif
 
