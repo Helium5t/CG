@@ -15,7 +15,8 @@ in "LightingFuncs.cginc"
 #define HELIUM_LIGHTING_INCLUDED
 
 #include "LightingCommon.cginc"
-
+#include "HeliumMaterialMacros.cginc"
+#include "HeliumMath.cginc"
 
 // Alpha threshold to clip the pixel. Called like this because Unity wouldn't be able to handle shadows otherwise.
 float _Cutoff;
@@ -32,24 +33,6 @@ float _NormalStrength;
 #ifdef HELIUM_AMBIENT_OCCLUSION
 sampler2D _Occlusion;
 float _OcclusionStrength;
-#endif
-
-
-#if !defined(HELIUM_ADD_PASS) && defined(HELIUM_AMBIENT_OCCLUSION)
-    #ifdef HELIUM_OCCLUSION_FROM_MAP
-        #define OCCLUSION(uv) lerp(1 ,tex2D(_Occlusion, uv.xy), _OcclusionStrength)
-    #else
-        #define OCCLUSION(uv) 1
-    #endif
-#else
-    #define OCCLUSION(uv) 1
-#endif
-
-
-#ifndef HELIUM_R_FROM_ALBEDO
-    #define ALPHA(uv) _Color.a * tex2D(_MainTex, uv.xy).a
-#else
-    #define ALPHA(uv) _Color.a
 #endif
 
 int _UseTextures;
@@ -69,10 +52,6 @@ struct fOutput{
     float4 colorOut  : SV_Target;
     #endif
 };
-
-float3 ComputeBinormal(float3 n, float3 t, float sign){
-    return cross(n,t) * (sign * unity_WorldTransformParams.w/*Handles cases where object is mirrored in some dimension*/);
-}
 
 #if defined(VERTEXLIGHT_ON)
 void ComputeVertexLight(inout vOutput v){
@@ -142,75 +121,6 @@ vOutput vert(vInput i){
     #endif
     return o;
 }
-
-// Leverage simple box rebounding to compute the actual point in the cubemap to sample.
-float3 BoxProjectionIfActive(
-    // if unprocessed, this direction would sample somewhere completely different
-    float3 refelctionDir,
-    // This is the point being rendered, aka the point from where the sampling should happen
-    float3 fragmentPos,
-    // Position of where the cubemap is baked
-    float4 cubemapPos, 
-    // bounds
-    float3 boxMin, 
-    float3 boxMax
-){
-    // Forces branch in the compiled shader, otherwise some implementations
-    // might use double computation and step based on the condition to choose the final value.
-    UNITY_BRANCH 
-    if(cubemapPos.w > 0 ){// Box projection is enabled
-        // This is the same math behind the interior mapping technique
-        // Bounds relative to the point reflecting light
-        boxMin -= fragmentPos;
-        boxMax -= fragmentPos;
-        // In an axis aligned cube the intersection is easily computed by finding 
-        // the closest plane to the source of a ray. 
-        float3 intersection;
-        intersection.x = (refelctionDir.x > 0? boxMax.x : boxMin.x) / refelctionDir.x;
-        intersection.y = (refelctionDir.y > 0? boxMax.y : boxMin.y) / refelctionDir.y;
-        intersection.z = (refelctionDir.z > 0? boxMax.z : boxMin.z) / refelctionDir.z;
-        // Find the multiplier to go from reflection direction to the vector going from 
-        // reflection point (fragment) to the point in the cube being reflected (sampled).
-        float multiplier = min(intersection.x, min(intersection.y, intersection.z));
-        // Compute the reflected point in the space relative to the cubemap position
-        // Equal to the vector going from cubemap to fragment + the vector from fragment to reflected point.
-        refelctionDir =  refelctionDir*multiplier + (fragmentPos - cubemapPos);
-    }
-    return refelctionDir;
-}
-
-#ifdef HELIUM_FOG_ACTIVE
-    #ifdef HELIUM_ADD_PASS
-        #define FOG_COLOR 0.0
-    #else
-        #define FOG_COLOR unity_FogColor.rgb
-    #endif
-
-    #ifdef HELIUM_FOG_USE_CLIP_SPACE_DEPTH
-        #define HELIUM_COMPUTE_FOG(c, vo)\
-        float viewDist =  UNITY_Z_0_FAR_FROM_CLIPSPACE(vo.pos.z*vo.pos.w);\
-        UNITY_CALC_FOG_FACTOR_RAW(viewDist);\
-        c.rgb = lerp(FOG_COLOR, c.rgb, saturate(unityFogFactor));
-    #else
-        #define HELIUM_COMPUTE_FOG(c, vo)\
-        float viewDist = length(_WorldSpaceCameraPos - vo.wPos);\
-        UNITY_CALC_FOG_FACTOR_RAW(viewDist);\
-        c.rgb = lerp(FOG_COLOR, c.rgb, saturate(unityFogFactor));
-    #endif
-    
-#else
-    #define HELIUM_COMPUTE_FOG(c, vo);
-#endif 
-
-
-#define HELIUM_COMPUTE_REFLECTION(pn, a, b,c, destName) \
-float3 rsv##pn = reflect(-a, b.n);\
-rsv##pn = BoxProjectionIfActive(rsv##pn, b.wPos, unity_SpecCube##pn##_ProbePosition, unity_SpecCube##pn##_BoxMin, unity_SpecCube##pn##_BoxMax); \
-/* Since they are all cubemaps of the same resolution etc..., 
-    all specular probe cubemaps use the sampler from unity_SpecCube0 */ \
-float4 specHDR##pn = UNITY_SAMPLE_TEXCUBE_SAMPLER_LOD(unity_SpecCube##pn , unity_SpecCube0, rsv##pn, c * ROUGHNESS(b.uvM.xy) * HELIUM_MAX_LOD); \
-float3 destName = DecodeHDR(specHDR##pn, unity_SpecCube##pn##_HDR); 
-
 
 #ifdef HELIUM_APPROX_SUBTRACTIVE_LIGHTING
 void ApplySubtractiveLighting(vOutput vo, inout UnityIndirect il){
@@ -395,7 +305,6 @@ fOutput frag(vOutput vo){
 
     InitFragNormal(vo);
 
-    
     float invertedReflectivity;
     float3 specularColor;
     float m = METALLIC(vo.uvM.xy);
