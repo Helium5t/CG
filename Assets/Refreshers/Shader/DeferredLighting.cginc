@@ -68,10 +68,11 @@ vOutput vert(vInput v){
 /* ----- Unity built-in vars ----- */
 sampler2D _LightBuffer; 
 UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
-sampler2D _CameraGBufferTexture0;
-sampler2D _CameraGBufferTexture1;
-sampler2D _CameraGBufferTexture2;
-sampler2D _CameraGBufferTexture4; 
+sampler2D _CameraGBufferTexture0; // albedo
+sampler2D _CameraGBufferTexture1; // specular
+sampler2D _CameraGBufferTexture2; // normals
+// sampler2D _CameraGBufferTexture3; // accumulated final color,unused
+sampler2D _CameraGBufferTexture4; // shadowmask
 
 #ifndef HELIUM_SHADOWS_DISABLED
     #ifdef SHADOWS_SCREEN
@@ -88,14 +89,12 @@ sampler2D _LightTexture0;
 #endif
 sampler2D _LightTextureB0;
 float4x4 unity_WorldToLight; // World to light space
+
 /* ------------------------------- */
-
-
 #ifdef HELIUM_DEBUG_GBUFFERS
 #define PI 3.14159265358979323846
 #define SLANT 3.07768
 #endif
-
 
 #ifdef SHADOWS_SCREEN
 float3 DirectionalShadowMap(float2 screenUV, float3 wPos, float depthViewSpace){
@@ -252,16 +251,19 @@ float4 frag (vOutput i) : SV_Target
 	float3 specularTint = tex2D(_CameraGBufferTexture1, uvScreenSpace).rgb;
 	float3 smoothness = tex2D(_CameraGBufferTexture1, uvScreenSpace).a;
 	float3 normal = tex2D(_CameraGBufferTexture2, uvScreenSpace).rgb * 2 - 1;
+	float3 shadowmask = tex2D(_CameraGBufferTexture4, uvScreenSpace).rgb ;
     float invertedReflectivity = 1 - SpecularStrength(specularTint);
     
     #ifdef HELIUM_DEBUG_GBUFFERS
-    float lim0 = uvScreenSpace.x * SLANT - 0.25;
-    float lim1 = uvScreenSpace.x * SLANT - 1.2;
-    float lim2 = uvScreenSpace.x * SLANT - SLANT + 1;
+    float lim0 = uvScreenSpace.x * SLANT;
+    float lim1 = uvScreenSpace.x * SLANT - 0.7;
+    float lim2 = uvScreenSpace.x * SLANT - 1.4;
+    float lim3 = uvScreenSpace.x * SLANT - 2.1;
     
     float3 c = albedo * step(lim0, uvScreenSpace.y) + normal * (1- step(lim0, uvScreenSpace.y));
     c = c * step(lim1,uvScreenSpace.y) + specularTint * (1 - step(lim1, uvScreenSpace.y));
     c = c * step(lim2,uvScreenSpace.y) + smoothness * (1 - step(lim2, uvScreenSpace.y));
+    c = c * step(lim3,uvScreenSpace.y) + shadowmask * (1 - step(lim3, uvScreenSpace.y));
     return float4(c,1.0);
     #endif
     
