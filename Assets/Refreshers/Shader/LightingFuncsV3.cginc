@@ -10,21 +10,12 @@ Compared to V2B Adds:
 If notes or comments are missing here, they should be present for the same line
 in "LightingFuncs.cginc"
 */
+
 #if !defined(HELIUM_LIGHTING_INCLUDED)
 #define HELIUM_LIGHTING_INCLUDED
 
-#if !defined(HELIUM_ADD_PASS) || defined(HELIUM_DEFERRED_PASS)
-    #define HELIUM_COMPUTE_EMISSION
-#endif
-
 #include "LightingCommon.cginc"
 
-#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
-    #ifndef HELIUM_FOG_USE_WORLD_SPACE_DISTANCE
-        #define HELIUM_FOG_USE_CLIP_SPACE_DEPTH
-    #endif
-    #define HELIUM_FOG_ACTIVE 1
-#endif 
 
 // Alpha threshold to clip the pixel. Called like this because Unity wouldn't be able to handle shadows otherwise.
 float _Cutoff;

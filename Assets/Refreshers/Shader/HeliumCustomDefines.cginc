@@ -1,3 +1,16 @@
+
+#if !defined(HELIUM_ADD_PASS) || defined(HELIUM_DEFERRED_PASS)
+    #define HELIUM_COMPUTE_EMISSION
+#endif
+
+#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
+    #ifndef HELIUM_FOG_USE_WORLD_SPACE_DISTANCE
+        #define HELIUM_FOG_USE_CLIP_SPACE_DEPTH
+    #endif
+    #define HELIUM_FOG_ACTIVE 1
+#endif 
+
+
 #define HELIUM_MAX_LOD 6
 
 #if defined(SHADOWS_SHADOWMASK) && (UNITY_ALLOWED_MRT_COUNT > 4) // Some platforms don't support 5+ gbuffers
