@@ -187,7 +187,7 @@ UnityLight ComputeDirectLighting(float2 screenUV, float3 wPos, float depthViewSp
     #ifdef HELIUM_USE_FAST_BRANCHING
         UNITY_BRANCH
         if (shadowFading > 0.99){
-            shadowDimming = 0;
+            shadowDimming = 1;
         }else{
     #endif
             #ifdef SHADOWS_SCREEN // SHADOWS_SCREEN is only used by directional light, POINT uses CUBE and SPOT uses DEPTH
