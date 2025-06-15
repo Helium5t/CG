@@ -45,7 +45,7 @@ Shader "Refreshers/StdReflections"
             #pragma multi_compile_fwdadd_fullshadows // equivalent of the following
             // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
 
-			#include "Archive/LightingFuncsV2.cginc"
+			#include "LightingFuncsV2.cginc"
 
 
             ENDCG
@@ -90,10 +90,8 @@ Shader "Refreshers/StdReflections"
             #pragma vertex vert
             #pragma fragment frag
             
-			#include "Archive/LightingFuncsV2.cginc"
+			#include "LightingFuncsV2.cginc"
             ENDCG
-            
-
         }
         Pass{
             Tags{
@@ -106,7 +104,7 @@ Shader "Refreshers/StdReflections"
 
             #pragma multi_compile_shadowcaster
             
-            #include ""Archive/ShadowFuncs.cginc"
+            #include ""ShadowFuncs.cginc"
 
             ENDCG
         }

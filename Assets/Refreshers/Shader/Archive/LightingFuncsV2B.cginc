@@ -4,7 +4,7 @@ in order to leverage its standard macros. Done in order to simplify code
 for future commits.
 
 If notes or comments are missing here, they should be present for the same line
-in "Archive/LightingFuncs.cginc"
+in "LightingFuncs.cginc"
 */
 #if !defined(HELIUM_LIGHTING_INCLUDED)
 #define HELIUM_LIGHTING_INCLUDED

@@ -38,7 +38,7 @@ Shader "Refreshers/ShadowsPBShader"
             #pragma multi_compile_fwdadd // equivalent of the following
             // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
 
-			#include "Archive/LightingFuncs.cginc"
+			#include "LightingFuncs.cginc"
 
 
             ENDCG
@@ -80,7 +80,7 @@ Shader "Refreshers/ShadowsPBShader"
             #pragma vertex vert
             #pragma fragment frag
             
-			#include "Archive/LightingFuncs.cginc"
+			#include "LightingFuncs.cginc"
             ENDCG
             
 
@@ -96,7 +96,7 @@ Shader "Refreshers/ShadowsPBShader"
 
             #pragma multi_compile_shadowcaster
             
-            #include ""Archive/ShadowFuncs.cginc"
+            #include ""ShadowFuncs.cginc"
 
             ENDCG
         }
