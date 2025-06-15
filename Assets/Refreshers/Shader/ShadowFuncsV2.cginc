@@ -50,7 +50,7 @@ struct svOutput{
 };
 
 struct sfInput{
-    #if HELIUM_SHADOWS_DITHERED
+    #if HELIUM_SHADOWS_DITHERED || defined(LOD_FADE_CROSSFADE)
         UNITY_VPOS_TYPE ssPos : VPOS; // Screen-space position where "screen" is the shadow map. 
     #else 
         float4 pos : SV_POSITION;
@@ -86,6 +86,9 @@ svOutput shadowVert(svInput i){
 }
 
 half4 shadowFrag(sfInput vo): SV_Target{
+    #if defined(LOD_FADE_CROSSFADE)
+		UnityApplyDitherCrossFade(vo.ssPos);
+	#endif
     float alpha = ALPHA(vo.uv);
     #if defined(HELIUM_TRANSPARENCY_CUTOUT) 
         clip(alpha - _Cutoff);

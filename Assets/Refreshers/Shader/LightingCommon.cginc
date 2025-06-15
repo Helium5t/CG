@@ -97,6 +97,55 @@ struct vOutput{
     #endif
 
 };
+struct fInput{
+
+    /*
+    In order to use some Unity Macros, namely:
+    - UNITY_LIGHT_ATTENUATION
+    - SHADOW_ATTENUATION
+    - TRANSFER_SHADOW
+    - SHADOW_COORDS
+    We needed to rename "csPos" to "pos" as it is the name
+    of the field assuemd by the Unity macros.
+    */
+    #ifdef LOD_FADE_CROSSFADE
+        UNITY_VPOS_TYPE lodVPos : VPOS;
+    #else
+        float4 pos : SV_Position; // Clip Space
+    #endif
+    float3 n :   TEXCOORD0;
+    #ifdef HELIUM_NORMAL_MAPPING
+    float4 uvM : TEXCOORD1; // Main(xy) and Secondary(zw)
+    #ifdef HELIUM_FRAGMENT_BINORMAL
+    float4 tan : TEXCOORD3;
+    #else
+    float4 tan : TEXCOORD3;
+    float3 bin : TEXCOORD4;
+    #endif
+    #else
+    float2 uvM : TEXCOORD1; // Main
+    #endif
+    float4 wPos : TEXCOORD2; // World Space Position
+
+    /*
+    Same as 
+    #ifdef SHADOWS_SCREEN
+    float4 _ShadowCoord : TEXCOORD5; //<--- NAME IS IMPORTANT as it's assumed in the macros
+    #endif
+    */
+    UNITY_SHADOW_COORDS(5) // 5 for the index of TEXCOORD 
+
+    #ifdef VERTEXLIGHT_ON
+    float3 lColor: TEXCOORD6; // Computed vertex light
+    #elif defined(LIGHTMAP_ON) || defined(HELIUM_MULITPLE_DIRECTIONAL_SHADOWMASKS)
+    float2 uvLight : TEXCOORD6;
+    #endif
+
+    #ifdef DYNAMICLIGHTMAP_ON
+    float2 uvDynLight : TEXCOORD7;
+    #endif
+
+};
 /*-ALBEDO AND DETAIL ALBEDO-*/
 
 #ifdef HELIUM_DETAIL_ALBEDO

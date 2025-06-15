@@ -330,8 +330,11 @@ void InitFragNormal(inout vOutput vo){
 }
 
 
-fOutput frag(vOutput vo){
+fOutput frag(fInput vo){
     fOutput fout;
+	#ifdef LOD_FADE_CROSSFADE
+		UnityApplyDitherCrossFade(vo.lodVPos);
+	#endif
     float alpha = ALPHA(vo.uvM);
     #ifdef HELIUM_TRANSPARENCY_CUTOUT
     clip(alpha-_Cutoff);
