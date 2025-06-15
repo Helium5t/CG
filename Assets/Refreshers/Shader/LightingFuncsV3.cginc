@@ -119,6 +119,10 @@ vOutput vert(vInput i){
     #elif defined(LIGHTMAP_ON) || defined(HELIUM_MULTIPLE_DIRECTIONAL_SHADOWMASKS)
     o.uvLight = HELIUM_TRANSFORM_LIGHTMAP(i.uvLight, unity_Lightmap); 
     #endif
+
+    #ifdef DYNAMICLIGHTMAP_ON
+    o.uvDynLight = HELIUM_TRANSFORM_LIGHTMAP(i.uvDynLight, unity_DynamicLightmap);
+    #endif
     return o;
 }
 
@@ -152,11 +156,11 @@ UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo, float3 viewDir)
 
     #if !defined(HELIUM_ADD_PASS) || defined(HELIUM_DEFERRED_PASS)
 
-        #ifdef LIGHTMAP_ON
-         // overrides vertexlight value, although we don't expect to have it since Unity either defined VERTEXLIGHT_ON or LIGHTMAP_ON
-        il.diffuse = DecodeLightmap(UNITY_SAMPLE_TEX2D(
-            unity_Lightmap, vo.uvLight
-        ));
+        #ifdef LIGHTMAP_ON 
+            // overrides vertexlight value, although we don't expect to have it since Unity either defined VERTEXLIGHT_ON or LIGHTMAP_ON
+            il.diffuse = DecodeLightmap(UNITY_SAMPLE_TEX2D(
+                unity_Lightmap, vo.uvLight
+            ));
             #ifdef DIRLIGHTMAP_COMBINED // We have direction info from lightmap
                 float4 lightmapDir = UNITY_SAMPLE_TEX2D_SAMPLER(
                     unity_LightmapInd, unity_Lightmap, vo.uvLight
@@ -169,11 +173,43 @@ UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo, float3 viewDir)
             #ifdef HELIUM_APPROX_SUBTRACTIVE_LIGHTING
                 ApplySubtractiveLighting(vo, il);
             #endif
-        #else
-        il.diffuse += max(0, ShadeSH9(float4(vo.n, 1)));
         #endif
+            
+        #ifdef DYNAMICLIGHTMAP_ON
+            float3 dynLightDiffuse = DecodeRealtimeLightmap(
+                UNITY_SAMPLE_TEX2D(unity_DynamicLightmap, vo.uvDynLight)
+            );
+
+            #ifdef DIRLIGHTMAP_COMBINED // We have direction info from lightmap
+                float4 dynLightmapDir = UNITY_SAMPLE_TEX2D_SAMPLER(
+                    unity_DynamicDirectionality, unity_DynamicLightmap, vo.uvDynLight
+                );
+                il.diffuse += DecodeDirectionalLightmap(
+                    dynLightDiffuse, dynLightmapDir, vo.n
+                );
+            #else
+                il.diffuse += dynLightDiffuse;
+            #endif
+        #endif
+            
+        #ifdef HELIUM_NO_LIGHTMAPS // Previous blocks did not run
+			float3 harmonics = ShadeSH9(float4(vo.n, 1));
+            #ifdef UNITY_LIGHT_PROBE_PROXY_VOLUME
+                // big function that does harmonics but with only 2 lights and sampling over multple points in world space => EXPENSIVE :C
+                float3 lppv = SHEvalLinearL0L1_SampleProbeVolume(
+                    float4(vo.n, 1), vo.wPos
+                );
+                il.diffuse += max(0, lppv * step(0.1, unity_ProbeVolumeParams.x) + harmonics * (1-step(0.1, unity_ProbeVolumeParams.x)));
+				#ifdef UNITY_COLORSPACE_GAMMA
+				il.diffuse = LinearToGammaSpace(il.diffuse);
+				#endif
+            #else
+                il.diffuse += max(0,harmonics);
+            #endif
+        #endif
+
     
-    float roughnessToMipMap = 1.7 - 0.7* ROUGHNESS(vo.uvM);
+        float roughnessToMipMap = 1.7 - 0.7* ROUGHNESS(vo.uvM);
         // float3 reflectionSampleVec = reflect(-viewDir, vo.n);
         // reflectionSampleVec = BoxProjectionIfActive(reflectionSampleVec, vo.wPos, 
         //      unity_SpecCube0_ProbePosition, unity_SpecCube0_BoxMin, unity_SpecCube0_BoxMax);

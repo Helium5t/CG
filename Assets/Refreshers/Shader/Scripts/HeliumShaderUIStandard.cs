@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEditor;
 using UnityEngine.Rendering;
-using System.Diagnostics;
 using UnityEngine.XR;
 
 public class HeliumShaderStandardUI : ShaderGUI {
@@ -211,24 +210,26 @@ public class HeliumShaderStandardUI : ShaderGUI {
     void DoEmission()
     {
         MaterialProperty map = FindProperty("_Emission");
-        bool useTex = map.textureValue;
+       
         Texture t = map.textureValue;
         EditorGUI.BeginChangeCheck();
         MaterialProperty mp = FindProperty("_EmissionColor");
-        if (useTex)
-        {
-            mp.colorValue = Color.white;
-        }
         editor.TexturePropertyWithHDRColor(
             MakeLabel(map, "Emission"), map, mp, false
         );
+        editor.LightmapEmissionProperty(2);
         if (EditorGUI.EndChangeCheck() && t != map.textureValue)
         {
+            bool useTex = map.textureValue;
             SetKeyword("HELIUM_EMISSION_FROM_MAP", useTex);
+            if (useTex)
+            {
+                mp.colorValue = Color.white;
+            }
         }
         foreach (Material m in editor.targets)
         {
-            m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.BakedEmissive;
+            m.globalIlluminationFlags &= ~MaterialGlobalIlluminationFlags.EmissiveIsBlack;
         }
     }
 
