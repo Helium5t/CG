@@ -8,7 +8,7 @@ Compared to V2B Adds:
 
 
 If notes or comments are missing here, they should be present for the same line
-in "LightingFuncs.cginc"
+in "Archive/LightingFuncs.cginc"
 */
 
 #if !defined(HELIUM_LIGHTING_INCLUDED)

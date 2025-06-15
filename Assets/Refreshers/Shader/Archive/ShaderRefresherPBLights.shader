@@ -27,7 +27,7 @@ Shader "Refreshers/MultiLightPhysicallyBased"
             #pragma multi_compile_fwdadd // equivalent of the following
             // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
 
-			#include "LightingFuncs.cginc"
+			#include "Archive/LightingFuncs.cginc"
 
 
             ENDCG
@@ -68,7 +68,7 @@ Shader "Refreshers/MultiLightPhysicallyBased"
             #pragma vertex vert
             #pragma fragment frag
             
-			#include "LightingFuncs.cginc"
+			#include "Archive/LightingFuncs.cginc"
             ENDCG
             
 

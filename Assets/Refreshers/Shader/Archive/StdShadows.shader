@@ -1,6 +1,6 @@
 // Same as ShadowsPBShader but uses Unity naming convention
-Shader "Refreshers/StdReflections"
-{   
+Shader "Refreshers/ShadowsPBStandard"
+{
     Properties{
         _Color("Color", Color) = (1,1,1,1)
         _Tex ("Texture", 2D) = "white" {}
@@ -9,11 +9,8 @@ Shader "Refreshers/StdReflections"
         _SecondaryTex("Secondary Texture", 2D) = "gray"{}
         [NoScaleOffset] _SecondaryNormal("Secondary Normal map", 2D) = "bump" {}
         _SecondaryNormalStrength("Secondary Normal Strength", Float) = 1
-        _UniformRoughness("Roughness", Range(0,1)) = 0.5
-        _Roughness("Roughness",2D) = "white"{}
-        [NoScaleOffset] _Metallic("Metallic", 2D) = "white" {}
-        _UniformMetallic("Metallic", Range(0,1)) = 0.5
-        _PackedMR("Metallic Roughness", 2D) = "grey" {}
+        _Roughness("Roughness", Range(0,1)) = 0.5
+        _Metallic("Metallic", Range(0,1)) = 0.1
     }
     CGINCLUDE
     #define HELIUM_FRAGMENT_BINORMAL
@@ -35,17 +32,13 @@ Shader "Refreshers/StdReflections"
 
 			#pragma multi_compile _ SHADOWS_SCREEN 
 
-            #pragma shader_feature HELIUM_2D_METALLIC
-            #pragma shader_feature HELIUM_2D_ROUGHNESS
-            #pragma shader_feature HELIUM_PACKED_MR
-
             #define HELIUM_NORMAL_MAPPING
             #define HELIUM_BASE_COLOR
         
             #pragma multi_compile_fwdadd_fullshadows // equivalent of the following
             // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
 
-			#include "LightingFuncsV2.cginc"
+			#include "Archive/LightingFuncsV2.cginc"
 
 
             ENDCG
@@ -83,14 +76,11 @@ Shader "Refreshers/StdReflections"
             
             #define HELIUM_NORMAL_MAPPING
             #define HELIUM_ADD_PASS
-            #pragma shader_feature HELIUM_2D_METALLIC
-            #pragma shader_feature HELIUM_2D_ROUGHNESS
-            #pragma shader_feature HELIUM_PACKED_MR
             
             #pragma vertex vert
             #pragma fragment frag
             
-			#include "LightingFuncsV2.cginc"
+			#include "Archive/LightingFuncsV2.cginc"
             ENDCG
             
 
@@ -106,11 +96,10 @@ Shader "Refreshers/StdReflections"
 
             #pragma multi_compile_shadowcaster
             
-            #include "ShadowFuncs.cginc"
+            #include ""Archive/ShadowFuncs.cginc"
 
             ENDCG
         }
     }
     Fallback "Diffuse"
-    CustomEditor "HeliumShaderUI"
 }

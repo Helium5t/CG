@@ -208,7 +208,7 @@ Shader "Refreshers/StdPackedTextures"
             }
             Cull Off
 
-            Name "Standard Shadow"
+            Name "Standard Meta"
             CGPROGRAM
             #pragma vertex vertLightMap
 			#pragma fragment fragLightMap

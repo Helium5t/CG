@@ -1,5 +1,5 @@
-// Same as ShadowsPBShader but uses Unity naming convention
-Shader "Refreshers/ShadowsPBStandard"
+
+Shader "Refreshers/ShadowsPBShader"
 {
     Properties{
         _Color("Color", Color) = (1,1,1,1)
@@ -35,10 +35,10 @@ Shader "Refreshers/ShadowsPBStandard"
             #define HELIUM_NORMAL_MAPPING
             #define HELIUM_BASE_COLOR
         
-            #pragma multi_compile_fwdadd_fullshadows // equivalent of the following
+            #pragma multi_compile_fwdadd // equivalent of the following
             // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
 
-			#include "LightingFuncsV2.cginc"
+			#include "Archive/LightingFuncs.cginc"
 
 
             ENDCG
@@ -80,7 +80,7 @@ Shader "Refreshers/ShadowsPBStandard"
             #pragma vertex vert
             #pragma fragment frag
             
-			#include "LightingFuncsV2.cginc"
+			#include "Archive/LightingFuncs.cginc"
             ENDCG
             
 
@@ -96,7 +96,7 @@ Shader "Refreshers/ShadowsPBStandard"
 
             #pragma multi_compile_shadowcaster
             
-            #include "ShadowFuncs.cginc"
+            #include ""Archive/ShadowFuncs.cginc"
 
             ENDCG
         }

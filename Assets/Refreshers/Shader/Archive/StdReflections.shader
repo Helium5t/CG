@@ -1,15 +1,23 @@
-// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
-// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
-Shader "Refreshers/HeightMappedPBShader"
-{
+// Same as ShadowsPBShader but uses Unity naming convention
+Shader "Refreshers/StdReflections"
+{   
     Properties{
+        _Color("Color", Color) = (1,1,1,1)
         _Tex ("Texture", 2D) = "white" {}
-        [NoScaleOffset] _Height ("Height map", 2D) = "gray" {}
-        _Roughness("Roughness", Range(0,1)) = 0.5
-        _Metallic("Metallic", Range(0,1)) = 0.1
+        [NoScaleOffset] _Normal ("Normal map", 2D) = "bump" {}
+        _NormalStrength("Normal Strength", Float) = 1
+        _SecondaryTex("Secondary Texture", 2D) = "gray"{}
+        [NoScaleOffset] _SecondaryNormal("Secondary Normal map", 2D) = "bump" {}
+        _SecondaryNormalStrength("Secondary Normal Strength", Float) = 1
+        _UniformRoughness("Roughness", Range(0,1)) = 0.5
+        _Roughness("Roughness",2D) = "white"{}
+        [NoScaleOffset] _Metallic("Metallic", 2D) = "white" {}
+        _UniformMetallic("Metallic", Range(0,1)) = 0.5
+        _PackedMR("Metallic Roughness", 2D) = "grey" {}
     }
+    CGINCLUDE
+    #define HELIUM_FRAGMENT_BINORMAL
+    ENDCG
     SubShader{
 
         Pass{
@@ -25,12 +33,19 @@ Shader "Refreshers/HeightMappedPBShader"
             // Only point is supported
             #pragma multi_compile _ VERTEXLIGHT_ON
 
-            #define HELIUM_HEIGHT_MAPPING
+			#pragma multi_compile _ SHADOWS_SCREEN 
+
+            #pragma shader_feature HELIUM_2D_METALLIC
+            #pragma shader_feature HELIUM_2D_ROUGHNESS
+            #pragma shader_feature HELIUM_PACKED_MR
+
+            #define HELIUM_NORMAL_MAPPING
+            #define HELIUM_BASE_COLOR
         
-            #pragma multi_compile_fwdadd // equivalent of the following
+            #pragma multi_compile_fwdadd_fullshadows // equivalent of the following
             // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
 
-			#include "LightingFuncs.cginc"
+			#include "Archive/LightingFuncsV2.cginc"
 
 
             ENDCG
@@ -64,19 +79,38 @@ Shader "Refreshers/HeightMappedPBShader"
             // etc...
             //#pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
             // Equivalent of the one above
-            #pragma multi_compile_fwdadd
+            #pragma multi_compile_fwdadd_fullshadows
             
-            #define HELIUM_HEIGHT_MAPPING
+            #define HELIUM_NORMAL_MAPPING
             #define HELIUM_ADD_PASS
+            #pragma shader_feature HELIUM_2D_METALLIC
+            #pragma shader_feature HELIUM_2D_ROUGHNESS
+            #pragma shader_feature HELIUM_PACKED_MR
             
             #pragma vertex vert
             #pragma fragment frag
             
-			#include "LightingFuncs.cginc"
+			#include "Archive/LightingFuncsV2.cginc"
             ENDCG
             
 
         }
+        Pass{
+            Tags{
+                "LightMode" = "ShadowCaster"
+            }
+            CGPROGRAM
+            #pragma target 3.0
+            #pragma vertex shadowVert
+            #pragma fragment shadowFrag
+
+            #pragma multi_compile_shadowcaster
+            
+            #include ""Archive/ShadowFuncs.cginc"
+
+            ENDCG
+        }
     }
     Fallback "Diffuse"
+    CustomEditor "HeliumShaderUI"
 }
