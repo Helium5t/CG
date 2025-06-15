@@ -103,7 +103,7 @@ Material:
     - _AlphaStrength: 0.685
     - _AlphaThreshold: 1
     - _BumpScale: 1
-    - _Cutoff: 0.01
+    - _Cutoff: 0.36
     - _DestinationBlend: 0
     - _DetailNormalMapScale: 1
     - _DstBlend: 0

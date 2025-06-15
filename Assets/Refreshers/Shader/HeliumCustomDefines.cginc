@@ -24,3 +24,7 @@
 #if defined(LIGHTMAP_ON) && defined(SHADOWS_SCREEN) && defined(LIGHTMAP_SHADOW_MIXING) && !defined(SHADOWS_SHADOWMASK)
 		#define HELIUM_APPROX_SUBTRACTIVE_LIGHTING 1
 #endif
+
+#if !defined(LIGHTMAP_ON) && !defined(DYNAMICLIGHTMAP_ON)
+    #define HELIUM_NO_LIGHTMAPS
+#endif

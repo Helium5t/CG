@@ -187,7 +187,7 @@ UnityLight ComputeDirectLighting(float2 screenUV, float3 wPos, float depthViewSp
     #ifdef HELIUM_USE_FAST_BRANCHING
         UNITY_BRANCH
         if (shadowFading > 0.99){
-            shadowDimming = 1;
+            shadowDimming = 0;
         }else{
     #endif
             #ifdef SHADOWS_SCREEN // SHADOWS_SCREEN is only used by directional light, POINT uses CUBE and SPOT uses DEPTH
@@ -200,7 +200,7 @@ UnityLight ComputeDirectLighting(float2 screenUV, float3 wPos, float depthViewSp
     #ifdef HELIUM_USE_FAST_BRANCHING
         }
     #endif
-
+    
 
     #ifndef HELIUM_SHADOWS_DISABLED 
     shadowDimming = MaxDistShadowFade(wPos, depthViewSpace, shadowDimming, shadowFading);
@@ -213,18 +213,18 @@ UnityLight ComputeDirectLighting(float2 screenUV, float3 wPos, float depthViewSp
     shadowDimming *= LightCookie(wPos);
 
     #ifndef HELIUM_SHADOWS_DISABLED
-    shadowFading = UnityComputeShadowFadeDistance(wPos, depthViewSpace);
-    shadowFading = saturate(shadowFading * _LightShadowData.z + _LightShadowData.w);
-    #ifdef SHADOWS_SHADOWMASK
-    float x = shadowDimming;
-    shadowDimming = UnityMixRealtimeAndBakedShadows(
-        shadowDimming, ApplyShadowMask(screenUV), shadowFading
-        );
-        #else
+        shadowFading = UnityComputeShadowFadeDistance(wPos, depthViewSpace);
         /*
         _LightShadowData : x - shadow strength | y - Appears to be unused | z - 1.0 / shadow far distance | w - shadow near distance
         */
-        shadowDimming = saturate(shadowDimming + 1);
+        shadowFading = saturate(shadowFading * _LightShadowData.z + _LightShadowData.w);
+        #ifdef SHADOWS_SHADOWMASK
+            // float x = shadowDimming;
+            shadowDimming = UnityMixRealtimeAndBakedShadows(
+                shadowDimming, ApplyShadowMask(screenUV), shadowFading
+                );
+        #else
+            shadowDimming = saturate(shadowDimming + shadowFading);
         #endif
     #endif
     

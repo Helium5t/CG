@@ -10,11 +10,15 @@
 vOutput vertLightMap(vInput v){
     vOutput o;
     // Rendering happens to the pixel on the lightmap, so we need to transform to the appropriate space
-    v.vertex.xy = HELIUM_TRANSFORM_LIGHTMAP(v.uvLight, unity_Lightmap); // Get UV coordinates on the lightmap
-    v.vertex.z = step(v.vertex.z, 0) * 0.0001; // Actually a dummy value, not actually used ultimately.
+    // v.vertex.xy = HELIUM_TRANSFORM_LIGHTMAP(v.uvLight, unity_Lightmap); // Get UV coordinates on the lightmap
+    // v.vertex.z = step(v.vertex.z, 0) * 0.0001; // Actually a dummy value, not actually used ultimately.
 
-    o.pos = UnityObjectToClipPos(
-        v.vertex
+    // o.pos = UnityObjectToClipPos(
+    //     v.vertex
+    // );
+    // Same as above, but makes sure to use the right map depending on if RGI is enabled or not.
+    o.pos = UnityMetaVertexPosition(
+        v.vertex, v.uvLight, v.uvDynLight, unity_LightmapST, unity_DynamicLightmapST
     );
     o.uvM.xy = TRANSFORM_TEX(v.uv, _MainTex);
     #ifdef HELIUM_DETAIL_ALBEDO

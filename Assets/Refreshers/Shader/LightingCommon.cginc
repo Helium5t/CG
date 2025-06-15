@@ -45,6 +45,7 @@ struct vInput{
     float3 n : NORMAL;
     float2 uv : TEXCOORD0;
     float2 uvLight : TEXCOORD1;
+    float2 uvDynLight : TEXCOORD2; // Realtime GI map
     
     #ifdef HELIUM_NORMAL_MAPPING
     float4 tan : TANGENT;
@@ -89,6 +90,10 @@ struct vOutput{
     float3 lColor: TEXCOORD6; // Computed vertex light
     #elif defined(LIGHTMAP_ON) || defined(HELIUM_MULITPLE_DIRECTIONAL_SHADOWMASKS)
     float2 uvLight : TEXCOORD6;
+    #endif
+
+    #ifdef DYNAMICLIGHTMAP_ON
+    float2 uvDynLight : TEXCOORD7;
     #endif
 
 };

@@ -203,6 +203,8 @@ Shader "Refreshers/StdPackedTextures"
             CGPROGRAM
             #pragma vertex vertLightMap
 			#pragma fragment fragLightMap
+            #pragma multi_compile_fwdbase
+            
 
             #pragma shader_feature HELIUM_2D_METALLIC
             #pragma shader_feature _ HELIUM_R_FROM_METALLIC HELIUM_R_FROM_ALBEDO
