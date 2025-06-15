@@ -35,6 +35,7 @@ Shader "Refreshers/StdPackedTextures"
             Tags {
                 "LightMode" = "ForwardBase"
 			}
+            Name "Standard Base FW"
             Blend [_SourceBlend] [_DestinationBlend]
             ZWrite [_WriteToDepthBuffer]
 
@@ -48,6 +49,7 @@ Shader "Refreshers/StdPackedTextures"
 			// #pragma multi_compile _ SHADOWS_SCREEN 
             // #pragma multi_compile _ DIRLIGHTMAP_COMBINED
             #pragma multi_compile_fwdbase // Same as the lines above together
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
 
 
             #pragma shader_feature _ HELIUM_TRANSPARENCY_CUTOUT HELIUM_TRANSPARENCY_BLENDED HELIUM_TRANSPARENCY_TRANSLUCENT
@@ -78,6 +80,7 @@ Shader "Refreshers/StdPackedTextures"
             Tags{
                 "LightMode" = "ForwardAdd" // ForwardAdd makes it so this pass is "added" on top of the base one, used for the main light
             }
+            Name "Standard Add FW"
             // In this case Blend 0 One One is the same as Blend One One 
             // since this shader is not using the other targets.
             // Blend 0 One One // Old Values
@@ -106,6 +109,7 @@ Shader "Refreshers/StdPackedTextures"
             // Equivalent of the one above
             #pragma multi_compile_fwdadd_fullshadows
             #pragma multi_compile_fog
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
             
             #define HELIUM_NORMAL_MAPPING
             #define HELIUM_ADD_PASS
@@ -133,6 +137,7 @@ Shader "Refreshers/StdPackedTextures"
             Tags {
                 "LightMode" = "Deferred"
             }
+            Name "Standard Deferred"
             Blend [_SourceBlend] [_DestinationBlend]
             ZWrite [_WriteToDepthBuffer]
 
@@ -144,6 +149,7 @@ Shader "Refreshers/StdPackedTextures"
             
 
 			#pragma multi_compile _ SHADOWS_SCREEN 
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
 
             #pragma shader_feature _ HELIUM_TRANSPARENCY_CUTOUT // Not needed in deferred : HELIUM_TRANSPARENCY_BLENDED HELIUM_TRANSPARENCY_TRANSLUCENT
             #pragma shader_feature HELIUM_2D_METALLIC
@@ -179,12 +185,14 @@ Shader "Refreshers/StdPackedTextures"
             Tags{
                 "LightMode" = "ShadowCaster"
             }
+            Name "Standard Shadow"
             CGPROGRAM
             #pragma target 3.0
             #pragma vertex shadowVert
             #pragma fragment shadowFrag
 
             #pragma multi_compile_shadowcaster
+            #pragma multi_compile _ LOD_FADE_CROSSFADE
             
             #pragma shader_feature _ HELIUM_TRANSPARENCY_CUTOUT HELIUM_TRANSPARENCY_BLENDED HELIUM_TRANSPARENCY_TRANSLUCENT
             #pragma shader_feature HELIUM_SHADOWS_FORCE_CUTOUT
@@ -200,6 +208,7 @@ Shader "Refreshers/StdPackedTextures"
             }
             Cull Off
 
+            Name "Standard Shadow"
             CGPROGRAM
             #pragma vertex vertLightMap
 			#pragma fragment fragLightMap
