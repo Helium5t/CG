@@ -30,7 +30,7 @@ Shader "Refreshers/HeightMappedPBShader"
             #pragma multi_compile_fwdadd // equivalent of the following
             // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
 
-			#include "Archive/LightingFuncs.cginc"
+			#include "LightingFuncs.cginc"
 
 
             ENDCG
@@ -72,7 +72,7 @@ Shader "Refreshers/HeightMappedPBShader"
             #pragma vertex vert
             #pragma fragment frag
             
-			#include "Archive/LightingFuncs.cginc"
+			#include "LightingFuncs.cginc"
             ENDCG
             
 
