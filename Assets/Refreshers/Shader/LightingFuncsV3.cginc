@@ -104,6 +104,10 @@ vOutput vert(vInput i){
     o.bin = ComputeBinormal(i.n, i.tan.xyz, i.tan.w);
 
     #endif
+
+    #ifdef INSTANCING_ON
+    unity_InstanceID = i.instanceID + unity_BaseInstanceID; // fetch the correct instance for mvp matrix selection
+    #endif
     o.pos = UnityObjectToClipPos(i.vertex);
     o.wPos = mul(unity_ObjectToWorld, i.vertex);
 

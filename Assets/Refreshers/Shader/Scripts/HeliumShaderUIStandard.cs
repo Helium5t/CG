@@ -90,16 +90,18 @@ public class HeliumShaderStandardUI : ShaderGUI {
         DoTransparencyMode();
         DoMain();
 	}
-	
-	void DoMain() {
+
+    void DoMain()
+    {
         GUILayout.Label("Main Maps", EditorStyles.boldLabel);
         MaterialProperty mainTex = FindProperty("_MainTex");
         MaterialProperty tint = FindProperty("_Color");
-		
+
         editor.TexturePropertySingleLine(MakeLabel(mainTex, "Albedo (RGB)"), mainTex, tint);
-		DoRoughness();
-		DoMetallic();
-        if(dirty){
+        DoRoughness();
+        DoMetallic();
+        if (dirty)
+        {
             dirty = false;
         }
         DoNormals();
@@ -108,11 +110,12 @@ public class HeliumShaderStandardUI : ShaderGUI {
         DoEmission();
         DoOcclusion();
         DoDetailMask();
-        if(showAlphaThresholdSlider){
+        if (showAlphaThresholdSlider)
+        {
             DoAlphaThreshold();
         }
         editor.TextureScaleOffsetProperty(mainTex);
-
+        DoDrawCallOptions();
 	}
 
     void DoNormals () {
@@ -314,6 +317,15 @@ public class HeliumShaderStandardUI : ShaderGUI {
         }
         if(forceCutout){
             showAlphaThresholdSlider = true;
+        }
+    }
+
+    void DoDrawCallOptions()
+    {
+        GUILayout.Label("Draw Call Options", EditorStyles.boldLabel);
+        editor.EnableInstancingField();
+        foreach( Material mt in editor.targets){
+            mt.enableInstancing = true;
         }
     }
 

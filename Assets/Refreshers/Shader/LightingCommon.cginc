@@ -31,7 +31,8 @@ sampler2D _Metallic, _Roughness;
 
 /*--Data Structs--*/
 
-struct vInput{
+struct vInput{	
+    UNITY_VERTEX_INPUT_INSTANCE_ID
     /*
     In order to use some Unity Macros, namely:
     - UNITY_LIGHT_ATTENUATION

@@ -49,7 +49,10 @@ Shader "Refreshers/StdPackedTextures"
 			// #pragma multi_compile _ SHADOWS_SCREEN 
             // #pragma multi_compile _ DIRLIGHTMAP_COMBINED
             #pragma multi_compile_fwdbase // Same as the lines above together
+            // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
+            #pragma multi_compile_fog
             #pragma multi_compile _ LOD_FADE_CROSSFADE
+            #pragma multi_compile_instancing
 
 
             #pragma shader_feature _ HELIUM_TRANSPARENCY_CUTOUT HELIUM_TRANSPARENCY_BLENDED HELIUM_TRANSPARENCY_TRANSLUCENT
@@ -71,6 +74,8 @@ Shader "Refreshers/StdPackedTextures"
             #pragma multi_compile_fwdadd_fullshadows // equivalent of the following
             // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
             #pragma multi_compile_fog
+            // #pragma multi_compile INSTANCING_ON and other keywords not used
+            #pragma multi_compile_instancing
 
 			#include "LightingFuncsV3.cginc"
 
@@ -150,6 +155,7 @@ Shader "Refreshers/StdPackedTextures"
 
 			#pragma multi_compile _ SHADOWS_SCREEN 
             #pragma multi_compile _ LOD_FADE_CROSSFADE
+            #pragma multi_compile_instancing
 
             #pragma shader_feature _ HELIUM_TRANSPARENCY_CUTOUT // Not needed in deferred : HELIUM_TRANSPARENCY_BLENDED HELIUM_TRANSPARENCY_TRANSLUCENT
             #pragma shader_feature HELIUM_2D_METALLIC
@@ -193,6 +199,7 @@ Shader "Refreshers/StdPackedTextures"
 
             #pragma multi_compile_shadowcaster
             #pragma multi_compile _ LOD_FADE_CROSSFADE
+            #pragma multi_compile_instancing
             
             #pragma shader_feature _ HELIUM_TRANSPARENCY_CUTOUT HELIUM_TRANSPARENCY_BLENDED HELIUM_TRANSPARENCY_TRANSLUCENT
             #pragma shader_feature HELIUM_SHADOWS_FORCE_CUTOUT

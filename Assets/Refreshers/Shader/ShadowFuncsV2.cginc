@@ -34,6 +34,7 @@ float _Cutoff;
 sampler3D _DitherMaskLOD;
 
 struct svInput{
+    UNITY_VERTEX_INPUT_INSTANCE_ID
     float4 pos: POSITION;
     float3 n : NORMAL;
     float2 uv : TEXCOORD0;
@@ -65,6 +66,9 @@ struct sfInput{
 
 svOutput shadowVert(svInput i){
     svOutput o;
+    #ifdef INSTANCING_ON
+    unity_InstanceID = i.instanceID + unity_BaseInstanceID;
+    #endif 
     // UnityClipSpaceShadowCasterPos transforms direction also in clip space
     // and then moves the vertex by the normal bias amount (unity_LightShadowBias.z)
     o.csPos = UnityClipSpaceShadowCasterPos(i.pos, i.n);
