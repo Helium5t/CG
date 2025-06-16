@@ -21,6 +21,11 @@ in "Archive/LightingFuncs.cginc"
 // Alpha threshold to clip the pixel. Called like this because Unity wouldn't be able to handle shadows otherwise.
 float _Cutoff;
 
+#ifdef HELIUM_HEIGHT_MAP 
+sampler2D _Height;
+float _ParallaxStrength;
+#endif
+
 #ifdef HELIUM_DETAIL_NORMAL_MAP
 sampler2D _SecondaryNormal;
 float _SecondaryNormalStrength;
@@ -129,6 +134,15 @@ vOutput vert(vInput i){
     #ifdef DYNAMICLIGHTMAP_ON
     o.uvDynLight = HELIUM_TRANSFORM_LIGHTMAP(i.uvDynLight, unity_DynamicLightmap);
     #endif
+
+    #ifdef HELIUM_HEIGHT_MAP
+    float3x3 objToTan = float3x3(
+        i.tan.xyz, 
+        cross(i.n, i.tan.xyz) * i.tan.w, 
+        i.n);
+    o.viewDirTanSpace = mul(objToTan, ObjSpaceViewDir(i.vertex));
+    #endif
+
     return o;
 }
 
@@ -344,6 +358,14 @@ fOutput frag(fInput vo){
 	#ifdef LOD_FADE_CROSSFADE
 		UnityApplyDitherCrossFade(vo.lodVPos);
 	#endif
+
+    #ifdef HELIUM_HEIGHT_MAP
+        DisplaceUVParallax(vo.uvM.xy,vo.viewDirTanSpace, (tex2D(_Height, vo.uvM.xy).r - 0.5)*  _ParallaxStrength);
+        #ifdef HELIUM_DETAIL_ALBEDO
+            DisplaceUVParallax(vo.uvM.zw,vo.viewDirTanSpace, (tex2D(_Height, vo.uvM.xy).r - 0.5)*  _ParallaxStrength * (_SecondaryTex_ST.xy / _MainTex_ST.xy));
+        #endif
+    #endif
+    
     float alpha = ALPHA(vo.uvM);
     #ifdef HELIUM_TRANSPARENCY_CUTOUT
     clip(alpha-_Cutoff);

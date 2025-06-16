@@ -102,6 +102,10 @@ struct vOutput{
     float2 uvDynLight : TEXCOORD7;
     #endif
 
+    #ifdef HELIUM_HEIGHT_MAP
+    float3 viewDirTanSpace : TEXCOORD8;
+    #endif
+
 };
 struct fInput{
     UNITY_VERTEX_INPUT_INSTANCE_ID
@@ -151,6 +155,10 @@ struct fInput{
     float2 uvDynLight : TEXCOORD7;
     #endif
 
+    #ifdef HELIUM_HEIGHT_MAP
+    float3 viewDirTanSpace : TEXCOORD8;
+    #endif
+
 };
 /*-ALBEDO AND DETAIL ALBEDO-*/
 
@@ -179,7 +187,6 @@ float3 ComputeAlbedoWithDetail(vOutput vo){
     #endif
 
     #ifdef HELIUM_NORMAL_MAPPING
-
     #ifdef HELIUM_DETAIL_ALBEDO
     float3 d = tex2D(_SecondaryTex, vo.uvM.zw) * unity_ColorSpaceDouble;
     #else
@@ -188,6 +195,8 @@ float3 ComputeAlbedoWithDetail(vOutput vo){
 
     #ifdef HELIUM_DETAIL_MASK
     a = lerp(a, a * d, DETAIL_MASK(vo.uvM));
+    #else 
+    a = lerp(a, a*d, 0.5);
     #endif
 
     #endif

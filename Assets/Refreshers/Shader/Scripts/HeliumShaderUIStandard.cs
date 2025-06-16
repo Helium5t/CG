@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEditor;
 using UnityEngine.Rendering;
 using UnityEngine.XR;
+using System;
 
 public class HeliumShaderStandardUI : ShaderGUI {
 
@@ -109,6 +110,7 @@ public class HeliumShaderStandardUI : ShaderGUI {
         DoSecondaryNormals();
         DoEmission();
         DoOcclusion();
+        DoHeight();
         DoDetailMask();
         if (showAlphaThresholdSlider)
         {
@@ -246,6 +248,28 @@ public class HeliumShaderStandardUI : ShaderGUI {
 		);
 		if (EditorGUI.EndChangeCheck() && t != map.textureValue) {
 			SetKeyword("HELIUM_OCCLUSION_FROM_MAP", map.textureValue);
+		}
+    }
+
+    void DoHeight(){
+        MaterialProperty map;
+        try
+        {
+            map = FindProperty("_Height");
+        }
+        catch (ArgumentException)
+        {
+            return;
+        }
+
+        Texture t = map.textureValue;
+		EditorGUI.BeginChangeCheck();
+		editor.TexturePropertySingleLine(
+			MakeLabel(map, "Height"), map,
+			map.textureValue ? FindProperty("_ParallaxStrength") : null
+		);
+		if (EditorGUI.EndChangeCheck() && t != map.textureValue) {
+			SetKeyword("HELIUM_HEIGHT_MAP", map.textureValue);
 		}
     }
 

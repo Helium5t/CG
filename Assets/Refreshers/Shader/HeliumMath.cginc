@@ -1,6 +1,9 @@
 #ifndef HELIUM_MATH
 #define HELIUM_MATH
 
+
+#define HELIUM_HEURISTIC_PARALLAX_BIAS 0.42
+
 float3 ComputeBinormal(float3 n, float3 t, float sign){
     return cross(n,t) * (sign * unity_WorldTransformParams.w/*Handles cases where object is mirrored in some dimension*/);
 }
@@ -39,6 +42,12 @@ float3 BoxProjectionIfActive(
         refelctionDir =  refelctionDir*multiplier + (fragmentPos - cubemapPos);
     }
     return refelctionDir;
+}
+
+void DisplaceUVParallax(inout float2 uv, inout float3 tanSpaceDir, float strength){
+    tanSpaceDir = normalize(tanSpaceDir);
+    tanSpaceDir.xy /= tanSpaceDir.z + HELIUM_HEURISTIC_PARALLAX_BIAS; // Correct xy length to see where the ray will reach when fully extended (plus an heuristic correction taken from Unity itself)
+    uv += tanSpaceDir.xy * (strength);
 }
 
 #endif
