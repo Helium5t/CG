@@ -13,9 +13,9 @@
 
 
 #ifndef HELIUM_R_FROM_ALBEDO
-    #define ALPHA(uv) _Color.a * tex2D(_MainTex, uv.xy).a
+    #define ALPHA(uv) UNITY_ACCESS_INSTANCED_PROP(_Color_arr, _Color).a * tex2D(_MainTex, uv.xy).a
 #else
-    #define ALPHA(uv) _Color.a
+    #define ALPHA(uv) UNITY_ACCESS_INSTANCED_PROP(_Color_arr, _Color).a
 #endif
 
 
