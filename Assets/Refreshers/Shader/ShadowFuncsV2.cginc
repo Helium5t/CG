@@ -1,3 +1,5 @@
+// Upgrade NOTE: upgraded instancing buffer 'InstanceProperties' to new syntax.
+
 // Currently just replaces a variable name to allow Unity to handle shadows correctly.
 #ifndef HELIUM_SHADOWS
 #define HELIUM_SHADOWS
@@ -21,12 +23,15 @@
 
 
 #ifdef HELIUM_SHADOWS_SAMPLE_ALPHA
-    #define ALPHA(uv) _Color.a * tex2D(_MainTex, uv.xy).a;
+    #define ALPHA(uv) UNITY_ACCESS_INSTANCED_PROP(_Color_arr, _Color).a * tex2D(_MainTex, uv.xy).a;
 #else 
-    #define ALPHA(uv) _Color.a;
+    #define ALPHA(uv) UNITY_ACCESS_INSTANCED_PROP(_Color_arr, _Color).a;
 #endif 
 
-float4 _Color;
+UNITY_INSTANCING_BUFFER_START(InstanceProperties)
+    UNITY_DEFINE_INSTANCED_PROP(float4,_Color)
+#define _Color_arr InstanceProperties
+UNITY_INSTANCING_BUFFER_END(InstanceProperties)
 sampler2D _MainTex;
 float4 _MainTex_ST;
 float _Cutoff;
@@ -41,6 +46,7 @@ struct svInput{
 };
 
 struct svOutput{
+    UNITY_VERTEX_INPUT_INSTANCE_ID
     float4 csPos : SV_Position; // Clip Space
     #ifdef HELIUM_SHADOWS_SAMPLE_ALPHA
         float2 uv : TEXCOORD0;
@@ -51,6 +57,7 @@ struct svOutput{
 };
 
 struct sfInput{
+    UNITY_VERTEX_INPUT_INSTANCE_ID
     #if HELIUM_SHADOWS_DITHERED || defined(LOD_FADE_CROSSFADE)
         UNITY_VPOS_TYPE ssPos : VPOS; // Screen-space position where "screen" is the shadow map. 
     #else 
@@ -66,6 +73,7 @@ struct sfInput{
 
 svOutput shadowVert(svInput i){
     svOutput o;
+    UNITY_TRANSFER_INSTANCE_ID(i,o);
     #ifdef INSTANCING_ON
     unity_InstanceID = i.instanceID + unity_BaseInstanceID;
     #endif 
@@ -90,6 +98,9 @@ svOutput shadowVert(svInput i){
 }
 
 half4 shadowFrag(sfInput vo): SV_Target{
+    #ifdef INSTANCING_ON
+    unity_InstanceID = vo.instanceID + unity_BaseInstanceID;
+    #endif
     #if defined(LOD_FADE_CROSSFADE)
 		UnityApplyDitherCrossFade(vo.ssPos);
 	#endif

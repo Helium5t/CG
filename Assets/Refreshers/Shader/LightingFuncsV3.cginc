@@ -93,19 +93,21 @@ void ComputeVertexLight(inout vOutput v){
 
 vOutput vert(vInput i){
     vOutput o;
-
+    
     o.uvM = 0;
     o.uvM.xy = HELIUM_TRANSFORM_TEX(i.uv, _MainTex);  // QOL command that summarizes texture tiling and offset
     #ifdef HELIUM_DETAIL_ALBEDO
-        o.uvM.zw = HELIUM_TRANSFORM_TEX(i.uv, _SecondaryTex);
+    o.uvM.zw = HELIUM_TRANSFORM_TEX(i.uv, _SecondaryTex);
     #endif
     o.tan = float4(UnityObjectToWorldDir(i.tan.xyz), i.tan.w);
     #ifndef HELIUM_FRAGMENT_BINORMAL
     o.bin = ComputeBinormal(i.n, i.tan.xyz, i.tan.w);
-
+    
     #endif
-
+    
+    UNITY_TRANSFER_INSTANCE_ID(i, o); // In case of instancing, set the transfer ID for the fragment shader struct
     #ifdef INSTANCING_ON
+    // Same as UNITY_SETUP_INSTANCE_ID
     unity_InstanceID = i.instanceID + unity_BaseInstanceID; // fetch the correct instance for mvp matrix selection
     #endif
     o.pos = UnityObjectToClipPos(i.vertex);
@@ -336,6 +338,9 @@ void InitFragNormal(inout vOutput vo){
 
 fOutput frag(fInput vo){
     fOutput fout;
+    #ifdef INSTANCING_ON
+    unity_InstanceID = vo.instanceID + unity_BaseInstanceID; // fetch the correct instance for mvp matrix selection
+    #endif
 	#ifdef LOD_FADE_CROSSFADE
 		UnityApplyDitherCrossFade(vo.lodVPos);
 	#endif

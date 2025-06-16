@@ -1,3 +1,5 @@
+// Upgrade NOTE: upgraded instancing buffer 'InstanceProperties' to new syntax.
+
 #ifndef HELIUM_LIGHTING_COMMON
 #define HELIUM_LIGHTING_COMMON
 
@@ -15,7 +17,10 @@
 #include "HeliumCustomDefines.cginc"
 
 #ifdef HELIUM_BASE_COLOR
-float4 _Color;
+UNITY_INSTANCING_BUFFER_START(InstanceProperties)
+UNITY_DEFINE_INSTANCED_PROP(float4, _Color)
+#define _Color_arr InstanceProperties
+UNITY_INSTANCING_BUFFER_END(InstanceProperties)
 #endif
 
 #ifdef HELIUM_EMISSION
@@ -54,7 +59,7 @@ struct vInput{
 };
 
 struct vOutput{
-
+    UNITY_VERTEX_INPUT_INSTANCE_ID
     /*
     In order to use some Unity Macros, namely:
     - UNITY_LIGHT_ATTENUATION
@@ -99,7 +104,7 @@ struct vOutput{
 
 };
 struct fInput{
-
+    UNITY_VERTEX_INPUT_INSTANCE_ID
     /*
     In order to use some Unity Macros, namely:
     - UNITY_LIGHT_ATTENUATION
@@ -170,7 +175,7 @@ float3 ComputeAlbedoWithDetail(vOutput vo){
     float3 a = tex2D(_MainTex, vo.uvM.xy);
 
     #ifdef HELIUM_BASE_COLOR
-    a *= _Color.xyz;
+    a *= UNITY_ACCESS_INSTANCED_PROP(_Color_arr, _Color).xyz;
     #endif
 
     #ifdef HELIUM_NORMAL_MAPPING
