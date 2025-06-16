@@ -11,12 +11,13 @@ Material:
   m_Shader: {fileID: 4800000, guid: 23ea53b3133e74bd7abeebe5b2f6806d, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords:
+  m_ValidKeywords: []
+  m_InvalidKeywords:
+  - HELIUM_DETAIL_ALBEDO
   - HELIUM_EMISSION_FROM_MAP
   - HELIUM_HEIGHT_MAP
   - HELIUM_NORMAL_MAP
   - HELIUM_SHADOWS_FORCE_CUTOUT
-  m_InvalidKeywords: []
   m_LightmapFlags: 2
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
@@ -96,8 +97,8 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SecondaryTex:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
+        m_Texture: {fileID: 2800000, guid: 2f4c9fd5e894a4945a76a2e1f331c826, type: 3}
+        m_Scale: {x: 10, y: 10}
         m_Offset: {x: 0, y: 0}
     - _Tex:
         m_Texture: {fileID: 0}
@@ -120,7 +121,7 @@ Material:
     - _NormalStrength: 1
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _ParallaxStrength: 0.03
+    - _ParallaxStrength: 0.657
     - _SecondaryNormalStrength: 1
     - _SmoothnessTextureChannel: 0
     - _SourceBlend: 1

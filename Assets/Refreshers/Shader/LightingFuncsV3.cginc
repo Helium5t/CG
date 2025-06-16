@@ -360,9 +360,9 @@ fOutput frag(fInput vo){
 	#endif
 
     #ifdef HELIUM_HEIGHT_MAP
-        DisplaceUVParallax(vo.uvM.xy,vo.viewDirTanSpace, (tex2D(_Height, vo.uvM.xy).r - 0.5)*  _ParallaxStrength);
+        PARALLAX(vo.uvM.xy,vo.viewDirTanSpace, (tex2D(_Height, vo.uvM.xy).r - 0.5)*  _ParallaxStrength);
         #ifdef HELIUM_DETAIL_ALBEDO
-            DisplaceUVParallax(vo.uvM.zw,vo.viewDirTanSpace, (tex2D(_Height, vo.uvM.xy).r - 0.5)*  _ParallaxStrength * (_SecondaryTex_ST.xy / _MainTex_ST.xy));
+            PARALLAX(vo.uvM.zw,vo.viewDirTanSpace, (tex2D(_Height, vo.uvM.xy).r - 0.5)*  _ParallaxStrength * (_SecondaryTex_ST.xy / _MainTex_ST.xy));
         #endif
     #endif
     
