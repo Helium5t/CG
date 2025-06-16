@@ -268,8 +268,10 @@ public class HeliumShaderStandardUI : ShaderGUI {
 			MakeLabel(map, "Height"), map,
 			map.textureValue ? FindProperty("_ParallaxStrength") : null
 		);
-		if (EditorGUI.EndChangeCheck() && t != map.textureValue) {
-			SetKeyword("HELIUM_HEIGHT_MAP", map.textureValue);
+        if (EditorGUI.EndChangeCheck() && t != map.textureValue)
+        {
+            SetKeyword("HELIUM_HEIGHT_MAP", map.textureValue);
+            SetKeyword("HELIUM_PARALLAX_RAYMARCH", map.textureValue);
 		}
     }
 

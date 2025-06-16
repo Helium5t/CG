@@ -16,6 +16,8 @@ in "Archive/LightingFuncs.cginc"
 
 #include "LightingCommon.cginc"
 #include "HeliumMaterialMacros.cginc"
+
+#define HELIUM_PARALLAX_RAYMARCHING_STEPS 20
 #include "HeliumMath.cginc"
 
 // Alpha threshold to clip the pixel. Called like this because Unity wouldn't be able to handle shadows otherwise.
@@ -349,6 +351,53 @@ void InitFragNormal(inout vOutput vo){
     );
 }
 
+#ifdef HELIUM_HEIGHT_MAP
+float GetParallaxHeight (float2 uv) {
+	return tex2D(_Height, uv).g;
+}
+float2 ParallaxOffset (float2 uv, float2 viewDir) {
+	float height = GetParallaxHeight(uv);
+	height -= 0.5;
+	height *= _ParallaxStrength;
+	return viewDir * height;
+}
+float2 ParallaxRaymarching (float2 uv, float2 viewDir) {
+	float2 uvOffset = 0;
+	float stepSize = 0.01;
+	float2 uvDelta = viewDir * (stepSize * _ParallaxStrength);
+
+    float stepHeight = 1;
+	float surfaceHeight = GetParallaxHeight(uv);
+    for (int i = 1; i < 100 && stepHeight > surfaceHeight; i++) {
+		uvOffset -= uvDelta;
+		stepHeight -= stepSize;
+		surfaceHeight = GetParallaxHeight(uv + uvOffset);
+	}
+	return uvOffset;
+}
+
+#define PARALLAX_FUNCTION ParallaxRaymarching
+
+#endif
+
+void ApplyParallax (inout fInput i) {
+	#if defined(HELIUM_HEIGHT_MAP)
+		i.viewDirTanSpace = normalize(i.viewDirTanSpace);
+		#if !defined(PARALLAX_OFFSET_LIMITING)
+			#if !defined(PARALLAX_BIAS)
+				#define PARALLAX_BIAS 0.42
+			#endif
+			i.viewDirTanSpace.xy /= (i.viewDirTanSpace.z + PARALLAX_BIAS);
+		#endif
+		
+		#if !defined(PARALLAX_FUNCTION)
+			#define PARALLAX_FUNCTION ParallaxOffset
+		#endif
+		float2 uvOffset = PARALLAX_FUNCTION(i.uvM.xy, i.viewDirTanSpace.xy);
+		i.uvM.xy += uvOffset;
+		i.uvM.zw += uvOffset * (_SecondaryTex_ST.xy / _MainTex_ST.xy);
+	#endif
+}
 
 fOutput frag(fInput vo){
     fOutput fout;
@@ -360,11 +409,12 @@ fOutput frag(fInput vo){
 	#endif
 
     #ifdef HELIUM_HEIGHT_MAP
-        PARALLAX(vo.uvM.xy,vo.viewDirTanSpace, (tex2D(_Height, vo.uvM.xy).r - 0.5)*  _ParallaxStrength);
-        #ifdef HELIUM_DETAIL_ALBEDO
-            PARALLAX(vo.uvM.zw,vo.viewDirTanSpace, (tex2D(_Height, vo.uvM.xy).r - 0.5)*  _ParallaxStrength * (_SecondaryTex_ST.xy / _MainTex_ST.xy));
-        #endif
+        // DisplaceUVParallax(vo.uvM.xy,vo.viewDirTanSpace, (tex2D(_Height, vo.uvM.xy).r - 0.5)*  _ParallaxStrength,_ParallaxStrength);
+        DisplaceUVParallax(vo.uvM,vo.viewDirTanSpace, _Height, _ParallaxStrength,  (_SecondaryTex_ST.xy / _MainTex_ST.xy) );
     #endif
+    // #ifdef HELIUM_HEIGHT_MAP
+    // ApplyParallax(vo);
+    // #endif
     
     float alpha = ALPHA(vo.uvM);
     #ifdef HELIUM_TRANSPARENCY_CUTOUT

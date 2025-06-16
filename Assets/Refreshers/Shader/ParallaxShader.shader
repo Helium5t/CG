@@ -70,6 +70,7 @@ Shader "Refreshers/Parallax"
 
             // For parallax
             #pragma shader_feature HELIUM_HEIGHT_MAP 
+            #pragma shader_feature _ HELIUM_PARALLAX_OFFSET HELIUM_PARALLAX_RAYMARCH
             
             #define HELIUM_NORMAL_MAPPING
             #define HELIUM_BASE_COLOR
@@ -182,6 +183,7 @@ Shader "Refreshers/Parallax"
             #pragma shader_feature HELIUM_DETAIL_NORMAL_MAP
             // For parallax
             #pragma shader_feature HELIUM_HEIGHT_MAP
+            #pragma shader_feature _ HELIUM_PARALLAX_OFFSET HELIUM_PARALLAX_RAYMARCH
             
             #define HELIUM_NORMAL_MAPPING
             #define HELIUM_BASE_COLOR

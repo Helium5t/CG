@@ -43,4 +43,43 @@ float3 BoxProjectionIfActive(
     return refelctionDir;
 }
 
+
+
+#define HELIUM_HEURISTIC_PARALLAX_BIAS 0.42
+
+#ifdef HELIUM_PARALLAX_OFFSET
+    #define PARALLAX_CORE(uv, heightMap, s, tsd, df)\
+        float o =  tsd * (tex2D(heightMap, uv.xy).r - 0.5) * s;;\
+        uv.xy += o;\ 
+        uv.zw += o * df;
+#elif defined(HELIUM_PARALLAX_RAYMARCH)
+    #ifndef HELIUM_PARALLAX_RAYMARCHING_STEPS 
+        #define HELIUM_PARALLAX_RAYMARCHING_STEPS  10
+    #endif
+    void RaymarchedParallax(inout float4 uv, inout float3 tsd, sampler2D h, float s, float2 df){
+        float2 uvOffset = 0;
+        float ss = 1.0/HELIUM_PARALLAX_RAYMARCHING_STEPS;
+        float2 uvStep = tsd * (ss * s);
+        float sh = 1;
+        float surfaceHeight = tex2D(h, uv);
+        for (int i = 1; i < HELIUM_PARALLAX_RAYMARCHING_STEPS && sh > surfaceHeight; i++){
+            uvOffset -= uvStep;
+            sh -= ss;
+            surfaceHeight = tex2D(h, uv + uvOffset);
+        }
+        uv.xy += uvOffset;
+        uv.zw += uvOffset * df;
+    }
+    #define PARALLAX_CORE(uv, height, s, tsd, df) RaymarchedParallax(uv, tsd, height, s, df)
+#else
+    #define PARALLAX_CORE(_,__,___,____,_____) return
+#endif
+
+
+void DisplaceUVParallax(inout float4 uv, inout float3 tsd, sampler2D h, float s, float2 detailFactor){
+    tsd = normalize(tsd);
+    tsd.xy/=tsd.z + HELIUM_HEURISTIC_PARALLAX_BIAS;
+    PARALLAX_CORE(uv, h, s, tsd, detailFactor);
+}
+
 #endif

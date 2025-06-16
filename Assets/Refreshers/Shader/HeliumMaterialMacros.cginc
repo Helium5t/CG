@@ -53,16 +53,4 @@ float4 specHDR##pn = UNITY_SAMPLE_TEXCUBE_SAMPLER_LOD(unity_SpecCube##pn , unity
 float3 destName = DecodeHDR(specHDR##pn, unity_SpecCube##pn##_HDR); 
 
 
-
-#ifdef DOEONIDOI
-#else
-
-    #define HELIUM_HEURISTIC_PARALLAX_BIAS 0.42
-
-    #define PARALLAX(uv, tanSpaceDir, strength) \
-    tanSpaceDir = normalize(tanSpaceDir); \
-    tanSpaceDir.xy /= tanSpaceDir.z + HELIUM_HEURISTIC_PARALLAX_BIAS; /* Corrects xy length to see where the ray will reach when fully extended (plus an heuristic correction taken from Unity itself)*/ \
-    uv += tanSpaceDir.xy * (strength);
-#endif
-
 #endif
