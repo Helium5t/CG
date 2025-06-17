@@ -8,16 +8,18 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: StdCrevaces
-  m_Shader: {fileID: 4800000, guid: 23ea53b3133e74bd7abeebe5b2f6806d, type: 3}
+  m_Shader: {fileID: 4800000, guid: c05262a2cbc2d4936965ac0e4586f64d, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords:
+  m_ValidKeywords:
   - HELIUM_DETAIL_ALBEDO
   - HELIUM_EMISSION_FROM_MAP
   - HELIUM_HEIGHT_MAP
   - HELIUM_NORMAL_MAP
-  - HELIUM_SHADOWS_FORCE_CUTOUT
+  - HELIUM_PARALLAX_RAYMARCH
+  m_InvalidKeywords:
+  - H
+  - H
   m_LightmapFlags: 2
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
@@ -121,7 +123,7 @@ Material:
     - _NormalStrength: 1
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _ParallaxStrength: 0.657
+    - _ParallaxStrength: 0.533
     - _SecondaryNormalStrength: 1
     - _SmoothnessTextureChannel: 0
     - _SourceBlend: 1

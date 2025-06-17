@@ -17,7 +17,9 @@ in "Archive/LightingFuncs.cginc"
 #include "LightingCommon.cginc"
 #include "HeliumMaterialMacros.cginc"
 
-#define HELIUM_PARALLAX_RAYMARCHING_STEPS 20
+#define HELIUM_PARALLAX_RAYMARCHING_STEPS 10
+#define HELIUM_PARALLAX_RM_SEARCH_STEPS 3
+#define HELIUM_PARALLAX_RM_LERP_DISPLACEMENT
 #include "HeliumMath.cginc"
 
 // Alpha threshold to clip the pixel. Called like this because Unity wouldn't be able to handle shadows otherwise.
@@ -138,6 +140,10 @@ vOutput vert(vInput i){
     #endif
 
     #ifdef HELIUM_HEIGHT_MAP
+    /* if batching breaks things use this
+    i.tan.xyz = normalize(i.tan.xyz);
+    i.n = normalize(i.n);
+    */
     float3x3 objToTan = float3x3(
         i.tan.xyz, 
         cross(i.n, i.tan.xyz) * i.tan.w, 

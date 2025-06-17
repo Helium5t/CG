@@ -47,6 +47,10 @@ float3 BoxProjectionIfActive(
 
 #define HELIUM_HEURISTIC_PARALLAX_BIAS 0.42
 
+#ifdef HELIUM_PARALLAX_RM_SEARCH_STEPS
+    #undef HELIUM_PARALLAX_RM_LERP_DISPLACEMENT // Lerping displacement does not work with binary search, so we undefine it to avoid useless computation
+#endif
+
 #ifdef HELIUM_PARALLAX_OFFSET
     #define PARALLAX_CORE(uv, heightMap, s, tsd, df)\
         float o =  tsd * (tex2D(heightMap, uv.xy).r - 0.5) * s;;\
@@ -60,13 +64,38 @@ float3 BoxProjectionIfActive(
         float2 uvOffset = 0;
         float ss = 1.0/HELIUM_PARALLAX_RAYMARCHING_STEPS;
         float2 uvStep = tsd * (ss * s);
-        float sh = 1;
-        float surfaceHeight = tex2D(h, uv);
-        for (int i = 1; i < HELIUM_PARALLAX_RAYMARCHING_STEPS && sh > surfaceHeight; i++){
+        float stepH = 1;
+        float displacement = tex2D(h, uv);
+        #ifdef HELIUM_PARALLAX_RM_LERP_DISPLACEMENT
+            float2 prevUVO = uvOffset;
+            float prevSH = stepH;
+            float prevD = displacement;
+        #endif
+        for (int i = 1; i < HELIUM_PARALLAX_RAYMARCHING_STEPS && stepH > displacement; i++){
+            #ifdef HELIUM_PARALLAX_RM_LERP_DISPLACEMENT
+                prevUVO = uvOffset;
+                prevSH = stepH;
+                prevD = displacement;
+            #endif
             uvOffset -= uvStep;
-            sh -= ss;
-            surfaceHeight = tex2D(h, uv + uvOffset);
+            stepH -= ss;
+            displacement = tex2D(h, uv + uvOffset);
         }
+        #ifdef HELIUM_PARALLAX_RM_SEARCH_STEPS
+            for (int i =0; i < HELIUM_PARALLAX_RM_SEARCH_STEPS; i++){
+                uvStep *= 0.5;
+                ss *= 0.5;
+                int searchDir = sign(displacement - stepH); // Go backward if we cross the height threhsold
+                uvOffset += searchDir * uvStep;
+                stepH += searchDir * ss;
+                displacement = tex2D(h, uv + uvOffset);
+            }
+        #elif defined(HELIUM_PARALLAX_RM_LERP_DISPLACEMENT)
+            float prevDelta = prevSH - prevD;
+            float delta = stepH - displacement;
+            float t = prevDelta/ (delta + prevDelta);
+            uvOffset = min(prevUVO - uvStep * t,0);
+        #endif
         uv.xy += uvOffset;
         uv.zw += uvOffset * df;
     }
