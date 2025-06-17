@@ -36,7 +36,7 @@ Shader "Refreshers/Parallax"
             Tags {
                 "LightMode" = "ForwardBase"
 			}
-            Name "Standard Base FW"
+            Name "FW Base"
             Blend [_SourceBlend] [_DestinationBlend]
             ZWrite [_WriteToDepthBuffer]
 
@@ -92,7 +92,7 @@ Shader "Refreshers/Parallax"
             Tags{
                 "LightMode" = "ForwardAdd" // ForwardAdd makes it so this pass is "added" on top of the base one, used for the main light
             }
-            Name "Standard Add FW"
+            Name "FW Add"
             // In this case Blend 0 One One is the same as Blend One One 
             // since this shader is not using the other targets.
             // Blend 0 One One // Old Values
@@ -109,6 +109,8 @@ Shader "Refreshers/Parallax"
 
             CGPROGRAM
             #pragma target 3.0 // to enable BRDF
+            #pragma vertex vert
+            #pragma fragment frag
             
             // Tells Unity's lighting helper 
             // functions that all macros will compute lighting based on the point light model
@@ -131,14 +133,10 @@ Shader "Refreshers/Parallax"
             #pragma shader_feature HELIUM_2D_METALLIC
             #pragma shader_feature _ HELIUM_R_FROM_METALLIC HELIUM_R_FROM_ALBEDO
             #pragma shader_feature HELIUM_DETAIL_MASK
-            
-
+    
             #pragma shader_feature HELIUM_NORMAL_MAP
             #pragma shader_feature HELIUM_DETAIL_ALBEDO
             #pragma shader_feature HELIUM_DETAIL_NORMAL_MAP
-            
-            #pragma vertex vert
-            #pragma fragment frag
             
 			#include "LightingFuncsV3.cginc"
             ENDCG
@@ -149,7 +147,7 @@ Shader "Refreshers/Parallax"
             Tags {
                 "LightMode" = "Deferred"
             }
-            Name "Standard Deferred"
+            Name "Deferred"
             Blend [_SourceBlend] [_DestinationBlend]
             ZWrite [_WriteToDepthBuffer]
 
@@ -194,6 +192,10 @@ Shader "Refreshers/Parallax"
             // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
 
             #define HELIUM_DEFERRED_PASS
+
+            #define HELIUM_PARALLAX_RAYMARCHING_STEPS 10
+            #define HELIUM_PARALLAX_RM_SEARCH_STEPS 3
+            #define HELIUM_PARALLAX_RM_LERP_DISPLACEMENT
 			#include "LightingFuncsV3.cginc"
 
             ENDCG
@@ -202,7 +204,7 @@ Shader "Refreshers/Parallax"
             Tags{
                 "LightMode" = "ShadowCaster"
             }
-            Name "Standard Shadow"
+            Name "Shadow"
             CGPROGRAM
             #pragma target 3.0
             #pragma vertex shadowVert
@@ -227,7 +229,7 @@ Shader "Refreshers/Parallax"
             }
             Cull Off
 
-            Name "Standard Meta"
+            Name "Meta"
             CGPROGRAM
             #pragma vertex vertLightMap
 			#pragma fragment fragLightMap
