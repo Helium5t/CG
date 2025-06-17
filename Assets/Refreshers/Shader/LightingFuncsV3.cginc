@@ -11,15 +11,12 @@ If notes or comments are missing here, they should be present for the same line
 in "Archive/LightingFuncs.cginc"
 */
 
-#if !defined(HELIUM_LIGHTING_INCLUDED)
+#ifndef HELIUM_LIGHTING_INCLUDED
 #define HELIUM_LIGHTING_INCLUDED
 
 #include "LightingCommon.cginc"
 #include "HeliumMaterialMacros.cginc"
 
-#define HELIUM_PARALLAX_RAYMARCHING_STEPS 10
-#define HELIUM_PARALLAX_RM_SEARCH_STEPS 3
-#define HELIUM_PARALLAX_RM_LERP_DISPLACEMENT
 #include "HeliumMath.cginc"
 
 // Alpha threshold to clip the pixel. Called like this because Unity wouldn't be able to handle shadows otherwise.
@@ -407,6 +404,7 @@ void ApplyParallax (inout fInput i) {
 
 fOutput frag(fInput vo){
     fOutput fout;
+    // vo.n = normalize(cross(ddx(vo.wPos), ddy(vo.wPos))); <---- flat shading. ddx and ddy get the field difference between this fragment and the one to the right (ddx) and to the top (ddy).
     #ifdef INSTANCING_ON
     unity_InstanceID = vo.instanceID + unity_BaseInstanceID; // fetch the correct instance for mvp matrix selection
     #endif
