@@ -28,3 +28,4 @@
 #if !defined(LIGHTMAP_ON) && !defined(DYNAMICLIGHTMAP_ON)
     #define HELIUM_NO_LIGHTMAPS
 #endif
+

@@ -1,5 +1,6 @@
 
-
+#ifndef HELIUM_MAT_MACROS_INCLUDED
+#define HELIUM_MAT_MACROS_INCLUDED
 
 #if !defined(HELIUM_ADD_PASS) && defined(HELIUM_AMBIENT_OCCLUSION)
     #ifdef HELIUM_OCCLUSION_FROM_MAP
@@ -50,3 +51,6 @@ rsv##pn = BoxProjectionIfActive(rsv##pn, b.wPos, unity_SpecCube##pn##_ProbePosit
     all specular probe cubemaps use the sampler from unity_SpecCube0 */ \
 float4 specHDR##pn = UNITY_SAMPLE_TEXCUBE_SAMPLER_LOD(unity_SpecCube##pn , unity_SpecCube0, rsv##pn, c * ROUGHNESS(b.uvM.xy) * HELIUM_MAX_LOD); \
 float3 destName = DecodeHDR(specHDR##pn, unity_SpecCube##pn##_HDR); 
+
+
+#endif
