@@ -1,5 +1,5 @@
 // Same as ShadowsPBShader but uses Unity naming convention
-Shader "Refreshers/Parallax"
+Shader "Refreshers/Wireframe"
 {   
     Properties{
         _Color("Color", Color) = (1,1,1,1)
@@ -18,13 +18,14 @@ Shader "Refreshers/Parallax"
         _EmissionColor ("Emission Color", Color) = (0, 0, 0)
         [NoScaleOffset] _Occlusion ("Occlusion", 2D) = "white" {}
 		_OcclusionStrength("Occlusion Strength", Range(0, 1)) = 1
-        [NoScaleOffset] _Height ("Height Map", 2D) = "black" {}
-        _ParallaxStrength("Parallax Strength", Range(0,1)) = 0
         [NoScaleOffset] _DetailMask ("Detail Mask", 2D) = "white" {}
         _Cutoff("Alpha Cutoff", Range(0,1)) = 0.5 
         [HideInInspector] _SourceBlend("_SourceBlend", Float) = 1
         [HideInInspector] _DestinationBlend("_DestinationBlend", Float) = 0
         [HideInInspector] _WriteToDepthBuffer("_WriteToDepthBuffer", Float) = 1
+        _WireframeThickness("Wireframe Thickness", Float) = 0.01
+        _WFColor ("Wireframe Color", Color) = (0, 0, 0)
+		_WFSmoothing ("Wireframe Smoothing", Range(0, 10)) = 1
     }
     CGINCLUDE
     #define HELIUM_FRAGMENT_BINORMAL 1
@@ -36,15 +37,15 @@ Shader "Refreshers/Parallax"
             Tags {
                 "LightMode" = "ForwardBase"
 			}
-            Name "FW Base"
+            Name "Standard Base FW"
             Blend [_SourceBlend] [_DestinationBlend]
             ZWrite [_WriteToDepthBuffer]
 
             CGPROGRAM
-            #pragma target 3.0 // to enable BRDF
+            #pragma target 4.0 // to enable BRDF and geometry shader
             #pragma vertex vert
             #pragma fragment frag
-            
+			#pragma geometry geo            
             
             // #pragma multi_compile _ VERTEXLIGHT_ON LIGHTMAP_ON
 			// #pragma multi_compile _ SHADOWS_SCREEN 
@@ -64,18 +65,21 @@ Shader "Refreshers/Parallax"
             #pragma shader_feature HELIUM_OCCLUSION_FROM_MAP
             #pragma shader_feature HELIUM_DETAIL_MASK
 
+            // #pragma multi_compile _ VERTEXLIGHT_ON LIGHTMAP_ON
+            // #pragma shader_feature _ UNITY_HDR_ON
+            // #pragma multi_compile _ DIRLIGHTMAP_COMBINED
+            #pragma multi_compile_prepassfinal // Same as the lines above 
+
             #pragma shader_feature HELIUM_NORMAL_MAP
             #pragma shader_feature HELIUM_DETAIL_ALBEDO
             #pragma shader_feature HELIUM_DETAIL_NORMAL_MAP
-
-            // For parallax
-            #pragma shader_feature HELIUM_HEIGHT_MAP 
-            #pragma shader_feature _ HELIUM_PARALLAX_OFFSET HELIUM_PARALLAX_RAYMARCH
             
             #define HELIUM_NORMAL_MAPPING
             #define HELIUM_BASE_COLOR
             #define HELIUM_EMISSION
             #define HELIUM_AMBIENT_OCCLUSION
+
+            #define HELIUM_PAINT_WIREFRAME
         
             #pragma multi_compile_fwdadd_fullshadows // equivalent of the following
             // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
@@ -84,6 +88,7 @@ Shader "Refreshers/Parallax"
             #pragma multi_compile_instancing
             #pragma instancing_options lodfade
 
+            #include "GeometryStageFuncs.cginc"
 			#include "LightingFuncsV3.cginc"
 
             ENDCG
@@ -92,7 +97,7 @@ Shader "Refreshers/Parallax"
             Tags{
                 "LightMode" = "ForwardAdd" // ForwardAdd makes it so this pass is "added" on top of the base one, used for the main light
             }
-            Name "FW Add"
+            Name "Standard Add FW"
             // In this case Blend 0 One One is the same as Blend One One 
             // since this shader is not using the other targets.
             // Blend 0 One One // Old Values
@@ -108,9 +113,10 @@ Shader "Refreshers/Parallax"
             ZWrite Off 
 
             CGPROGRAM
-            #pragma target 3.0 // to enable BRDF
+            #pragma target 4.0 // to enable BRDF and geometry shader
             #pragma vertex vert
             #pragma fragment frag
+            #pragma geometry geo
             
             // Tells Unity's lighting helper 
             // functions that all macros will compute lighting based on the point light model
@@ -133,29 +139,35 @@ Shader "Refreshers/Parallax"
             #pragma shader_feature HELIUM_2D_METALLIC
             #pragma shader_feature _ HELIUM_R_FROM_METALLIC HELIUM_R_FROM_ALBEDO
             #pragma shader_feature HELIUM_DETAIL_MASK
-    
+            
+
             #pragma shader_feature HELIUM_NORMAL_MAP
             #pragma shader_feature HELIUM_DETAIL_ALBEDO
             #pragma shader_feature HELIUM_DETAIL_NORMAL_MAP
             
+            
+            #include "GeometryStageFuncs.cginc"
 			#include "LightingFuncsV3.cginc"
             ENDCG
             
 
         }  
+        
         Pass {
             Tags {
                 "LightMode" = "Deferred"
+                "Queue" = "Geometry" 
             }
-            Name "Deferred"
+            Name "Standard Deferred"
             Blend [_SourceBlend] [_DestinationBlend]
             ZWrite [_WriteToDepthBuffer]
 
             CGPROGRAM
-            #pragma target 3.0 // to enable BRDF
+            #pragma target 4.0 // to enable BRDF and geometry shader
             #pragma exclude_renderers nomrt
             #pragma vertex vert
             #pragma fragment frag
+            // #pragma geometry geo // Currently does not work in deferred mode
             
 
 			#pragma multi_compile _ SHADOWS_SCREEN 
@@ -179,23 +191,24 @@ Shader "Refreshers/Parallax"
             #pragma shader_feature HELIUM_NORMAL_MAP
             #pragma shader_feature HELIUM_DETAIL_ALBEDO
             #pragma shader_feature HELIUM_DETAIL_NORMAL_MAP
-            // For parallax
-            #pragma shader_feature HELIUM_HEIGHT_MAP
-            #pragma shader_feature _ HELIUM_PARALLAX_OFFSET HELIUM_PARALLAX_RAYMARCH
             
             #define HELIUM_NORMAL_MAPPING
             #define HELIUM_BASE_COLOR
             #define HELIUM_EMISSION
             #define HELIUM_AMBIENT_OCCLUSION
+
+            #define HELIUM_PAINT_WIREFRAME
         
             #pragma multi_compile_fwdadd_fullshadows // equivalent of the following
             // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
+            #pragma multi_compile_fog
+            // #pragma multi_compile INSTANCING_ON and other keywords not used
+            #pragma multi_compile_instancing
+            #pragma instancing_options lodfade
 
             #define HELIUM_DEFERRED_PASS
 
-            #define HELIUM_PARALLAX_RAYMARCHING_STEPS 10
-            #define HELIUM_PARALLAX_RM_SEARCH_STEPS 3
-            #define HELIUM_PARALLAX_RM_LERP_DISPLACEMENT
+            #include "GeometryStageFuncs.cginc"
 			#include "LightingFuncsV3.cginc"
 
             ENDCG
@@ -204,7 +217,7 @@ Shader "Refreshers/Parallax"
             Tags{
                 "LightMode" = "ShadowCaster"
             }
-            Name "Shadow"
+            Name "Standard Shadow"
             CGPROGRAM
             #pragma target 3.0
             #pragma vertex shadowVert
@@ -229,7 +242,7 @@ Shader "Refreshers/Parallax"
             }
             Cull Off
 
-            Name "Meta"
+            Name "Standard Meta"
             CGPROGRAM
             #pragma vertex vertLightMap
 			#pragma fragment fragLightMap
@@ -251,6 +264,6 @@ Shader "Refreshers/Parallax"
 			ENDCG
         }
     }
-    Fallback "Diffuse"
-    CustomEditor "HeliumShaderStandardUI"
+    Fallback "Refreshers/StdPackedTextures"
+    CustomEditor "HeliumWireframeShaderUI"
 }

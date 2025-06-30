@@ -11,15 +11,12 @@ If notes or comments are missing here, they should be present for the same line
 in "Archive/LightingFuncs.cginc"
 */
 
-#if !defined(HELIUM_LIGHTING_INCLUDED)
+#ifndef HELIUM_LIGHTING_INCLUDED
 #define HELIUM_LIGHTING_INCLUDED
 
 #include "LightingCommon.cginc"
 #include "HeliumMaterialMacros.cginc"
 
-#define HELIUM_PARALLAX_RAYMARCHING_STEPS 10
-#define HELIUM_PARALLAX_RM_SEARCH_STEPS 3
-#define HELIUM_PARALLAX_RM_LERP_DISPLACEMENT
 #include "HeliumMath.cginc"
 
 // Alpha threshold to clip the pixel. Called like this because Unity wouldn't be able to handle shadows otherwise.
@@ -155,7 +152,7 @@ vOutput vert(vInput i){
 }
 
 #ifdef HELIUM_APPROX_SUBTRACTIVE_LIGHTING
-void ApplySubtractiveLighting(vOutput vo, inout UnityIndirect il){
+void ApplySubtractiveLighting(fInput vo, inout UnityIndirect il){
     UNITY_LIGHT_ATTENUATION(dimming, vo, vo.wPos.xyz);
     dimming = ComputeShadowFading(vo, dimming);
 
@@ -173,7 +170,7 @@ void ApplySubtractiveLighting(vOutput vo, inout UnityIndirect il){
 }
 #endif
 
-UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo, float3 viewDir){
+UnityIndirect CreateIndirectLightAndDeriveFromVertex(fInput vo, float3 viewDir){
     UnityIndirect il;
     il.diffuse =0;
     il.specular = 0;
@@ -295,7 +292,7 @@ float ComputeShadowFading(vOutput vo, float dimming){
 }
 #endif
 
-UnityLight CreateLight(vOutput vo){
+UnityLight CreateLight(fInput vo){
     UnityLight l;
     #if defined(HELIUM_DEFERRED_PASS) || defined(HELIUM_APPROX_SUBTRACTIVE_LIGHTING)
         l.dir = float3(0,1,0);
@@ -325,7 +322,7 @@ UnityLight CreateLight(vOutput vo){
     return l;
 }
 
-float3 TanSpaceNormal(vOutput vo){
+float3 TanSpaceNormal(fInput vo){
     float3 n1 = UnpackScaleNormal(tex2D(_Normal, vo.uvM.xy),-_NormalStrength); 
 
     #ifdef HELIUM_DETAIL_NORMAL_MAP
@@ -341,7 +338,7 @@ float3 TanSpaceNormal(vOutput vo){
     return n1;
 }
 
-void InitFragNormal(inout vOutput vo){
+void InitFragNormal(inout fInput vo){
     float3 tanSpaceNormal = TanSpaceNormal(vo);
     // Normal maps store the up direction in the z component 
     tanSpaceNormal = tanSpaceNormal.xzy;
@@ -407,6 +404,7 @@ void ApplyParallax (inout fInput i) {
 
 fOutput frag(fInput vo){
     fOutput fout;
+    // vo.n = normalize(cross(ddx(vo.wPos), ddy(vo.wPos))); <---- flat shading. ddx and ddy get the field difference between this fragment and the one to the right (ddx) and to the top (ddy).
     #ifdef INSTANCING_ON
     unity_InstanceID = vo.instanceID + unity_BaseInstanceID; // fetch the correct instance for mvp matrix selection
     #endif
@@ -463,6 +461,17 @@ fOutput frag(fInput vo){
     #if defined(HELIUM_TRANSPARENCY_BLENDED) || defined(HELIUM_TRANSPARENCY_TRANSLUCENT)
     finalCol.a = alpha;
     #endif
+
+    #if defined(HELIUM_PAINT_WIREFRAME)
+    float3 bCoord = float3(vo.baryCoord, 1 - vo.baryCoord.x - vo.baryCoord.y);
+    float3 dd = fwidth(bCoord);
+    float3 smooth = dd * _WFSmoothing;
+    float3 thickness = dd * _WireframeThickness;
+	bCoord = smoothstep(thickness, smooth + thickness, bCoord /** vo.pos.wAccounts for screen size of the fragment*/);
+	float baryLerp = min(bCoord.x, min(bCoord.y, bCoord.z));
+	finalCol = lerp( float4(_WFColor,1.0) ,finalCol ,baryLerp);
+    #endif
+
 
     #ifdef HELIUM_DEFERRED_PASS
         float ao = OCCLUSION(vo.uvM);

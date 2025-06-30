@@ -107,6 +107,7 @@ struct vOutput{
     #endif
 
 };
+
 struct fInput{
     UNITY_VERTEX_INPUT_INSTANCE_ID
     /*
@@ -155,8 +156,12 @@ struct fInput{
     float2 uvDynLight : TEXCOORD7;
     #endif
 
-    #ifdef HELIUM_HEIGHT_MAP
+    #ifdef HELIUM_HEIGHT_MAP 
     float3 viewDirTanSpace : TEXCOORD8;
+    #endif
+
+    #if defined(HELIUM_PAINT_WIREFRAME)
+    float2 baryCoord : TEXCOORD9;
     #endif
 
 };
@@ -179,7 +184,7 @@ sampler2D _DetailMask;
     #define DETAIL_MASK_N(uv) 1
 #endif
 
-float3 ComputeAlbedoWithDetail(vOutput vo){
+float3 ComputeAlbedoWithDetail(fInput vo){
     float3 a = tex2D(_MainTex, vo.uvM.xy);
 
     #ifdef HELIUM_BASE_COLOR
