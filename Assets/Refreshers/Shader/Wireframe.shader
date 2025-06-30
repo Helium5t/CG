@@ -23,6 +23,9 @@ Shader "Refreshers/Wireframe"
         [HideInInspector] _SourceBlend("_SourceBlend", Float) = 1
         [HideInInspector] _DestinationBlend("_DestinationBlend", Float) = 0
         [HideInInspector] _WriteToDepthBuffer("_WriteToDepthBuffer", Float) = 1
+        _WireframeThickness("Wireframe Thickness", Float) = 0.01
+        _WFColor ("Wireframe Color", Color) = (0, 0, 0)
+		_WireframeSmoothing ("Wireframe Smoothing", Range(0, 10)) = 1
     }
     CGINCLUDE
     #define HELIUM_FRAGMENT_BINORMAL 1
@@ -30,7 +33,6 @@ Shader "Refreshers/Wireframe"
 
     ENDCG
     SubShader{
-
         Pass{
             Tags {
                 "LightMode" = "ForwardBase"
@@ -43,7 +45,7 @@ Shader "Refreshers/Wireframe"
             #pragma target 4.0 // to enable BRDF and geometry shader
             #pragma vertex vert
             #pragma fragment frag
-			#pragma geometry geo_helium            
+			#pragma geometry geo            
             
             // #pragma multi_compile _ VERTEXLIGHT_ON LIGHTMAP_ON
 			// #pragma multi_compile _ SHADOWS_SCREEN 
@@ -63,6 +65,11 @@ Shader "Refreshers/Wireframe"
             #pragma shader_feature HELIUM_OCCLUSION_FROM_MAP
             #pragma shader_feature HELIUM_DETAIL_MASK
 
+            // #pragma multi_compile _ VERTEXLIGHT_ON LIGHTMAP_ON
+            // #pragma shader_feature _ UNITY_HDR_ON
+            // #pragma multi_compile _ DIRLIGHTMAP_COMBINED
+            #pragma multi_compile_prepassfinal // Same as the lines above 
+
             #pragma shader_feature HELIUM_NORMAL_MAP
             #pragma shader_feature HELIUM_DETAIL_ALBEDO
             #pragma shader_feature HELIUM_DETAIL_NORMAL_MAP
@@ -71,6 +78,8 @@ Shader "Refreshers/Wireframe"
             #define HELIUM_BASE_COLOR
             #define HELIUM_EMISSION
             #define HELIUM_AMBIENT_OCCLUSION
+
+            #define HELIUM_PAINT_WIREFRAME
         
             #pragma multi_compile_fwdadd_fullshadows // equivalent of the following
             // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
@@ -107,7 +116,7 @@ Shader "Refreshers/Wireframe"
             #pragma target 4.0 // to enable BRDF and geometry shader
             #pragma vertex vert
             #pragma fragment frag
-            #pragma geometry geo_helium
+            #pragma geometry geo
             
             // Tells Unity's lighting helper 
             // functions that all macros will compute lighting based on the point light model
@@ -143,9 +152,11 @@ Shader "Refreshers/Wireframe"
             
 
         }  
+        
         Pass {
             Tags {
                 "LightMode" = "Deferred"
+                "Queue" = "Geometry" 
             }
             Name "Standard Deferred"
             Blend [_SourceBlend] [_DestinationBlend]
@@ -156,7 +167,8 @@ Shader "Refreshers/Wireframe"
             #pragma exclude_renderers nomrt
             #pragma vertex vert
             #pragma fragment frag
-            #pragma geometry geo_helium
+            #pragma require geometry
+            // #pragma geometry geo
             
 
 			#pragma multi_compile _ SHADOWS_SCREEN 
@@ -185,12 +197,18 @@ Shader "Refreshers/Wireframe"
             #define HELIUM_BASE_COLOR
             #define HELIUM_EMISSION
             #define HELIUM_AMBIENT_OCCLUSION
+
+            #define HELIUM_PAINT_WIREFRAME
         
             #pragma multi_compile_fwdadd_fullshadows // equivalent of the following
             // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
+            #pragma multi_compile_fog
+            // #pragma multi_compile INSTANCING_ON and other keywords not used
+            #pragma multi_compile_instancing
+            #pragma instancing_options lodfade
 
             #define HELIUM_DEFERRED_PASS
-            
+
             #include "GeometryStageFuncs.cginc"
 			#include "LightingFuncsV3.cginc"
 
@@ -247,6 +265,6 @@ Shader "Refreshers/Wireframe"
 			ENDCG
         }
     }
-    Fallback "Diffuse"
-    CustomEditor "HeliumShaderStandardUI"
+    Fallback "Refreshers/StdPackedTextures"
+    CustomEditor "HeliumWireframeShaderUI"
 }

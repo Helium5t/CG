@@ -152,7 +152,7 @@ vOutput vert(vInput i){
 }
 
 #ifdef HELIUM_APPROX_SUBTRACTIVE_LIGHTING
-void ApplySubtractiveLighting(vOutput vo, inout UnityIndirect il){
+void ApplySubtractiveLighting(fInput vo, inout UnityIndirect il){
     UNITY_LIGHT_ATTENUATION(dimming, vo, vo.wPos.xyz);
     dimming = ComputeShadowFading(vo, dimming);
 
@@ -170,7 +170,7 @@ void ApplySubtractiveLighting(vOutput vo, inout UnityIndirect il){
 }
 #endif
 
-UnityIndirect CreateIndirectLightAndDeriveFromVertex(vOutput vo, float3 viewDir){
+UnityIndirect CreateIndirectLightAndDeriveFromVertex(fInput vo, float3 viewDir){
     UnityIndirect il;
     il.diffuse =0;
     il.specular = 0;
@@ -292,7 +292,7 @@ float ComputeShadowFading(vOutput vo, float dimming){
 }
 #endif
 
-UnityLight CreateLight(vOutput vo){
+UnityLight CreateLight(fInput vo){
     UnityLight l;
     #if defined(HELIUM_DEFERRED_PASS) || defined(HELIUM_APPROX_SUBTRACTIVE_LIGHTING)
         l.dir = float3(0,1,0);
@@ -322,7 +322,7 @@ UnityLight CreateLight(vOutput vo){
     return l;
 }
 
-float3 TanSpaceNormal(vOutput vo){
+float3 TanSpaceNormal(fInput vo){
     float3 n1 = UnpackScaleNormal(tex2D(_Normal, vo.uvM.xy),-_NormalStrength); 
 
     #ifdef HELIUM_DETAIL_NORMAL_MAP
@@ -338,7 +338,7 @@ float3 TanSpaceNormal(vOutput vo){
     return n1;
 }
 
-void InitFragNormal(inout vOutput vo){
+void InitFragNormal(inout fInput vo){
     float3 tanSpaceNormal = TanSpaceNormal(vo);
     // Normal maps store the up direction in the z component 
     tanSpaceNormal = tanSpaceNormal.xzy;
@@ -461,6 +461,15 @@ fOutput frag(fInput vo){
     #if defined(HELIUM_TRANSPARENCY_BLENDED) || defined(HELIUM_TRANSPARENCY_TRANSLUCENT)
     finalCol.a = alpha;
     #endif
+
+    #if defined(HELIUM_PAINT_WIREFRAME)
+    float3 minB = float3(vo.baryCoord, 1 - vo.baryCoord.x - vo.baryCoord.y);
+    float3 dd = fwidth(minB);
+	minB = smoothstep(dd, 2 * dd, minB * vo.pos.w/*Accounts for screen size of the fragment*/);
+	float minBary = min(minB.x, min(minB.y, minB.z));
+	finalCol = finalCol * minBary + float4(_WFColor,1.0) * (1 - minBary);
+    #endif
+
 
     #ifdef HELIUM_DEFERRED_PASS
         float ao = OCCLUSION(vo.uvM);

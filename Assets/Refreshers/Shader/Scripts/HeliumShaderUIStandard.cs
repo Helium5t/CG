@@ -59,13 +59,13 @@ public class HeliumShaderStandardUI : ShaderGUI {
 
 
     Material target;
-    MaterialEditor editor;
+    protected MaterialEditor editor;
 	MaterialProperty[] properties;
     static GUIContent staticLabel = new GUIContent();
 
     bool dirty = false;
     bool showAlphaThresholdSlider = false;
-    static GUIContent MakeLabel (string text, string tooltip = null) {
+    protected static GUIContent MakeLabel (string text, string tooltip = null) {
 		staticLabel.text = text;
 		staticLabel.tooltip = tooltip;
 		return staticLabel;
@@ -75,7 +75,7 @@ public class HeliumShaderStandardUI : ShaderGUI {
         return target.IsKeywordEnabled(keyword);
     }
 
-    static GUIContent MakeLabel (
+    protected static GUIContent MakeLabel (
 		MaterialProperty property, string tooltip = null
 	) {
 		staticLabel.text = property.displayName;
@@ -92,7 +92,7 @@ public class HeliumShaderStandardUI : ShaderGUI {
         DoMain();
 	}
 
-    void DoMain()
+    protected virtual void DoMain()
     {
         GUILayout.Label("Main Maps", EditorStyles.boldLabel);
         MaterialProperty mainTex = FindProperty("_MainTex");
@@ -355,7 +355,7 @@ public class HeliumShaderStandardUI : ShaderGUI {
         }
     }
 
-    MaterialProperty FindProperty (string name) {
+    protected MaterialProperty FindProperty (string name) {
 		return FindProperty(name, properties);
 	}
     void SetKeyword (string keyword, bool state) {
