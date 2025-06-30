@@ -2,7 +2,7 @@
 #define HELIUM_GEOMETRY_FUNCS_INCLUDED
 
 float3 _WFColor;
-float _WireframeSmoothing;
+float _WFSmoothing;
 float _WireframeThickness;
 
 #include "LightingFuncsV3.cginc"

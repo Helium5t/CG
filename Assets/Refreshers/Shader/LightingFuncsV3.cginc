@@ -463,11 +463,13 @@ fOutput frag(fInput vo){
     #endif
 
     #if defined(HELIUM_PAINT_WIREFRAME)
-    float3 minB = float3(vo.baryCoord, 1 - vo.baryCoord.x - vo.baryCoord.y);
-    float3 dd = fwidth(minB);
-	minB = smoothstep(dd, 2 * dd, minB * vo.pos.w/*Accounts for screen size of the fragment*/);
-	float minBary = min(minB.x, min(minB.y, minB.z));
-	finalCol = finalCol * minBary + float4(_WFColor,1.0) * (1 - minBary);
+    float3 bCoord = float3(vo.baryCoord, 1 - vo.baryCoord.x - vo.baryCoord.y);
+    float3 dd = fwidth(bCoord);
+    float3 smooth = dd * _WFSmoothing;
+    float3 thickness = dd * _WireframeThickness;
+	bCoord = smoothstep(thickness, smooth + thickness, bCoord /** vo.pos.wAccounts for screen size of the fragment*/);
+	float baryLerp = min(bCoord.x, min(bCoord.y, bCoord.z));
+	finalCol = lerp( float4(_WFColor,1.0) ,finalCol ,baryLerp);
     #endif
 
 

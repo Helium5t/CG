@@ -25,7 +25,7 @@ Shader "Refreshers/Wireframe"
         [HideInInspector] _WriteToDepthBuffer("_WriteToDepthBuffer", Float) = 1
         _WireframeThickness("Wireframe Thickness", Float) = 0.01
         _WFColor ("Wireframe Color", Color) = (0, 0, 0)
-		_WireframeSmoothing ("Wireframe Smoothing", Range(0, 10)) = 1
+		_WFSmoothing ("Wireframe Smoothing", Range(0, 10)) = 1
     }
     CGINCLUDE
     #define HELIUM_FRAGMENT_BINORMAL 1
