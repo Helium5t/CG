@@ -13,6 +13,7 @@ struct geoOutput{
 };
 
 
+// Currently this only works in forward mode. There is probably a data pipeline issue when in deferred which has to be root caused yet. 
 [maxvertexcount(3)]
 void geo (
 	triangle vOutput inp[3],

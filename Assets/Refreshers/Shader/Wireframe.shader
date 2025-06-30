@@ -167,8 +167,7 @@ Shader "Refreshers/Wireframe"
             #pragma exclude_renderers nomrt
             #pragma vertex vert
             #pragma fragment frag
-            #pragma require geometry
-            // #pragma geometry geo
+            // #pragma geometry geo // Currently does not work in deferred mode
             
 
 			#pragma multi_compile _ SHADOWS_SCREEN 
