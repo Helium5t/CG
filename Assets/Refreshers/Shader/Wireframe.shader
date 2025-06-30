@@ -152,67 +152,8 @@ Shader "Refreshers/Wireframe"
             
 
         }  
-        
-        Pass {
-            Tags {
-                "LightMode" = "Deferred"
-                "Queue" = "Geometry" 
-            }
-            Name "Standard Deferred"
-            Blend [_SourceBlend] [_DestinationBlend]
-            ZWrite [_WriteToDepthBuffer]
-
-            CGPROGRAM
-            #pragma target 4.0 // to enable BRDF and geometry shader
-            #pragma exclude_renderers nomrt
-            #pragma vertex vert
-            #pragma fragment frag
-            // #pragma geometry geo // Currently does not work in deferred mode
-            
-
-			#pragma multi_compile _ SHADOWS_SCREEN 
-            #pragma multi_compile _ LOD_FADE_CROSSFADE
-            #pragma multi_compile_instancing
-            #pragma instancing_options lodfade
-
-            #pragma shader_feature _ HELIUM_TRANSPARENCY_CUTOUT // Not needed in deferred : HELIUM_TRANSPARENCY_BLENDED HELIUM_TRANSPARENCY_TRANSLUCENT
-            #pragma shader_feature HELIUM_2D_METALLIC
-            #pragma shader_feature _ HELIUM_R_FROM_METALLIC HELIUM_R_FROM_ALBEDO
-            #pragma shader_feature HELIUM_EMISSION_FROM_MAP
-            #pragma shader_feature HELIUM_OCCLUSION_FROM_MAP
-            #pragma shader_feature HELIUM_DETAIL_MASK
-
-
-            // #pragma multi_compile _ VERTEXLIGHT_ON LIGHTMAP_ON
-            // #pragma shader_feature _ UNITY_HDR_ON
-            // #pragma multi_compile _ DIRLIGHTMAP_COMBINED
-            #pragma multi_compile_prepassfinal // Same as the lines above 
-
-            #pragma shader_feature HELIUM_NORMAL_MAP
-            #pragma shader_feature HELIUM_DETAIL_ALBEDO
-            #pragma shader_feature HELIUM_DETAIL_NORMAL_MAP
-            
-            #define HELIUM_NORMAL_MAPPING
-            #define HELIUM_BASE_COLOR
-            #define HELIUM_EMISSION
-            #define HELIUM_AMBIENT_OCCLUSION
-
-            #define HELIUM_PAINT_WIREFRAME
-        
-            #pragma multi_compile_fwdadd_fullshadows // equivalent of the following
-            // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
-            #pragma multi_compile_fog
-            // #pragma multi_compile INSTANCING_ON and other keywords not used
-            #pragma multi_compile_instancing
-            #pragma instancing_options lodfade
-
-            #define HELIUM_DEFERRED_PASS
-
-            #include "GeometryStageFuncs.cginc"
-			#include "LightingFuncsV3.cginc"
-
-            ENDCG
-        }
+        // The deferred pipeline does not seem to gel well with the geometry stage. Apparently some Unity optimization in the background breaks the data transfer when using TEXCOORD channels.
+        // Since the geometry shader is not being used anymore when it comes to state of the art, I won't bother trying to fix this. 
         Pass{
             Tags{
                 "LightMode" = "ShadowCaster"
