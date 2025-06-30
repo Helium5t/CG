@@ -15,12 +15,20 @@ public class HeliumWireframeShaderUI : HeliumShaderStandardUI
 
     void DoGeo()
     {
-        MaterialProperty slider = FindProperty("_WireframeThickness");
-        EditorGUI.indentLevel += 2;
-        editor.ShaderProperty(slider, MakeLabel(slider));
-        
-        MaterialProperty col = FindProperty("_WFColor");
-        editor.ShaderProperty(col, MakeLabel(col));
-        EditorGUI.indentLevel -= 2;
+		GUILayout.Label("Wireframe", EditorStyles.boldLabel);
+		EditorGUI.indentLevel += 2;
+		editor.ShaderProperty(
+			FindProperty("_WFColor"),
+			MakeLabel("Color")
+		);
+		editor.ShaderProperty(
+			FindProperty("_WFSmoothing"),
+			MakeLabel("Screen Space Smoothing")
+		);
+		editor.ShaderProperty(
+			FindProperty("_WireframeThickness"),
+			MakeLabel("Thickness", "In clip space.")
+		);
+		EditorGUI.indentLevel -= 2;
     }
 }
