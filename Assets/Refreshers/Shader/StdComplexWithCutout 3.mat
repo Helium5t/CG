@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: StdComplexWithCutout 3
-  m_Shader: {fileID: 4800000, guid: 72ae64e63e31f422da1bfc0c13f1dcfe, type: 3}
+  m_Shader: {fileID: 4800000, guid: e3f2615fc1f93294b84c9cc4ada59bf1, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
@@ -17,10 +17,10 @@ Material:
   - HELIUM_NORMAL_MAP
   m_InvalidKeywords:
   - HELIUM_CUTOUT_TRANSPARENCY
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
+  m_LightmapFlags: 0
+  m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 2000
+  m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
   m_LockedProperties: 

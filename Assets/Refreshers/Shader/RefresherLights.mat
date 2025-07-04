@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: RefresherLights
-  m_Shader: {fileID: 4800000, guid: b4bffbdd0a06a4eac86d507fb400ccf2, type: 3}
+  m_Shader: {fileID: 4800000, guid: 20d0a546db571a945b925aea9a9f8be7, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
