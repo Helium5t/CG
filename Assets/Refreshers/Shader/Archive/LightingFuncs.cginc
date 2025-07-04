@@ -20,7 +20,7 @@
 
 
 sampler2D _Tex;
-#ifdef HELIUM_HEIGHT_MAPPING
+#ifdef HELIUM_DERIVE_N_FROM_HEIGHT
 sampler2D _Height;
 // e.g. resolution is 1000x2000 => texel size is u=1/1000, v  = 1/2000
 // the minimum amount of change for u and v that moves sampling to another pixel
@@ -238,7 +238,7 @@ UnityLight CreateLight(vOutput vo){
 }
 
 void InitFragNormal(inout vOutput vo){
-    #if defined(HELIUM_HEIGHT_MAPPING)
+    #if defined(HELIUM_DERIVE_N_FROM_HEIGHT)
     float2 du = float2(_Height_TexelSize.x * 0.5, 0);
     float u1 = tex2D(_Height, vo.uvM - du);
     float u2 = tex2D(_Height, vo.uvM + du);
@@ -304,7 +304,7 @@ float4 frag(vOutput vo): SV_Target{
     albedo *= _Color.xyz;
     #endif
 
-    #if defined(HELIUM_HEIGHT_MAPPING) || defined(HELIUM_NORMAL_MAPPING)
+    #if defined(HELIUM_DERIVE_N_FROM_HEIGHT) || defined(HELIUM_NORMAL_MAPPING)
     InitFragNormal(vo);
     #endif
 
@@ -322,7 +322,7 @@ float4 frag(vOutput vo): SV_Target{
         ); 
         float3 viewdir = normalize(_WorldSpaceCameraPos - vo.wPos);
         
-    #if !defined(HELIUM_HEIGHT_MAPPING)
+    #if !defined(HELIUM_DERIVE_N_FROM_HEIGHT)
         vo.n = normalize(vo.n);
     #endif
     float3 approximatedCol = ShadeSH9(float4(vo.n, 1));

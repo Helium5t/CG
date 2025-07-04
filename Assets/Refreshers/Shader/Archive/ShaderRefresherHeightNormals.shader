@@ -25,7 +25,7 @@ Shader "Refreshers/HeightMappedPBShader"
             // Only point is supported
             #pragma multi_compile _ VERTEXLIGHT_ON
 
-            #define HELIUM_HEIGHT_MAPPING
+            #define HELIUM_DERIVE_N_FROM_HEIGHT
         
             #pragma multi_compile_fwdadd // equivalent of the following
             // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
@@ -66,7 +66,7 @@ Shader "Refreshers/HeightMappedPBShader"
             // Equivalent of the one above
             #pragma multi_compile_fwdadd
             
-            #define HELIUM_HEIGHT_MAPPING
+            #define HELIUM_DERIVE_N_FROM_HEIGHT
             #define HELIUM_ADD_PASS
             
             #pragma vertex vert

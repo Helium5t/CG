@@ -102,7 +102,7 @@ struct vOutput{
     float2 uvDynLight : TEXCOORD7;
     #endif
 
-    #ifdef HELIUM_HEIGHT_MAP
+    #ifdef HELIUM_USE_PARALLAX_DISPLACEMENT
     float3 viewDirTanSpace : TEXCOORD8;
     #endif
 
@@ -156,7 +156,7 @@ struct fInput{
     float2 uvDynLight : TEXCOORD7;
     #endif
 
-    #ifdef HELIUM_HEIGHT_MAP 
+    #ifdef HELIUM_USE_PARALLAX_DISPLACEMENT 
     float3 viewDirTanSpace : TEXCOORD8;
     #endif
 
