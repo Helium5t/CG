@@ -71,7 +71,7 @@ public class HeliumShaderStandardUI : ShaderGUI {
 		return staticLabel;
 	}
 
-    bool IsDefined(string keyword){
+    protected bool IsDefined(string keyword){
         return target.IsKeywordEnabled(keyword);
     }
 
@@ -358,7 +358,7 @@ public class HeliumShaderStandardUI : ShaderGUI {
     protected MaterialProperty FindProperty (string name) {
 		return FindProperty(name, properties);
 	}
-    void SetKeyword (string keyword, bool state) {
+    protected void SetKeyword (string keyword, bool state) {
         if (state) {
             foreach( Material mt in editor.targets){
                 mt.EnableKeyword(keyword);
@@ -371,7 +371,7 @@ public class HeliumShaderStandardUI : ShaderGUI {
         }
 	}
 
-    void RecordAction(string label){
+    protected void RecordAction(string label){
         editor.RegisterPropertyChangeUndo(label);
     }
 }
