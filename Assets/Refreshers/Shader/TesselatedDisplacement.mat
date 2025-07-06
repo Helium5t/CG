@@ -81,8 +81,8 @@ Material:
     - _ParallaxStrength: 10
     - _SecondaryNormalStrength: 1
     - _SourceBlend: 1
-    - _Subdivs: 7.03
-    - _TargetEdgeLen: 7.01
+    - _Subdivs: -4.8
+    - _TargetEdgeLen: 15.79
     - _UniformMetallic: 0.5
     - _UniformRoughness: 0.5
     - _WFSmoothing: 1

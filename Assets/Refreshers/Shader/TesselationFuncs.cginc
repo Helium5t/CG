@@ -53,16 +53,39 @@ float getSubdivs(
     #endif
 }
 
+#define PLANE_TEST(pt, pl, bias) dot(pt##0, pl) + bias < 0 && dot(pt##1, pl) + bias < 0 && dot(pt##2, pl) + bias < 0 
+
+bool frustumCulling(float3 p0,float3 p1,float3 p2){
+    float4 wp0 = mul(unity_ObjectToWorld, float4(p0,1));
+    float4 wp1 = mul(unity_ObjectToWorld, float4(p1,1));
+    float4 wp2 = mul(unity_ObjectToWorld, float4(p2,1));
+    #ifdef HELIUM_USE_TESSELATION_DISPLACEMENT
+    float b = _ParallaxStrength * 0.5;
+    #else
+    float b = -1000;
+    #endif
+
+    return  PLANE_TEST(wp,unity_CameraWorldClipPlanes[0], b) &&
+            PLANE_TEST(wp,unity_CameraWorldClipPlanes[1], b) &&
+            PLANE_TEST(wp,unity_CameraWorldClipPlanes[2], b) &&
+            PLANE_TEST(wp,unity_CameraWorldClipPlanes[3], b) &&
+            PLANE_TEST(wp,unity_CameraWorldClipPlanes[4], b) &&
+            PLANE_TEST(wp,unity_CameraWorldClipPlanes[5], b) ;
+}
+
 tessInfo patchCutEval (InputPatch<vTesselatedOutput,3> p){
     _Subdivs = max(_Subdivs,1);
     _TargetEdgeLen = max(_TargetEdgeLen, 0.1);
 
     tessInfo ti;
-    ti.edge[0] = getSubdivs(p[1],p[2]);
-    ti.edge[1] = getSubdivs(p[2],p[0]);
-    ti.edge[2] = getSubdivs(p[0],p[1]);
-    
-    ti.inner = (ti.edge[0]+ti.edge[1] + ti.edge[2]) / 3.0;
+    if (frustumCulling(p[0].vertex, p[1].vertex, p[2].vertex)){
+        ti.edge[0] = ti.edge[1] = ti.edge[2] = ti.inner = 0;
+    }else{
+        ti.edge[0] = getSubdivs(p[1],p[2]);
+        ti.edge[1] = getSubdivs(p[2],p[0]);
+        ti.edge[2] = getSubdivs(p[0],p[1]);
+        ti.inner = (ti.edge[0]+ti.edge[1] + ti.edge[2]) / 3.0;
+    }
     return ti;
 }
 

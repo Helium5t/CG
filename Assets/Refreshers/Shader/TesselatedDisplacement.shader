@@ -69,14 +69,12 @@ Shader "Refreshers/TesselatedDisplacement"
             #pragma shader_feature HELIUM_DETAIL_MASK
             #pragma shader_feature _ HELIUM_EDGE_BASED_TESSELATION HELIUM_SCREEN_SIZE_TESSELATION HELIUM_SCREEN_DISTANCE_TESSELATION
 
-
-            #pragma shader_feature _ HELIUM_HEIGHT_MAP
-
+            
             // #pragma multi_compile _ VERTEXLIGHT_ON LIGHTMAP_ON
             // #pragma shader_feature _ UNITY_HDR_ON
             // #pragma multi_compile _ DIRLIGHTMAP_COMBINED
             #pragma multi_compile_prepassfinal // Same as the lines above 
-
+            
             #pragma shader_feature HELIUM_NORMAL_MAP
             #pragma shader_feature HELIUM_DETAIL_ALBEDO
             #pragma shader_feature HELIUM_DETAIL_NORMAL_MAP
@@ -85,10 +83,11 @@ Shader "Refreshers/TesselatedDisplacement"
             #define HELIUM_BASE_COLOR
             #define HELIUM_EMISSION
             #define HELIUM_AMBIENT_OCCLUSION
-
+            
             // #define HELIUM_PAINT_WIREFRAME
-
+            
             #define HELIUM_TESSELATE_ON_HEIGHT
+            #pragma shader_feature _ HELIUM_HEIGHT_MAP
         
             #pragma multi_compile_fwdadd_fullshadows // equivalent of the following
             // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
