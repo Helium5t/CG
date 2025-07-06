@@ -26,6 +26,9 @@ float _Cutoff;
 sampler2D _Height;
 float _ParallaxStrength;
 #endif
+#ifdef HELIUM_USE_TESSELATION_DISPLACEMENT
+#define _Displacement _ParallaxStrength
+#endif
 
 #ifdef HELIUM_DETAIL_NORMAL_MAP
 sampler2D _SecondaryNormal;
@@ -99,16 +102,17 @@ void ComputeVertexLight(inout vOutput v){
 
 vOutput vert(vInput i){
     vOutput o;
+
+    i.n = normalize(i.n);
     
     o.uvM = 0;
-    o.uvM.xy = HELIUM_TRANSFORM_TEX(i.uv, _MainTex);  // QOL command that summarizes texture tiling and offset
+    o.uvM.xy = HELIUM_TRANSFORM_TEX(i.uv, _MainTex);  
     #ifdef HELIUM_DETAIL_ALBEDO
     o.uvM.zw = HELIUM_TRANSFORM_TEX(i.uv, _SecondaryTex);
     #endif
     o.tan = float4(UnityObjectToWorldDir(i.tan.xyz), i.tan.w);
     #ifndef HELIUM_FRAGMENT_BINORMAL
     o.bin = ComputeBinormal(i.n, i.tan.xyz, i.tan.w);
-    
     #endif
     
     UNITY_TRANSFER_INSTANCE_ID(i, o); // In case of instancing, set the transfer ID for the fragment shader struct
@@ -116,11 +120,16 @@ vOutput vert(vInput i){
     // Same as UNITY_SETUP_INSTANCE_ID
     unity_InstanceID = i.instanceID + unity_BaseInstanceID; // fetch the correct instance for mvp matrix selection
     #endif
+    
+    #if defined(HELIUM_USE_TESSELATION_DISPLACEMENT) && defined(HELIUM_HEIGHT_MAP)
+    float displacement = tex2Dlod(_Height, float4(o.uvM.xy,0,0)).g;
+    displacement = (displacement - 0.5) * _Displacement;
+    i.vertex.xyz += i.n * displacement;
+    #endif
     o.pos = UnityObjectToClipPos(i.vertex);
     o.wPos = mul(unity_ObjectToWorld, i.vertex);
 
     o.n = UnityObjectToWorldNormal(i.n); 
-    o.n = normalize(o.n);
 
     // Check LightingFuncs.cginc to see deeper explanation of how this works
     vInput v = i; // Unity assumes input from vertex shader is called v.
@@ -136,7 +145,7 @@ vOutput vert(vInput i){
     o.uvDynLight = HELIUM_TRANSFORM_LIGHTMAP(i.uvDynLight, unity_DynamicLightmap);
     #endif
 
-    #ifdef HELIUM_HEIGHT_MAP
+    #ifdef HELIUM_USE_PARALLAX_DISPLACEMENT
     /* if batching breaks things use this
     i.tan.xyz = normalize(i.tan.xyz);
     i.n = normalize(i.n);
@@ -323,10 +332,10 @@ UnityLight CreateLight(fInput vo){
 }
 
 float3 TanSpaceNormal(fInput vo){
-    float3 n1 = UnpackScaleNormal(tex2D(_Normal, vo.uvM.xy),-_NormalStrength); 
+    float3 n1 = UnpackScaleNormal(tex2D(_Normal, vo.uvM.xy),_NormalStrength); 
 
     #ifdef HELIUM_DETAIL_NORMAL_MAP
-        float3 n2 = UnpackScaleNormal(tex2D(_SecondaryNormal, vo.uvM.zw), -_SecondaryNormalStrength);
+        float3 n2 = UnpackScaleNormal(tex2D(_SecondaryNormal, vo.uvM.zw), _SecondaryNormalStrength);
 
         #ifdef HELIUM_DETAIL_MASK
         n2 = lerp(float3(0,0,1), n2, DETAIL_MASK_N(vo.uvM));
@@ -358,6 +367,8 @@ void InitFragNormal(inout fInput vo){
 float GetParallaxHeight (float2 uv) {
 	return tex2D(_Height, uv).g;
 }
+
+#ifdef HELIUM_USE_PARALLAX_DISPLACEMENT
 float2 ParallaxOffset (float2 uv, float2 viewDir) {
 	float height = GetParallaxHeight(uv);
 	height -= 0.5;
@@ -380,11 +391,12 @@ float2 ParallaxRaymarching (float2 uv, float2 viewDir) {
 }
 
 #define PARALLAX_FUNCTION ParallaxRaymarching
+#endif
 
 #endif
 
 void ApplyParallax (inout fInput i) {
-	#if defined(HELIUM_HEIGHT_MAP)
+	#if defined(HELIUM_USE_PARALLAX_DISPLACEMENT)
 		i.viewDirTanSpace = normalize(i.viewDirTanSpace);
 		#if !defined(PARALLAX_OFFSET_LIMITING)
 			#if !defined(PARALLAX_BIAS)
@@ -412,13 +424,10 @@ fOutput frag(fInput vo){
 		UnityApplyDitherCrossFade(vo.lodVPos);
 	#endif
 
-    #ifdef HELIUM_HEIGHT_MAP
+    #ifdef HELIUM_USE_PARALLAX_DISPLACEMENT
         // DisplaceUVParallax(vo.uvM.xy,vo.viewDirTanSpace, (tex2D(_Height, vo.uvM.xy).r - 0.5)*  _ParallaxStrength,_ParallaxStrength);
         DisplaceUVParallax(vo.uvM,vo.viewDirTanSpace, _Height, _ParallaxStrength,  (_SecondaryTex_ST.xy / _MainTex_ST.xy) );
     #endif
-    // #ifdef HELIUM_HEIGHT_MAP
-    // ApplyParallax(vo);
-    // #endif
     
     float alpha = ALPHA(vo.uvM);
     #ifdef HELIUM_TRANSPARENCY_CUTOUT
@@ -472,7 +481,6 @@ fOutput frag(fInput vo){
 	finalCol = lerp( float4(_WFColor,1.0) ,finalCol ,baryLerp);
     #endif
 
-
     #ifdef HELIUM_DEFERRED_PASS
         float ao = OCCLUSION(vo.uvM);
         fout.g0 = float4(
@@ -500,7 +508,6 @@ fOutput frag(fInput vo){
         #endif
         return fout;
     #else
-        // finalCol =   (vo.pos.z/vo.pos.w);
         fout.colorOut = finalCol;
         HELIUM_COMPUTE_FOG(fout.colorOut, vo);
         return fout; 

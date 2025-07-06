@@ -350,9 +350,6 @@ public class HeliumShaderStandardUI : ShaderGUI {
     {
         GUILayout.Label("Draw Call Options", EditorStyles.boldLabel);
         editor.EnableInstancingField();
-        foreach( Material mt in editor.targets){
-            mt.enableInstancing = true;
-        }
     }
 
     protected MaterialProperty FindProperty (string name) {

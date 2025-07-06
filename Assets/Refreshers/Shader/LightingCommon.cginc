@@ -102,7 +102,7 @@ struct vOutput{
     float2 uvDynLight : TEXCOORD7;
     #endif
 
-    #ifdef HELIUM_HEIGHT_MAP
+    #ifdef HELIUM_USE_PARALLAX_DISPLACEMENT
     float3 viewDirTanSpace : TEXCOORD8;
     #endif
 
@@ -156,7 +156,7 @@ struct fInput{
     float2 uvDynLight : TEXCOORD7;
     #endif
 
-    #ifdef HELIUM_HEIGHT_MAP 
+    #ifdef HELIUM_USE_PARALLAX_DISPLACEMENT 
     float3 viewDirTanSpace : TEXCOORD8;
     #endif
 
@@ -241,7 +241,7 @@ float3 ComputeAlbedoWithDetail(fInput vo){
 
 /*-UTILITY FUNCTIONS-*/
 
-// To prove TRANSFORM_TEX is just a define
+// QOL command that summarizes texture tiling and offset
 #define HELIUM_TRANSFORM_TEX(x,y) (x.xy * y##_ST.xy + y##_ST.zw)
 
 #define HELIUM_TRANSFORM_LIGHTMAP(uvVar, mapName) uvVar * mapName##ST.xy + mapName##ST.zw // suffix is different compared to normal TRASNFORM_TEX
