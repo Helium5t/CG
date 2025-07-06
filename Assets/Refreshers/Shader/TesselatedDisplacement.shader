@@ -1,5 +1,5 @@
 // Same as ShadowsPBShader but uses Unity naming convention
-Shader "Refreshers/TesselatedWireframe"
+Shader "Refreshers/TesselatedDisplacement"
 {   
     Properties{
         _Color("Color", Color) = (1,1,1,1)
@@ -28,6 +28,8 @@ Shader "Refreshers/TesselatedWireframe"
 		_WFSmoothing ("Wireframe Smoothing", Range(0, 10)) = 1
         _Subdivs("Tesselation Subdivisions", Float) = 1
         _TargetEdgeLen("Target Edge Length", Float) = 1
+        [NoScaleOffset] _Height ("Height Map", 2D) = "black" {}
+        _ParallaxStrength("Displacement Strength", Range(0,10)) = 1
     }
     CGINCLUDE
     #define HELIUM_FRAGMENT_BINORMAL 1
@@ -67,6 +69,9 @@ Shader "Refreshers/TesselatedWireframe"
             #pragma shader_feature HELIUM_DETAIL_MASK
             #pragma shader_feature _ HELIUM_EDGE_BASED_TESSELATION HELIUM_SCREEN_SIZE_TESSELATION HELIUM_SCREEN_DISTANCE_TESSELATION
 
+
+            #pragma shader_feature _ HELIUM_HEIGHT_MAP
+
             // #pragma multi_compile _ VERTEXLIGHT_ON LIGHTMAP_ON
             // #pragma shader_feature _ UNITY_HDR_ON
             // #pragma multi_compile _ DIRLIGHTMAP_COMBINED
@@ -81,7 +86,9 @@ Shader "Refreshers/TesselatedWireframe"
             #define HELIUM_EMISSION
             #define HELIUM_AMBIENT_OCCLUSION
 
-            #define HELIUM_PAINT_WIREFRAME
+            // #define HELIUM_PAINT_WIREFRAME
+
+            #define HELIUM_TESSELATE_ON_HEIGHT
         
             #pragma multi_compile_fwdadd_fullshadows // equivalent of the following
             // #pragma multi_compile DIRECTIONAL POINT SPOT DIRECTIONAL_COOKIE POINT_COOKIE
@@ -163,9 +170,11 @@ Shader "Refreshers/TesselatedWireframe"
             }
             Name "Standard Shadow"
             CGPROGRAM
-            #pragma target 3.0
-            #pragma vertex shadowVert
+            #pragma target 4.6
+            #pragma vertex vertForTesselation
             #pragma fragment shadowFrag
+            #pragma hull hull
+            #pragma domain dom
 
             #pragma multi_compile_shadowcaster
             #pragma multi_compile _ LOD_FADE_CROSSFADE
@@ -175,8 +184,20 @@ Shader "Refreshers/TesselatedWireframe"
             #pragma shader_feature _ HELIUM_TRANSPARENCY_CUTOUT HELIUM_TRANSPARENCY_BLENDED HELIUM_TRANSPARENCY_TRANSLUCENT
             #pragma shader_feature HELIUM_SHADOWS_FORCE_CUTOUT
             #pragma shader_feature HELIUM_R_FROM_ALBEDO
+
+			#pragma shader_feature HELIUM_HEIGHT_MAP
+			#pragma shader_feature HELIUM_EDGE_BASED_TESSELATION
+
+            #define HELIUM_SIMPLIFIED_TESSELATION_STRUCT
+            #define HELIUM_TESSELATE_ON_HEIGHT
             
             #include "ShadowFuncsV2.cginc"
+
+            #define vOutput svOutput
+            #define vInput svInput
+            #define vert shadowVert
+            
+            #include "TesselationFuncs.cginc"
 
             ENDCG
         }

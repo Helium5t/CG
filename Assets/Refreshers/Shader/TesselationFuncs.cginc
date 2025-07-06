@@ -7,15 +7,18 @@ float _TargetEdgeLen;
 struct vTesselatedOutput {
 	float4 vertex : INTERNALTESSPOS;
 	float3 n : TEXCOORD0;
-	float4 tan : TEXCOORD3;
 	float4 uv : TEXCOORD1;
-    #ifdef VERTEXLIGHT_ON
-    float3 lColor: TEXCOORD6; // Computed vertex light
-    #elif defined(LIGHTMAP_ON) || defined(HELIUM_MULITPLE_DIRECTIONAL_SHADOWMASKS)
-    float2 uvLight : TEXCOORD6;
-    #endif
-    #ifdef DYNAMICLIGHTMAP_ON
-    float2 uvDynLight : TEXCOORD7;
+
+    #ifndef HELIUM_SIMPLIFIED_TESSELATION_STRUCT
+        float4 tan : TEXCOORD3;
+        #ifdef VERTEXLIGHT_ON
+        float3 lColor: TEXCOORD6; // Computed vertex light
+        #elif defined(LIGHTMAP_ON) || defined(HELIUM_MULITPLE_DIRECTIONAL_SHADOWMASKS)
+        float2 uvLight : TEXCOORD6;
+        #endif
+        #ifdef DYNAMICLIGHTMAP_ON
+        float2 uvDynLight : TEXCOORD7;
+        #endif
     #endif
 };
 
@@ -81,34 +84,39 @@ vOutput dom(
     float3 bc : SV_DomainLocation
 ){
     vInput vi;
+    #ifndef HELIUM_SIMPLIFIED_TESSELATION_STRUCT
+        BARYCENTRIC_INTERP(p, vi, tan);
+        #if defined(LIGHTMAP_ON) || defined(HELIUM_MULITPLE_DIRECTIONAL_SHADOWMASKS)
+        BARYCENTRIC_INTERP(p, vi, uvLight);
+        #endif
+        #ifdef DYNAMICLIGHTMAP_ON
+        BARYCENTRIC_INTERP(p, vi, uvDynLight);
+        #endif
+    #endif
     // Weighted average based on barycentric coordinates
     // vi.vertex = p[0].vertex * bc.x + p[1].vertex * bc.y + p[2].vertex * bc.z;
     BARYCENTRIC_INTERP(p, vi, vertex);
     BARYCENTRIC_INTERP(p, vi, n);
-    BARYCENTRIC_INTERP(p, vi, tan);
     BARYCENTRIC_INTERP(p, vi, uv);
-    #if defined(LIGHTMAP_ON) || defined(HELIUM_MULITPLE_DIRECTIONAL_SHADOWMASKS)
-    BARYCENTRIC_INTERP(p, vi, uvLight);
-    #endif
-    #ifdef DYNAMICLIGHTMAP_ON
-    BARYCENTRIC_INTERP(p, vi, uvDynLight);
-    #endif
     return vert(vi);
 }
 
 vTesselatedOutput vertForTesselation(vInput v){
     vTesselatedOutput vtp;
-    vtp.vertex = v.vertex;
-    vtp.n = v.n;
-    vtp.tan = v.tan; 
+    
+    #ifndef HELIUM_SIMPLIFIED_TESSELATION_STRUCT
+        vtp.tan = v.tan; 
+        #if defined(LIGHTMAP_ON) || defined(HELIUM_MULITPLE_DIRECTIONAL_SHADOWMASKS)
+        vtp.uvLight = v.uvLight;
+        #endif
+        #ifdef DYNAMICLIGHTMAP_ON
+        vtp.uvDynLight = v.uvDynLight;
+        #endif
+    #endif
     vtp.uv = 0;
     vtp.uv.xy = v.uv;
-    #if defined(LIGHTMAP_ON) || defined(HELIUM_MULITPLE_DIRECTIONAL_SHADOWMASKS)
-    vtp.uvLight = v.uvLight;
-    #endif
-    #ifdef DYNAMICLIGHTMAP_ON
-    vtp.uvDynLight = v.uvDynLight;
-    #endif
+    vtp.vertex = v.vertex ;
+    vtp.n = v.n;
     return vtp;
 }
 

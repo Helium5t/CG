@@ -21,26 +21,40 @@
     #define HELIUM_SHADOWS_SAMPLE_ALPHA 1
 #endif
 
-
 #ifdef HELIUM_SHADOWS_SAMPLE_ALPHA
     #define ALPHA(uv) UNITY_ACCESS_INSTANCED_PROP(_Color_arr, _Color).a * tex2D(_MainTex, uv.xy).a;
 #else 
     #define ALPHA(uv) UNITY_ACCESS_INSTANCED_PROP(_Color_arr, _Color).a;
 #endif 
 
+
+#if defined(HELIUM_HEIGHT_MAP)
+    #ifdef HELIUM_TESSELATE_ON_HEIGHT
+        #define HELIUM_USE_TESSELATION_DISPLACEMENT
+        #define _Displacement _ParallaxStrength
+
+        #ifndef HELIUM_SHADOWS_SAMPLE_ALPHA
+            #define HELIUM_SHADOWS_SAMPLE_ALPHA
+        #endif 
+
+    #endif
+#endif
+
 UNITY_INSTANCING_BUFFER_START(InstanceProperties)
-    UNITY_DEFINE_INSTANCED_PROP(float4,_Color)
+UNITY_DEFINE_INSTANCED_PROP(float4,_Color)
 #define _Color_arr InstanceProperties
 UNITY_INSTANCING_BUFFER_END(InstanceProperties)
 sampler2D _MainTex;
 float4 _MainTex_ST;
 float _Cutoff;
+sampler2D _Height;
+float _ParallaxStrength;
 
 sampler3D _DitherMaskLOD;
 
 struct svInput{
     UNITY_VERTEX_INPUT_INSTANCE_ID
-    float4 pos: POSITION;
+    float4 vertex: POSITION;
     float3 n : NORMAL;
     float2 uv : TEXCOORD0;
 };
@@ -63,7 +77,8 @@ struct sfInput{
     #else 
         float4 pos : SV_POSITION;
     #endif
-    #if HELIUM_SHADOWS_SAMPLE_ALPHA
+    
+    #ifdef HELIUM_SHADOWS_SAMPLE_ALPHA
         float2 uv : TEXCOORD0;
     #endif 
     #ifdef SHADOWS_CUBE
@@ -74,12 +89,22 @@ struct sfInput{
 svOutput shadowVert(svInput i){
     svOutput o;
     UNITY_TRANSFER_INSTANCE_ID(i,o);
+    #ifdef HELIUM_SHADOWS_SAMPLE_ALPHA
+        o.uv = TRANSFORM_TEX(i.uv, _MainTex);
+    #endif
+
+    #ifdef HELIUM_USE_TESSELATION_DISPLACEMENT
+    float d = tex2Dlod(_Height, float4(o.uv.xy ,0,0)).g;
+    d = (d - 0.5) * _Displacement;
+    i.n = normalize(i.n);
+    i.vertex.xyz += i.n * d;
+    #endif
     #ifdef INSTANCING_ON
     unity_InstanceID = i.instanceID + unity_BaseInstanceID;
     #endif 
     // UnityClipSpaceShadowCasterPos transforms direction also in clip space
     // and then moves the vertex by the normal bias amount (unity_LightShadowBias.z)
-    o.csPos = UnityClipSpaceShadowCasterPos(i.pos, i.n);
+    o.csPos = UnityClipSpaceShadowCasterPos(i.vertex, i.n);
     // in clip space the z is the distance so fundamentally the following also works
     /*
     o.csPos.z += saturate(unity_LightShadowBias.x / o.csPos.w);
@@ -89,11 +114,8 @@ svOutput shadowVert(svInput i){
     */
     o.csPos = UnityApplyLinearShadowBias(o.csPos);
     #ifdef SHADOWS_CUBE
-        o.lVec = mul(unity_ObjectToWorld, i.pos).xyz - _LightPositionRange.xyz;
+        o.lVec = mul(unity_ObjectToWorld, i.vertex).xyz - _LightPositionRange.xyz;
     #endif 
-    #ifdef HELIUM_SHADOWS_SAMPLE_ALPHA
-        o.uv = TRANSFORM_TEX(i.uv, _MainTex);
-    #endif
     return o;
 }
 

@@ -29,7 +29,7 @@
     #define HELIUM_NO_LIGHTMAPS
 #endif
 
-#if defined(HEIGHT_MAP)
+#if defined(HELIUM_HEIGHT_MAP)
     #ifndef HELIUM_TESSELATE_ON_HEIGHT
         #define HELIUM_USE_PARALLAX_DISPLACEMENT
     #else

@@ -102,9 +102,11 @@ void ComputeVertexLight(inout vOutput v){
 
 vOutput vert(vInput i){
     vOutput o;
+
+    i.n = normalize(i.n);
     
     o.uvM = 0;
-    o.uvM.xy = HELIUM_TRANSFORM_TEX(i.uv, _MainTex);  // QOL command that summarizes texture tiling and offset
+    o.uvM.xy = HELIUM_TRANSFORM_TEX(i.uv, _MainTex);  
     #ifdef HELIUM_DETAIL_ALBEDO
     o.uvM.zw = HELIUM_TRANSFORM_TEX(i.uv, _SecondaryTex);
     #endif
@@ -117,6 +119,12 @@ vOutput vert(vInput i){
     #ifdef INSTANCING_ON
     // Same as UNITY_SETUP_INSTANCE_ID
     unity_InstanceID = i.instanceID + unity_BaseInstanceID; // fetch the correct instance for mvp matrix selection
+    #endif
+    
+    #if defined(HELIUM_USE_TESSELATION_DISPLACEMENT) && defined(HELIUM_HEIGHT_MAP)
+    float displacement = tex2Dlod(_Height, float4(o.uvM.xy,0,0)).g;
+    displacement = (displacement - 0.5) * _Displacement;
+    i.vertex.xyz += i.n * displacement;
     #endif
     o.pos = UnityObjectToClipPos(i.vertex);
     o.wPos = mul(unity_ObjectToWorld, i.vertex);
@@ -473,7 +481,6 @@ fOutput frag(fInput vo){
 	finalCol = lerp( float4(_WFColor,1.0) ,finalCol ,baryLerp);
     #endif
 
-
     #ifdef HELIUM_DEFERRED_PASS
         float ao = OCCLUSION(vo.uvM);
         fout.g0 = float4(
@@ -501,7 +508,6 @@ fOutput frag(fInput vo){
         #endif
         return fout;
     #else
-        // finalCol =   (vo.pos.z/vo.pos.w);
         fout.colorOut = finalCol;
         HELIUM_COMPUTE_FOG(fout.colorOut, vo);
         return fout; 
