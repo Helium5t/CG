@@ -13,14 +13,15 @@ Material:
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - HELIUM_EMISSION_FROM_MAP
-  - HELIUM_TRANSPARENCY_BLENDED
+  - HELIUM_TRANSPARENCY_TRANSLUCENT
   m_InvalidKeywords:
   - HELIUM_CUTOUT_TRANSPARENCY
   m_LightmapFlags: 0
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
+  m_CustomRenderQueue: 3000
+  stringTagMap:
+    RenderType: Transparent
   disabledShaderPasses: []
   m_LockedProperties: 
   m_SavedProperties:
@@ -51,7 +52,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: a32c483d924a948ea87fbb6d5f291d26, type: 3}
+        m_Texture: {fileID: 2800000, guid: cf1eb2d3368cb446eafc43733f6d2073, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Metallic:
@@ -121,7 +122,7 @@ Material:
     - _Period: 3
     - _SecondaryNormalStrength: 1
     - _SmoothnessTextureChannel: 0
-    - _SourceBlend: 5
+    - _SourceBlend: 1
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _UVSec: 0

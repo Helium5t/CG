@@ -111,4 +111,12 @@ void DisplaceUVParallax(inout float4 uv, inout float3 tsd, sampler2D h, float s,
     PARALLAX_CORE(uv, h, s, tsd, detailFactor);
 }
 
+
+#ifdef HELIUM_POSTPROCESS
+    #define COL(uv) tex2D(_MainTex, uv)
+
+    #define BOX(uv, boxSize, d) float4 boxOffsets_ = _MainTex_TexelSize.xyxy * float2(-boxSize,boxSize).xxyy;\
+            d = (COL(uv + boxOffsets_.xy) + COL(uv + boxOffsets_.xw) + COL(uv + boxOffsets_.zy) + COL(uv + boxOffsets_.zw)) * 0.25;
+#endif 
+
 #endif
