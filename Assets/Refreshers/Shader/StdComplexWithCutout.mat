@@ -13,15 +13,15 @@ Material:
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - HELIUM_EMISSION_FROM_MAP
-  - HELIUM_SHADOWS_FORCE_CUTOUT
   - HELIUM_TRANSPARENCY_BLENDED
   m_InvalidKeywords:
   - HELIUM_CUTOUT_TRANSPARENCY
   m_LightmapFlags: 0
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
+  m_CustomRenderQueue: 3000
+  stringTagMap:
+    RenderType: Transparent
   disabledShaderPasses: []
   m_LockedProperties: 
   m_SavedProperties:
@@ -52,7 +52,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: ee2d5f560fd7a406e9c4c80b870cb76b, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Metallic:
@@ -104,7 +104,7 @@ Material:
     - _AlphaCutoff: 0.5
     - _AlphaThreshold: 0.29
     - _BumpScale: 1
-    - _Cutoff: 0.5
+    - _Cutoff: 0.39
     - _DestinationBlend: 10
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
@@ -122,12 +122,12 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _UVSec: 0
-    - _UniformMetallic: 0
-    - _UniformRoughness: 0.103
+    - _UniformMetallic: 0.523
+    - _UniformRoughness: 0.423
     - _WriteToDepthBuffer: 0
     - _ZWrite: 1
     m_Colors:
-    - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
+    - _Color: {r: 1, g: 0, b: 0, a: 1}
+    - _EmissionColor: {r: 1, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

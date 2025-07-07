@@ -7,35 +7,25 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: StdBlankHalfTransparent
+  m_Name: StdBlankSmooth
   m_Shader: {fileID: 4800000, guid: e3f2615fc1f93294b84c9cc4ada59bf1, type: 3}
   m_Parent: {fileID: 2100000, guid: 96574b531029aee46803e65af10857a5, type: 2}
-  m_ModifiedSerializedProperties: 22
-  m_ValidKeywords:
-  - HELIUM_EMISSION_FROM_MAP
-  - HELIUM_TRANSPARENCY_CUTOUT
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
   m_InvalidKeywords: []
-  m_LightmapFlags: 2
+  m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 2450
-  stringTagMap:
-    RenderType: TransparentCutout
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
   disabledShaderPasses: []
   m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
-    m_TexEnvs:
-    - _MainTex:
-        m_Texture: {fileID: 2800000, guid: ee2d5f560fd7a406e9c4c80b870cb76b, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
+    m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _Cutoff: 0.366
-    - _UniformMetallic: 0
-    - _UniformRoughness: 1
-    m_Colors:
-    - _Color: {r: 0.5222944, g: 0.6725895, b: 0.9150943, a: 1}
+    - _UniformRoughness: 0.432
+    m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1

@@ -466,10 +466,10 @@ fOutput frag(fInput vo){
     il
     );
     
-    finalCol.rgb += EMISSION(vo.uvM);
     #if defined(HELIUM_TRANSPARENCY_BLENDED) || defined(HELIUM_TRANSPARENCY_TRANSLUCENT)
     finalCol.a = alpha;
     #endif
+    finalCol.rgb += EMISSION(vo.uvM);
 
     #if defined(HELIUM_PAINT_WIREFRAME)
     float3 bCoord = float3(vo.baryCoord, 1 - vo.baryCoord.x - vo.baryCoord.y);
