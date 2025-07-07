@@ -117,6 +117,9 @@ void DisplaceUVParallax(inout float4 uv, inout float3 tsd, sampler2D h, float s,
 
     #define BOX(uv, boxSize, d) float4 boxOffsets_ = _MainTex_TexelSize.xyxy * float2(-boxSize,boxSize).xxyy;\
             d = (COL(uv + boxOffsets_.xy) + COL(uv + boxOffsets_.xw) + COL(uv + boxOffsets_.zy) + COL(uv + boxOffsets_.zw)) * 0.25;
+    
+    #define BOX_TEX(uv,tex, boxSize, d) float4 boxOffsets_ = _MainTex_TexelSize.xyxy * float2(-boxSize,boxSize).xxyy;\
+            d = (tex2D(tex, uv + boxOffsets_.xy) + tex2D(tex, uv + boxOffsets_.xw) + tex2D(tex, uv + boxOffsets_.zy) + tex2D(tex, uv + boxOffsets_.zw)) * 0.25;
 #endif 
 
 #endif
