@@ -17,6 +17,8 @@ public class DoFPostProcess : MonoBehaviour
     [Range(1f,10f)]
     public float discBlurSize = 4f;
 
+    public float _correction;
+
     enum DoFPass
     {
         CoC = 0,
@@ -24,7 +26,9 @@ public class DoFPostProcess : MonoBehaviour
         BoxBlur = 2,
         CocScale = 3,
         Final = 4,
-        ShowFocus = 5
+        ShowFocus = 5,
+        ShowCOC = 6,
+        ShowCOCScale = 7
     }
 
     public enum DebugPass
@@ -32,6 +36,8 @@ public class DoFPostProcess : MonoBehaviour
         OFF = 0,
         FOCUS = 1,
         BLUR = 2,
+        COC = 3,
+        COCScale = 4,
     }
 
     public DebugPass showIntermediateResult = DebugPass.OFF;
@@ -51,7 +57,8 @@ public class DoFPostProcess : MonoBehaviour
         m.SetVector("_physCameraParams", new Vector4(
             focus,
             focusDepth,
-            discBlurSize, 0f
+            discBlurSize, 
+            _correction
         ));
         switch (showIntermediateResult)
         {
@@ -61,12 +68,23 @@ public class DoFPostProcess : MonoBehaviour
             default:
                 break;
         }
-        RenderTexture coc = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.RHalf, RenderTextureReadWrite.Linear);
+        RenderTexture coc = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.RFloat);
+        RenderTextureFormat f = source.format;
+        RenderTexture b0 = RenderTexture.GetTemporary(source.width/2, source.height/2, 0,f);
         Graphics.Blit(source, coc, m, (int)DoFPass.CoC);
-        RenderTexture b0 = RenderTexture.GetTemporary(source.width / 2, source.height / 2, 0, source.format);
-        RenderTexture b1 = RenderTexture.GetTemporary(source.width / 2, source.height / 2, 0, source.format);
+        if (showIntermediateResult == DebugPass.COC)
+        {
+            Graphics.Blit(coc, destination, m, (int)DoFPass.ShowCOC);
+            return;
+        }
         m.SetTexture("_CocTex", coc);
+        RenderTexture b1 = RenderTexture.GetTemporary(source.width / 2, source.height / 2, 0, source.format);
         Graphics.Blit(source, b0, m , (int)DoFPass.CocScale);
+        if (showIntermediateResult == DebugPass.COCScale)
+        {
+            Graphics.Blit(b0, destination, m, (int)DoFPass.ShowCOCScale);
+            return;
+        }
         Graphics.Blit(b0, b1, m, (int)DoFPass.DiscBlur);
         Graphics.Blit(b1, b0, m, (int)DoFPass.BoxBlur);
         m.SetTexture("_BlurTex", b1);
@@ -76,7 +94,7 @@ public class DoFPostProcess : MonoBehaviour
         }
         else
         {
-            Graphics.Blit(source, destination, m, (int)DoFPass.Final);
+            Graphics.Blit(source, destination, m , (int)DoFPass.Final);
         }
         coc.Release();
         b0.Release();

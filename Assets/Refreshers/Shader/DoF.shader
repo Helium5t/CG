@@ -17,7 +17,7 @@ Shader "Refreshers/DoF" {
             float4 _MainTex_TexelSize;
             sampler2D _CocTex, _BlurTex;
             sampler2D _CameraDepthTexture;
-            float4 _physCameraParams;
+            half4 _physCameraParams;
 
             struct vIn{
                 float4 pos : POSITION;
@@ -45,7 +45,8 @@ Shader "Refreshers/DoF" {
 				#pragma fragment frag
                 
                 half frag(vOut i): SV_Target{
-                    float d = LinearEyeDepth(SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, i.uv).r);
+                    float d = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, i.uv);
+                    d = LinearEyeDepth(d);
                     d =  (d - _physCameraParams.x) / _physCameraParams.y;
                     d = clamp(d,-1,1) * _physCameraParams.z;
                     return d;
@@ -111,22 +112,33 @@ Shader "Refreshers/DoF" {
 					};
                 #endif
 
+                #define WEIGHT_F(s,d) saturate((s - d +2) / 2)
+
                 half4 frag(vOut i): SV_Target{
-                    half4 c;
-                    half w = 0;
+                    half coc = tex2D(_MainTex, i.uv).a;
+
+                    half4 cBg, cFg;
+                    half totalBgW =0, totalFgW = 0;
                     for (int v = 0; v < kernelValues; v++){
-                        float2 t = k[v] *  _physCameraParams.z;
+                        half2 t = k[v] *  _physCameraParams.z;
                         half sampleDist = length(t);
                         t *= _MainTex_TexelSize.xy;
                         half4 sample = COL(i.uv + t);
-                        if(abs(sample.a) >= sampleDist){
-                            c += sample;
-                            w += 1; 
-                        }
+
+                        half sampleWBG = WEIGHT_F(max(0, min(sample.a, coc)), sampleDist);
+                        cBg.rgb += sample.rgb * sampleWBG;
+                        totalBgW += sampleWBG; 
+
+                        half sampleWFG = WEIGHT_F(-sample.a, sampleDist);
+                        cFg.rgb += sample.rgb * sampleWFG;
+                        totalFgW += sampleWFG; 
                     }
-                    c *= 1.0 / w;
-                    c.a = 1;
-                    return c;
+                    cBg *= 1.0 / (totalBgW + (totalBgW == 0));
+                    cFg *= 1.0 / (totalFgW + (totalFgW == 0));
+                    cBg.a = 1;
+                    cFg.a = 1;
+                    half focusLerp = min(1, totalFgW * 3.14159265359 / kernelValues);
+                    return  half4(lerp(cBg, cFg, focusLerp).rgb, focusLerp);
                 }
 			ENDCG
 		}
@@ -151,18 +163,32 @@ Shader "Refreshers/DoF" {
 				#pragma vertex vert
 				#pragma fragment frag
 
+                #define WEIGHT_F(c) 1 / (1 + max(max(c.r, c.g), c.b));
+
                 half4 frag(vOut i): SV_Target{
-                    float4 offset = _MainTex_TexelSize.xyxy * float2(-0.5,0.5).xxyy;
-                    half4 c;
-                    c.r = tex2D(_CocTex, i.uv + + offset.xy).r;
-                    c.g = tex2D(_CocTex, i.uv + + offset.xw).r;
-                    c.b = tex2D(_CocTex, i.uv + + offset.zy).r;
-                    c.a = tex2D(_CocTex, i.uv + + offset.zw).r;
-                    half cmx = max(max(max(c.r,c.g),c.b),c.a);
-                    c.r = min(min(min(c.r,c.g),c.b),c.a);
-                    float l = step(-c.r, cmx);
-                    c.r = cmx >= -c.r ? cmx : c.r; 
-                    return half4(COL(i.uv).rgb, c.r) ;
+					float4 o = _MainTex_TexelSize.xyxy * float2(-0.5,0.5).xxyy;
+
+					half3 s0 = tex2D(_MainTex, i.uv + o.xy).rgb;
+					half3 s1 = tex2D(_MainTex, i.uv + o.zy).rgb;
+					half3 s2 = tex2D(_MainTex, i.uv + o.xw).rgb;
+					half3 s3 = tex2D(_MainTex, i.uv + o.zw).rgb;
+
+					half w0 = WEIGHT_F(s0);
+					half w1 = WEIGHT_F(s1);
+					half w2 = WEIGHT_F(s2);
+					half w3 = WEIGHT_F(s3);
+
+                    half3 weightedCol = (s0 * w0 + s1 * w1 + s2 * w2 + s3 * w3) / max(w0 + w1 + w2 + w3, 0.00001);
+
+                    half cocr     = tex2D(_CocTex, i.uv + o.xy).r;
+					half cocg     = tex2D(_CocTex, i.uv + o.zy).r;
+					half cocb     = tex2D(_CocTex, i.uv + o.xw).r;
+					half coca     = tex2D(_CocTex, i.uv + o.zw).r;
+				
+					half cocMin = min(min(min(cocr, cocg), cocb), coca);
+					half cocMax = max(max(max(cocr, cocg), cocb), coca);
+					half coc = cocMax >= -cocMin ? cocMax : cocMin;
+                    return half4(weightedCol,coc);
                 }
 			ENDCG
 		}
@@ -176,8 +202,9 @@ Shader "Refreshers/DoF" {
 
                 half4 frag(vOut i): SV_Target{
                     float l = tex2D(_CocTex, i.uv) ;
-                    l = ((l+1) * step(l,0)) + ((1-l) * step(0,l));
-                    half4 c = lerp(tex2D(_BlurTex, i.uv), tex2D(_MainTex, i.uv), l);
+                    half4 blurCol = tex2D(_BlurTex, i.uv);
+                    l = smoothstep(0.1,1, abs(l));
+                    half4 c = lerp(tex2D(_MainTex, i.uv), blurCol, l + blurCol.a - l * blurCol.a);
                     return c;
                 }
 			ENDCG
@@ -197,6 +224,48 @@ Shader "Refreshers/DoF" {
                     d /=  _physCameraParams.y;
                     return ((d+1) * step(d,0)) + ((1-d) * step(0,d));
                     // return clamp(d - _physCameraParams.x +_physCameraParams.y , 0 , 2 * _physCameraParams.y)/ (2* _physCameraParams.y);
+                }
+			ENDCG
+		}
+		Pass {
+            Name "ShowCOC"
+			CGPROGRAM
+
+				#pragma vertex vert
+				#pragma fragment frag
+
+
+                half4 frag(vOut i): SV_Target{
+                    half d = COL(i.uv);
+                    d /= _physCameraParams.z;
+
+                    return lerp(
+                        -half4(1,0,0,1) * d,
+                        half4(0,0,1,1) * d,
+                        step(0,d)
+                    );
+                }
+			ENDCG
+		}
+		Pass {
+            Name "ShowCOCScale"
+			CGPROGRAM
+
+				#pragma vertex vert
+				#pragma fragment frag
+
+
+                half4 frag(vOut i): SV_Target{
+                    half d = tex2D(_MainTex, i.uv).a;
+                    // return d;
+                    // d = tex2D(_CocTex, i.uv);
+                    d /= _physCameraParams.z;
+
+                    return lerp(
+                        -half4(1,0,1,1) * d,
+                        half4(0,1,1,1) * d,
+                        step(0,d)
+                    );
                 }
 			ENDCG
 		}
