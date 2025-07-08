@@ -22,7 +22,7 @@ public class BloomPostProcess : MonoBehaviour
 
     Material m;
 
-    enum Pass
+    enum BloomPass
     {
         BOXDOWN = 0,
         BOXUP = 1,
@@ -30,14 +30,14 @@ public class BloomPostProcess : MonoBehaviour
         PREPASS = 3,
     }
 
-    public enum DebugPass
+    public enum DebugBloomResult
     {
         OFF = 0,
         PREPASS = 1,
         BLOOM = 2,
     }
 
-    public DebugPass d = DebugPass.OFF;
+    public DebugBloomResult showIntermediateResult = DebugBloomResult.OFF;
 
 
     void OnRenderImage(RenderTexture source, RenderTexture destination)
@@ -63,8 +63,8 @@ public class BloomPostProcess : MonoBehaviour
         bloomParams.z = 2f * intensityPassFilter * softening;
         bloomParams.w = 0.25f / ((intensityPassFilter * softening)+ 0.00001f);
         m.SetVector("_Bloom", bloomParams);
-        Graphics.Blit(source, p, m, (int)Pass.PREPASS);
-        if (d == DebugPass.PREPASS)
+        Graphics.Blit(source, p, m, (int)BloomPass.PREPASS);
+        if (showIntermediateResult == DebugBloomResult.PREPASS)
         {
             Graphics.Blit(p, destination);
             return;
@@ -74,7 +74,7 @@ public class BloomPostProcess : MonoBehaviour
         ts[0] = RenderTexture.GetTemporary(
             w, h, 0, source.format
         );
-        Graphics.Blit(p, ts[0], m, (int)Pass.BOXDOWN);
+        Graphics.Blit(p, ts[0], m, (int)BloomPass.BOXDOWN);
         // Graphics.Blit(source, destination);
         int actual_halvenings = 1;
         for (int i = 1; i < halvenings && w > 2 && h > 2; i++)
@@ -82,23 +82,23 @@ public class BloomPostProcess : MonoBehaviour
             w /= 2;
             h /= 2;
             ts[i] = RenderTexture.GetTemporary(w, h, 0, source.format);
-            Graphics.Blit(ts[i - 1], ts[i], m, (int)Pass.BOXDOWN);
+            Graphics.Blit(ts[i - 1], ts[i], m, (int)BloomPass.BOXDOWN);
             actual_halvenings++;
         }
         for (int i = 1; i < actual_halvenings; i++)
         {
-            Graphics.Blit(ts[actual_halvenings - i], ts[actual_halvenings - i - 1], m, (int)Pass.BOXUP);
+            Graphics.Blit(ts[actual_halvenings - i], ts[actual_halvenings - i - 1], m, (int)BloomPass.BOXUP);
         }
         m.SetTexture("_SourceTex", source);
         bloomParams.x = Mathf.GammaToLinearSpace(additiveMultiplier);
         m.SetVector("_Bloom", bloomParams);
-        if (d == DebugPass.BLOOM)
+        if (showIntermediateResult == DebugBloomResult.BLOOM)
         {
             Graphics.Blit(ts[0], destination);
         }
         else
         {
-            Graphics.Blit(ts[0], destination, m, (int)Pass.TRANSFER);
+            Graphics.Blit(ts[0], destination, m, (int)BloomPass.TRANSFER);
         }
         for (int i = 0; i < Mathf.Min(actual_halvenings, ts.Length); i++)
             {
